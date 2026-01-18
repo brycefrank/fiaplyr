@@ -1,0 +1,37 @@
+# fiaplyr
+
+An FIA database toolkit based on dplyr-style grammar. Users chain together
+common operations (e.g., plot-level summaries, estimates, etc) offloading
+computations to the database. When ready, users `collect` data locally. This
+offers flexible ways to interact with *evaluations*, which are official
+collections of plots and conditions that are used to produce estimates.
+
+```{r}
+library(fiaplyr)
+library(dplyr)
+
+# Establish a backend connection
+db_path <- "C:/fia/SQLite_FIADB_OR.db"
+con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+
+# Pass an evaluation id to a handler and print a summary
+handler <- eval_handler(con, 411001)
+
+handler
+```
+
+## Plot-level Aggregations
+
+We can aggregate variables to the plot level
+
+```{r}
+plot_query <- handler |>
+  summarize_plot(VOLCFNET)
+```
+
+This makes a `dbplyr` query, which we can `collect` to retrieve local data
+
+```{r}
+collect(plot_query)
+```
+

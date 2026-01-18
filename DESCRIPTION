@@ -1,0 +1,21 @@
+Package: fiaplyr
+Title: Interface to FIA Databases using dbplyr
+Version: 0.0.0.9000
+Authors@R: person("First", "Last", email = "first.last@example.com", role = c("aut", "cre"))
+Description: Provides an S4 class interface to query and aggregate data from Forest Inventory and Analysis (FIA) databases using dbplyr.
+License: MIT
+Encoding: UTF-8
+LazyData: true
+Imports:
+    methods,
+    dplyr,
+    dbplyr,
+    DBI,
+    cli
+Collate:
+    'methods.R'
+    'BaseHandler.R'
+    'EvalHandler.R'
+    'utils.R'
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
