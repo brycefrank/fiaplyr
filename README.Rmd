@@ -1,3 +1,7 @@
+---
+output: github_document
+---
+
 # fiaplyr
 
 An FIA database toolkit based on dplyr-style grammar. Users chain together
@@ -5,6 +9,15 @@ common operations (e.g., plot-level summaries, estimates, etc) offloading
 computations to the database. When ready, users `collect` data locally. This
 offers flexible ways to interact with *evaluations*, which are official
 collections of plots and conditions that are used to produce estimates.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  message = FALSE,   # Suppresses package startup messages
+  warning = FALSE    # Suppresses warnings
+)
+```
 
 ```{r}
 library(fiaplyr)
