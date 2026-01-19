@@ -7,12 +7,19 @@
 #' @export
 setGeneric("fetch", function(object, ...) standardGeneric("fetch"))
 
-#' Summarize to Plot Level
+#' Summarize Trees to Plot Level
 #'
 #' @param object A handler object.
 #' @param ... Additional arguments.
 #' @export
-setGeneric("summarize_plot", function(object, ...) standardGeneric("summarize_plot"))
+setGeneric("summarize_tree", function(object, ...) standardGeneric("summarize_tree"))
+
+#' Summarize Conditions to Plot Level
+#'
+#' @param object A handler object.
+#' @param ... Additional arguments.
+#' @export
+setGeneric("summarize_cond", function(object, ...) standardGeneric("summarize_cond"))
 
 #' Aggregate to Population Level
 #'
@@ -21,10 +28,16 @@ setGeneric("summarize_plot", function(object, ...) standardGeneric("summarize_pl
 #' @export
 setGeneric("aggregate_pop", function(object, ...) standardGeneric("aggregate_pop"))
 
-#' @importFrom dplyr mutate
-#' @export
-setGeneric("mutate", function(.data, ...) standardGeneric("mutate"))
 
-#' @importFrom dplyr group_by
 #' @export
-setGeneric("group_by", function(.data, ...) standardGeneric("group_by"))
+setGeneric("mutate_tree", function(.data, ...) standardGeneric("mutate_tree"))
+
+#' @export
+setGeneric("mutate_cond", function(.data, ...) standardGeneric("mutate_cond"))
+
+#' @export
+setGeneric("specify_tree_domains", function(.data, ...) standardGeneric("specify_tree_domains"))
+
+#' @export
+setGeneric("specify_cond_domains", function(.data, ...) standardGeneric("specify_cond_domains"))
+

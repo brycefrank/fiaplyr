@@ -22,8 +22,10 @@ setClass("EvalHandler",
     pop_plot_stratum_assgn = "ANY",
     subp_cond = "ANY",
     internal_cache = "environment",
-    mutations = "list",
-    grouping_vars = "ANY"
+    tree_mutations = "list",
+    cond_mutations = "list",
+    tree_domains = "ANY",
+    cond_domains = "ANY"
   )
 )
 
@@ -75,8 +77,10 @@ eval_handler <- function(db, evalid) {
     pop_plot_stratum_assgn = pop_plot_stratum_assgn_qry,
     subp_cond = subp_cond_qry,
     internal_cache = new.env(parent = emptyenv()),
-    mutations = list(),
-    grouping_vars = list()
+    tree_mutations = list(),
+    cond_mutations = list(),
+    tree_domains = list(),
+    cond_domains = list()
   )
 }
 
@@ -172,53 +176,205 @@ setMethod("show", "EvalHandler", function(object) {
   cat("Measure Years:  ", s$min_meas, "-", s$max_meas, "\n")
 })
 
-#' Mutate method for EvalHandler
+#' Mutate Tree Table
 #'
 #' @param .data A EvalHandler object.
 #' @param ... Name-value pairs of expressions.
 #' @return A EvalHandler object with pending mutations.
 #' @importFrom dplyr mutate
 #' @export
-setMethod("mutate", "EvalHandler", function(.data, ...) {
+setMethod("mutate_tree", "EvalHandler", function(.data, ...) {
   # Capture expressions as quosures
   new_mutations <- dplyr::quos(...)
   
   # Append to existing mutations
-  .data@mutations <- c(.data@mutations, new_mutations)
+  .data@tree_mutations <- c(.data@tree_mutations, new_mutations)
   
   return(.data)
 })
 
-#' Group by method for EvalHandler
+#' Mutate Condition Table
+#'
+#' @param .data A EvalHandler object.
+#' @param ... Name-value pairs of expressions.
+#' @return A EvalHandler object with pending mutations.
+#' @importFrom dplyr mutate
+#' @export
+setMethod("mutate_cond", "EvalHandler", function(.data, ...) {
+  # Capture expressions as quosures
+  new_mutations <- dplyr::quos(...)
+  
+  # Append to existing mutations
+  .data@cond_mutations <- c(.data@cond_mutations, new_mutations)
+  
+  return(.data)
+})
+
+#' Specify Tree Domains (Grouping)
 #'
 #' @param .data A EvalHandler object.
 #' @param ... Variables to group by.
 #' @return A EvalHandler object with pending grouping.
 #' @importFrom dplyr group_by
 #' @export
-setMethod("group_by", "EvalHandler", function(.data, ...) {
+setMethod("specify_tree_domains", "EvalHandler", function(.data, ...) {
   # Capture expressions as quosures
   new_groups <- dplyr::quos(...)
   
-  # Overwrite existing grouping (standard dplyr behavior replaces groups)
-  .data@grouping_vars <- new_groups
+  # Overwrite existing grouping
+  .data@tree_domains <- new_groups
   
   return(.data)
 })
 
-#' Internal Plot Aggregation Logic
+#' Specify Condition Domains (Grouping)
+#'
+#' @param .data A EvalHandler object.
+#' @param ... Variables to group by.
+#' @return A EvalHandler object with pending grouping.
+#' @importFrom dplyr group_by
+#' @export
+setMethod("specify_cond_domains", "EvalHandler", function(.data, ...) {
+  # Capture expressions as quosures
+  new_groups <- dplyr::quos(...)
+  
+  # Overwrite existing grouping
+  .data@cond_domains <- new_groups
+  
+  return(.data)
+})
+
+#' Aggregate condition data to plot or subplot levels
 #'
 #' @param object A EvalHandler object.
 #' @param ... Variables to aggregate (tidy-select supported)
+#' @param level The level to aggregate to. Can be "plot" or "subplot".
 #' @keywords internal
-.make_plot_aggregates <- function(object, ...) {
+.make_cond_aggregates <- function(object, ..., level = "plot", prop_basis = "MACR") {
+  # Join core tables
+  # PLOT -> COND
+  
+  # Start with PLOT
+  res <- object@plot %>%
+    dplyr::inner_join(object@cond, by = c("CN" = "PLT_CN"), suffix = c("", ".cond"))
+  
+  # Apply standard filtering
+  res <- res %>%
+    dplyr::filter(
+      !is.na(CONDPROP_UNADJ)
+    )
+    
+  if (!is.null(prop_basis)) {
+    res <- res %>%
+      dplyr::filter(PROP_BASIS == !!prop_basis)
+  }
+  
+  # Apply pending mutations from the handler object
+  if (length(object@cond_mutations) > 0) {
+    res <- res %>% dplyr::mutate(!!!object@cond_mutations)
+  }
+  
+  # Capture grouping variables
+  # Standard PLOT keys
+  plot_keys <- c("CN", "STATECD", "INVYR", "PLOT", "COUNTYCD")
+  
+  # Aggregate matching records
+  # We group by PLOT keys + any user defined groups
+  if (length(object@cond_domains) > 0) {
+     res <- res %>% dplyr::group_by(!!!object@cond_domains)
+  }
+  
+  # We also need to group by plot keys to ensure plot-level summary
+  res <- res %>% 
+    dplyr::group_by(dplyr::across(dplyr::all_of(plot_keys)), .add = TRUE)
+
+  # Check if specific variables are provided to aggregate
+  agg_vars <- dplyr::quos(...)
+  
+  if (length(agg_vars) == 0) {
+    # Default behavior: Just sum the condition proportion (divide by 4)
+    # This gives the proportion of the plot covered by the condition domain
+    aggregated <- res %>%
+      dplyr::summarise(
+        prop_area = sum(CONDPROP_UNADJ, na.rm = TRUE)
+      ) %>%
+      dplyr::ungroup()
+      
+  } else {
+    # Weighted aggregation: Sum(Value * Prop / 4)
+    aggregated <- res %>%
+      dplyr::summarise(
+        dplyr::across(c(...), ~ sum(.x * CONDPROP_UNADJ, na.rm = TRUE))
+      ) %>%
+      dplyr::ungroup()
+  }
+
+  # ----------------------------------------------------------------
+  # SCAFFOLD CONSTRUCTION
+  # ----------------------------------------------------------------
+  
+  # 1. Get all plots (Full Plot List)
+  all_plots <- object@plot %>%
+    dplyr::select(dplyr::all_of(plot_keys))
+  
+  # 2. Identify Domain Variables
+  all_groups <- dplyr::group_vars(res)
+  domain_vars <- setdiff(all_groups, plot_keys)
+  
+  # Construct the scaffold
+  if (length(domain_vars) > 0) {
+    # Extract distinct combinations of domain variables from the aggregated data
+    observed_domains <- aggregated %>%
+      dplyr::select(dplyr::all_of(domain_vars)) %>%
+      dplyr::distinct()
+    
+    # Cross join: All Plots x Observed Domains
+    scaffold <- all_plots %>%
+      dplyr::cross_join(observed_domains, copy = TRUE)
+      
+    # Join key
+    join_by <- c(plot_keys, domain_vars)
+    
+  } else {
+    scaffold <- all_plots
+    join_by <- plot_keys
+  }
+
+  # ----------------------------------------------------------------
+  # FINAL MERGE
+  # ----------------------------------------------------------------
+  
+  # Left join aggregated data onto the scaffold
+  final_res <- scaffold %>%
+    dplyr::left_join(aggregated, by = join_by)
+
+  if (length(agg_vars) == 0) {
+    final_res <- final_res %>%
+      dplyr::mutate(prop_area = dplyr::coalesce(prop_area, 0))
+  } else {
+    final_res <- final_res %>%
+      dplyr::mutate(
+        dplyr::across(c(...), ~ dplyr::coalesce(.x, 0))
+      )
+  }
+
+  return(final_res)
+}
+
+#' Aggregate tree data to plot or subplot levels
+#'
+#' @param object A EvalHandler object.
+#' @param ... Variables to aggregate (tidy-select supported)
+#' @param level The level to aggregate to. Can be "plot" or "subplot".
+#' @keywords internal
+.make_tree_aggregates <- function(object, ..., level = "plot") {
   # Join core tables
   # PLOT -> COND -> TREE
   
   # Start with PLOT
   res <- object@plot %>%
-    dplyr::inner_join(object@cond, by = c("CN" = "PLT_CN")) %>%
-    dplyr::inner_join(object@tree, by = c("CN" = "PLT_CN", "CONDID" = "CONDID"))
+    dplyr::inner_join(object@cond, by = c("CN" = "PLT_CN"), suffix = c("", ".cond")) %>%
+    dplyr::inner_join(object@tree, by = c("CN" = "PLT_CN", "CONDID" = "CONDID"), suffix = c("", ".tree"))
   
   # Apply standard filtering
   res <- res %>%
@@ -227,9 +383,9 @@ setMethod("group_by", "EvalHandler", function(.data, ...) {
     )
   
   # Apply pending mutations from the handler object
-  # These are user-defined expressions queued via mutate()
-  if (length(object@mutations) > 0) {
-    res <- res %>% dplyr::mutate(!!!object@mutations)
+  # These are user-defined expressions queued via mutate_tree()
+  if (length(object@tree_mutations) > 0) {
+    res <- res %>% dplyr::mutate(!!!object@tree_mutations)
   }
   
   # Capture grouping variables
@@ -237,17 +393,16 @@ setMethod("group_by", "EvalHandler", function(.data, ...) {
   plot_keys <- c("CN", "STATECD", "INVYR", "PLOT", "COUNTYCD")
   
   # Determine target variables for aggregation
-  # If ... is empty, default to VOLCFNET
   target_vars <- dplyr::quos(...)
 
   # Aggregate matching records
   # We group by PLOT keys + any user defined groups
   grouping_cols <- plot_keys
-  if (length(object@grouping_vars) > 0) {
+  if (length(object@tree_domains) > 0) {
      # Extract variable names from quosures for simpler checking 
      # (This is a simplification, assumes simple variable names or needs inspection)
      # For now, we rely on the fact that group_by adds them to the query
-     res <- res %>% dplyr::group_by(!!!object@grouping_vars)
+     res <- res %>% dplyr::group_by(!!!object@tree_domains)
   }
   
   # We also need to group by plot keys to ensure plot-level summary
@@ -322,12 +477,22 @@ setMethod("group_by", "EvalHandler", function(.data, ...) {
   return(final_res)
 }
 
-#' Summarize to Plot Level
+#' Summarize Trees to Plot Level
 #'
 #' @param object A EvalHandler object.
 #' @param ... Variables to aggregate (tidy-select supported)
 #' @return A lazy query with plot-level summaries.
 #' @export
-setMethod("summarize_plot", "EvalHandler", function(object, ...) {
-  .make_plot_aggregates(object, ...)
+setMethod("summarize_tree", "EvalHandler", function(object, ...) {
+  .make_tree_aggregates(object, ...)
+})
+
+#' Summarize Conditions to Plot Level
+#'
+#' @param object A EvalHandler object.
+#' @param ... Variables to aggregate (tidy-select supported)
+#' @return A lazy query with plot-level summaries.
+#' @export
+setMethod("summarize_cond", "EvalHandler", function(object, ..., prop_basis = "MACR") {
+  .make_cond_aggregates(object, ..., prop_basis = prop_basis)
 })
