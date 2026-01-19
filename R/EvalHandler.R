@@ -383,6 +383,10 @@ setMethod("specify_cond_domains", "EvalHandler", function(.data, ...) {
     )
   
   # Apply pending mutations from the handler object
+  if (length(object@cond_mutations) > 0) {
+    res <- res %>% dplyr::mutate(!!!object@cond_mutations)
+  }
+
   # These are user-defined expressions queued via mutate_tree()
   if (length(object@tree_mutations) > 0) {
     res <- res %>% dplyr::mutate(!!!object@tree_mutations)
