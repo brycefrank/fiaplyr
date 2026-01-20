@@ -12,8 +12,8 @@ output: github_document
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  message = FALSE,   # Suppresses package startup messages
-  warning = FALSE    # Suppresses warnings
+  message = FALSE, # Suppresses package startup messages
+  warning = FALSE # Suppresses warnings
 )
 ```
 
@@ -74,7 +74,7 @@ Calculate plot-level summaries easily. `fiaplyr` automatically weights tree vari
 ```{r}
 # Calculate Net Cubic Foot Volume per acre for each plot
 plot_vol <- handler |>
-  summarize_tree(VOLCFNET)
+  aggregate_tree(VOLCFNET)
 
 # The result is a lazy query. Collect to execute.
 head(collect(plot_vol))
@@ -87,9 +87,9 @@ You can perform more complex analyses by grouping (defining domains) and creatin
 ```{r}
 # Calculate Basal Area per acre by Species
 plot_ba_by_sp <- handler |>
-  specify_tree_domains(SPCD) |>                    # Group by Species Code
-  mutate_tree(BA = 0.005454 * DIA^2) |>            # Calculate Basal Area per tree
-  summarize_tree(BA)                               # Sum to plot level (weighted by TPA)
+  specify_tree_domains(SPCD) |> # Group by Species Code
+  mutate_tree(BA = 0.005454 * DIA^2) |> # Calculate Basal Area per tree
+  summarize_tree(BA) # Sum to plot level (weighted by TPA)
 
 # Verify the output
 # Note: This will result in multiple rows per plot (one for each species present)
