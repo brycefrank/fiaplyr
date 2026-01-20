@@ -27,6 +27,8 @@ setGeneric("specify_cond_domains", function(.data, ...) standardGeneric("specify
 #' @export
 setGeneric("estimate_tree", function(object, ...) standardGeneric("estimate_tree"))
 
-
 #' @export
 setGeneric("estimate_tree_strata", function(object, ...) standardGeneric("estimate_tree_strata"))
+
+#' @export
+setGeneric("estimate_cond_strata", function(object, ...) standardGeneric("estimate_cond_strata"))

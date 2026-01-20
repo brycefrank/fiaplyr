@@ -14,6 +14,8 @@ Imports:
     cli
 Collate:
     'methods.R'
+    'aggregate.R'
+    'estimate.R'
     'BaseHandler.R'
     'EvalHandler.R'
     'utils.R'
