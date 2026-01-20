@@ -4,14 +4,10 @@
 \alias{.make_cond_aggregates}
 \title{Aggregate condition data to plot or subplot levels}
 \usage{
-.make_cond_aggregates(object, ..., level = "plot", prop_basis = "MACR")
+.make_cond_aggregates(object)
 }
 \arguments{
 \item{object}{A EvalHandler object.}
-
-\item{...}{Variables to aggregate (tidy-select supported)}
-
-\item{level}{The level to aggregate to. Can be "plot" or "subplot".}
 }
 \description{
 Aggregate condition data to plot or subplot levels

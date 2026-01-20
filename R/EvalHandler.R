@@ -210,14 +210,14 @@ setMethod("mutate_cond", "EvalHandler", function(.data, ...) {
   return(.data)
 })
 
-#' Specify Tree Domains (Grouping)
+#' Set Tree Domains (Grouping)
 #'
 #' @param .data A EvalHandler object.
 #' @param ... Variables to group by.
 #' @return A EvalHandler object with pending grouping.
 #' @importFrom dplyr group_by
 #' @export
-setMethod("specify_tree_domains", "EvalHandler", function(.data, ...) {
+setMethod("set_tree_domains", "EvalHandler", function(.data, ...) {
   # Capture expressions as quosures
   new_groups <- dplyr::quos(...)
 
@@ -227,14 +227,14 @@ setMethod("specify_tree_domains", "EvalHandler", function(.data, ...) {
   return(.data)
 })
 
-#' Specify Condition Domains (Grouping)
+#' Set Condition Domains (Grouping)
 #'
 #' @param .data A EvalHandler object.
 #' @param ... Variables to group by.
 #' @return A EvalHandler object with pending grouping.
 #' @importFrom dplyr group_by
 #' @export
-setMethod("specify_cond_domains", "EvalHandler", function(.data, ...) {
+setMethod("set_cond_domains", "EvalHandler", function(.data, ...) {
   # Capture expressions as quosures
   new_groups <- dplyr::quos(...)
 

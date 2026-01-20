@@ -19,10 +19,10 @@ setGeneric("mutate_tree", function(.data, ...) standardGeneric("mutate_tree"))
 setGeneric("mutate_cond", function(.data, ...) standardGeneric("mutate_cond"))
 
 #' @export
-setGeneric("specify_tree_domains", function(.data, ...) standardGeneric("specify_tree_domains"))
+setGeneric("set_tree_domains", function(.data, ...) standardGeneric("set_tree_domains"))
 
 #' @export
-setGeneric("specify_cond_domains", function(.data, ...) standardGeneric("specify_cond_domains"))
+setGeneric("set_cond_domains", function(.data, ...) standardGeneric("set_cond_domains"))
 
 #' @export
 setGeneric("estimate_tree", function(object, ...) standardGeneric("estimate_tree"))

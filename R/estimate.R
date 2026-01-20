@@ -20,15 +20,34 @@
     ) %>%
     dplyr::ungroup() %>%
     dplyr::mutate(
-      w_h = as.numeric(P1POINTCNT) / P1PNTCNT_EU,
-      n_h = P2POINTCNT
+      w_h = as.numeric(P1POINTCNT) / P1PNTCNT_EU, n_h = P2POINTCNT
     ) %>%
     dplyr::select(
-      STRATUM_CN = CN,
-      ESTN_UNIT_CN,
-      w_h,
-      n_h,
-      n
+      STRATUM_CN = CN, ESTN_UNIT_CN, w_h, n_h, n
+    )
+}
+
+#' Get Subplot Type Adjustment Factors
+#'
+#' @param object A EvalHandler object.
+#' @param subptypes A character vector of subplot types
+#' @keywords internal
+.get_subptype_adjustment_factors <- function(object, subptypes = c("MACR", "SUBP", "MICR")) {
+  subptype_vars <- paste0("ADJ_FACTOR_", subptypes)
+
+  object@pop_stratum %>%
+    dplyr::select(
+      CN,
+      dplyr::all_of(subptype_vars)
+    ) |>
+    dplyr::rename(
+      STRATUM_CN = CN
+    ) %>%
+    tidyr::pivot_longer(
+      cols = dplyr::all_of(subptype_vars),
+      names_to = "SUBPTYPE",
+      names_prefix = "ADJ_FACTOR_",
+      values_to = "ADJ_FACTOR"
     )
 }
 
@@ -37,28 +56,27 @@
 #' @param object A BaseHandler object.
 #' @keywords internal
 .estimate_cond_strata <- function(object) {
-  cond_values <- .make_cond_aggregates(object)
+  cond_values <- .make_cond_aggregates(object, adjusted = TRUE)
   strata_summary <- .get_strata_summary(object)
 
   combined_data <- cond_values %>%
     dplyr::inner_join(
       object@pop_plot_stratum_assgn %>% dplyr::select(PLT_CN, STRATUM_CN),
-      by = c("CN" = "PLT_CN")
+      by = "PLT_CN"
     ) |>
     dplyr::inner_join(strata_summary, by = "STRATUM_CN")
 
-  plot_keys <- c("CN", "STATECD", "INVYR", "PLOT", "COUNTYCD")
   strat_keys <- c("STRATUM_CN", "ESTN_UNIT_CN", "EVAL_CN", "w_h", "n_h", "n")
+  plot_keys <- c("PLT_CN", "STATECD", "INVYR", "PLOT", "COUNTYCD")
 
   # All columns in combined_data
   all_cols <- colnames(combined_data)
   group_vars <- setdiff(all_cols, c(plot_keys, strat_keys, "prop"))
 
-  # Calculate Stratum Means
   stratum_stats <- combined_data %>%
     dplyr::group_by(dplyr::across(dplyr::all_of(c("ESTN_UNIT_CN", "STRATUM_CN", "w_h", "n_h", "n", group_vars)))) %>%
     dplyr::summarise(
-      prop_mean = sum(prop, na.rm = TRUE) / n
+      prop_mean = sum(prop, na.rm = TRUE) / n_h
     ) %>%
     dplyr::ungroup()
 
@@ -73,11 +91,11 @@
   combined_data <- plot_values %>%
     dplyr::inner_join(
       object@pop_plot_stratum_assgn %>% dplyr::select(PLT_CN, STRATUM_CN),
-      by = c("CN" = "PLT_CN")
+      by = "PLT_CN"
     ) %>%
     dplyr::inner_join(strata_summary, by = c("STRATUM_CN"))
 
-  plot_keys <- c("CN", "STATECD", "INVYR", "PLOT", "COUNTYCD")
+  plot_keys <- c("PLT_CN", "STATECD", "INVYR", "PLOT", "COUNTYCD")
   strat_keys <- c("STRATUM_CN", "ESTN_UNIT_CN", "EVAL_CN", "w_h", "n_h", "n")
 
   # All columns in combined_data
@@ -91,7 +109,7 @@
   }
 
   # Calculate Stratum Means
-  stratum_stats <- combined_data %>%
+  strata_stats <- combined_data %>%
     dplyr::group_by(dplyr::across(dplyr::all_of(c("ESTN_UNIT_CN", "STRATUM_CN", "w_h", "n_h", "n", group_vars)))) %>%
     dplyr::summarise(
       dplyr::across(
@@ -104,5 +122,5 @@
     ) %>%
     dplyr::ungroup()
 
-  return(stratum_stats)
+  return(strata_stats)
 }

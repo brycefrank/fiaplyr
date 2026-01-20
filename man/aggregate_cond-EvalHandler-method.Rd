@@ -4,7 +4,7 @@
 \alias{aggregate_cond,EvalHandler-method}
 \title{Aggregate Conditions to Plot Level}
 \usage{
-\S4method{aggregate_cond}{EvalHandler}(object, ..., prop_basis = "MACR")
+\S4method{aggregate_cond}{EvalHandler}(object)
 }
 \arguments{
 \item{object}{A EvalHandler object.}

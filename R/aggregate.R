@@ -2,10 +2,9 @@
 #'
 #' @param object A EvalHandler object.
 #' @keywords internal
-.make_cond_aggregates <- function(object) {
+.make_cond_aggregates <- function(object, adjusted = FALSE) {
   res <- .build_cond_data(object)
 
-  # Capture grouping variables
   # Standard PLOT keys
   plot_keys <- c("CN", "STATECD", "INVYR", "PLOT", "COUNTYCD")
 
@@ -19,12 +18,28 @@
   res <- res %>%
     dplyr::group_by(dplyr::across(dplyr::all_of(plot_keys)), .add = TRUE)
 
+  if (adjusted) {
+    subptype_adj_factors <- .get_subptype_adjustment_factors(object)
 
-  aggregated <- res %>%
-    dplyr::summarise(
-      prop = sum(CONDPROP_UNADJ, na.rm = TRUE)
-    ) %>%
-    dplyr::ungroup()
+    aggregated <- res |>
+      dplyr::left_join(
+        object@pop_plot_stratum_assgn %>% dplyr::select(PLT_CN, STRATUM_CN),
+        by = c("CN" = "PLT_CN")
+      ) |>
+      dplyr::left_join(
+        subptype_adj_factors,
+        by = c("STRATUM_CN", "PROP_BASIS" = "SUBPTYPE")
+      ) |>
+      dplyr::summarise(
+        prop = sum(CONDPROP_UNADJ * ADJ_FACTOR, na.rm = TRUE)
+      )
+  } else {
+    aggregated <- res %>%
+      dplyr::summarise(
+        prop = sum(CONDPROP_UNADJ, na.rm = TRUE)
+      ) %>%
+      dplyr::ungroup()
+  }
 
   # Identify Domain Variables
   all_groups <- dplyr::group_vars(res)
@@ -37,6 +52,9 @@
     plot_keys = plot_keys,
     domain_vars = domain_vars
   )
+
+  final_res <- final_res %>%
+    dplyr::rename(PLT_CN = CN)
 
   return(final_res)
 }
@@ -79,11 +97,19 @@
     dplyr::group_by(dplyr::across(dplyr::all_of(plot_keys)), .add = TRUE)
 
   # Perform the aggregation (summing)
-  aggregated <- res %>%
-    dplyr::summarise(
-      dplyr::across(c(...), ~ sum(TPA_UNADJ * .x, na.rm = TRUE))
-    ) %>%
-    dplyr::ungroup()
+  if (length(target_vars) == 0) {
+    aggregated <- res %>%
+      dplyr::summarise(
+        tree_count = sum(TPA_UNADJ, na.rm = TRUE)
+      ) %>%
+      dplyr::ungroup()
+  } else {
+    aggregated <- res %>%
+      dplyr::summarise(
+        dplyr::across(c(...), ~ sum(TPA_UNADJ * .x, na.rm = TRUE))
+      ) %>%
+      dplyr::ungroup()
+  }
 
   # Identify Domain Variables
   all_groups <- dplyr::group_vars(res)
@@ -96,6 +122,9 @@
     plot_keys = plot_keys,
     domain_vars = domain_vars
   )
+
+  final_res <- final_res %>%
+    dplyr::rename(PLT_CN = CN)
 
   return(final_res)
 }
