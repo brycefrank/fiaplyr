@@ -76,59 +76,11 @@
   stratum_stats <- combined_data %>%
     dplyr::group_by(dplyr::across(dplyr::all_of(c("ESTN_UNIT_CN", "STRATUM_CN", "w_h", "n_h", "n", group_vars)))) %>%
     dplyr::summarise(
-      p_strat = sum(prop, na.rm = TRUE) / n_h
+      prop_mean = sum(prop, na.rm = TRUE) / n_h
     ) %>%
     dplyr::ungroup()
 
   return(stratum_stats)
-}
-
-.estimate_cond_eu <- function(object) {
-  strata_stats <- .estimate_cond_strata(object) |>
-    dplyr::left_join(
-      object@pop_estn_unit |> dplyr::select(CN),
-      by = c("ESTN_UNIT_CN" = "CN")
-    )
-
-  strat_keys <- c("STRATUM_CN", "ESTN_UNIT_CN", "EVAL_CN", "w_h", "n_h", "n")
-  plot_keys <- c("PLT_CN", "STATECD", "INVYR", "PLOT", "COUNTYCD")
-
-  # All columns in combined_data
-  all_cols <- colnames(strata_stats)
-  group_vars <- setdiff(all_cols, c(plot_keys, strat_keys, "p_strat"))
-
-  strata_stats |>
-    dplyr::group_by(dplyr::across(dplyr::all_of(c("ESTN_UNIT_CN", group_vars)))) |>
-    dplyr::summarise(
-      p_eu = sum(w_h * p_strat, na.rm = TRUE)
-    ) |>
-    dplyr::ungroup()
-}
-
-.estimate_cond <- function(object) {
-  # Calculate eu weights
-  eu_weights <- object@pop_estn_unit |>
-    dplyr::mutate(
-      w_eu = P1PNTCNT_EU / sum(P1PNTCNT_EU, na.rm = TRUE)
-    ) |>
-    dplyr::select(CN, w_eu)
-
-
-  eu_stats <- .estimate_cond_eu(object)
-
-  eu_keys <- c("ESTN_UNIT_CN")
-
-  # All columns in combined_data
-  all_cols <- colnames(eu_stats)
-  group_vars <- setdiff(all_cols, c(eu_keys, "p_eu", "w_eu"))
-
-  eu_stats |>
-    dplyr::left_join(eu_weights, by = c("ESTN_UNIT_CN" = "CN")) |>
-    dplyr::group_by(dplyr::across(dplyr::all_of(c(eu_keys, group_vars)))) |>
-    dplyr::summarise(
-      p = sum(p_eu * w_eu, na.rm = TRUE)
-    ) |>
-    dplyr::ungroup()
 }
 
 .estimate_tree_strata <- function(object, ...) {

@@ -4,7 +4,7 @@
 \alias{.make_cond_aggregates}
 \title{Aggregate condition data to plot or subplot levels}
 \usage{
-.make_cond_aggregates(object, adjusted = FALSE)
+.make_cond_aggregates(object)
 }
 \arguments{
 \item{object}{A EvalHandler object.}

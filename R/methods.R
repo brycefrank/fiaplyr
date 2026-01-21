@@ -32,9 +32,3 @@ setGeneric("estimate_tree_strata", function(object, ...) standardGeneric("estima
 
 #' @export
 setGeneric("estimate_cond_strata", function(object, ...) standardGeneric("estimate_cond_strata"))
-
-#' @export
-setGeneric("estimate_cond_eu", function(object, ...) standardGeneric("estimate_cond_eu"))
-
-#' @export
-setGeneric("estimate_cond", function(object, ...) standardGeneric("estimate_cond"))

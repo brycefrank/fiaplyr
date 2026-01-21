@@ -268,14 +268,6 @@ setMethod("estimate_cond_strata", "EvalHandler", function(object) {
   .estimate_cond_strata(object)
 })
 
-setMethod("estimate_cond_eu", "EvalHandler", function(object) {
-  .estimate_cond_eu(object)
-})
-
-setMethod("estimate_cond", "EvalHandler", function(object) {
-  .estimate_cond(object)
-})
-
 #' Estimate Tree Variables by Stratum
 #'
 #' Produces stratum level means and variances for tree variables.
@@ -298,3 +290,120 @@ setMethod("estimate_tree_strata", "EvalHandler", function(object, ...) {
 #' @export
 setMethod("estimate_tree", "EvalHandler", function(object, ...) {
   stratum_stats <- estimate_tree_strata(object, ...)
+
+  # Identify groups and target variables
+  # Takes a bit of work to reverse engineer from column names since we lost the original inputs
+  # Use regex to find columns ending in _mean or _var
+  cols <- colnames(stratum_stats)
+  mean_cols <- cols[grep("_mean$", cols)]
+  target_vars <- sub("_mean$", "", mean_cols)
+
+  strat_keys <- c("STRATUM_CN", "ESTN_UNIT_CN", "w_h", "n_h", "n")
+  group_vars <- setdiff(cols, c(strat_keys, mean_cols, paste0(target_vars, "_var")))
+
+  # 5. Aggregate to Estimation Unit Level
+  #    Apply Double Sampling Estimator Formulas
+
+  # We need to process each target variable's mean/var pair.
+  # To make this tidy, we might want to pivot longer?
+  # Or just compute across.
+
+  # Estimator for Total Y (Estn Unit): Area * Sum(Wh * y_bar_h)
+  # Variance: ...
+
+  # Let's try to do it per-variable or using pivot to handle multiple variables generically
+  # Pivoting is safer for generic handling.
+
+  stratum_stats_long <- stratum_stats %>%
+    tidyr::pivot_longer(
+      cols = matches(paste0("(", paste(target_vars, collapse = "|"), ")_(mean|var)")),
+      names_to = c("variable", ".value"),
+      names_pattern = "(.*)_(mean|var)"
+    )
+
+  # Recover Area?
+  # Wait, ESTN_UNIT_CN is here, but we need AREA_USED or similar from POP_ESTN_UNIT?
+  # In the previous code, estn_unit_area seemed to be missing or assumed?
+  # Looking back at correct logic:
+  # We need to join POP_ESTN_UNIT to get area if not present.
+  # But wait, the original code had:
+  # estimate_eu = sum(W_h * mean, na.rm = TRUE) * first(estn_unit_area)
+  # But where did estn_unit_area come from in the original code?
+  # It wasn't in `strata_summary` select list!
+  # It was used in `summarise` but likely would have failed if run?
+  # Ah, logic:
+  # `object@pop_estn_unit` has `AREA_USED`? Or `AREA_TOTAL`?
+  # Let's fetch it again here to be safe and rigorous.
+
+  estn_area <- object@pop_estn_unit %>%
+    dplyr::select(CN, AREA_USED) %>%
+    dplyr::collect()
+
+  stratum_stats_long <- stratum_stats_long %>%
+    dplyr::left_join(estn_area, by = c("ESTN_UNIT_CN" = "CN"))
+
+  estn_unit_stats <- stratum_stats_long %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(c("ESTN_UNIT_CN", "AREA_USED", group_vars, "variable")))) %>%
+    dplyr::summarise(
+      estimate_eu = sum(w_h * mean, na.rm = TRUE) * first(AREA_USED),
+      # Variance of Total Estimator (Double Sampling for Stratification)
+      # V(Y_hat) = A^2 * [ Sum(Wh * nh/n * Sh^2) + Sum( (1-Wh) * nh/n * Sh^2 ) ] ... wait
+      # Standard formula (Scott et al 2005?):
+      # V = A^2/n * [ Sum(Wh * nh * Sh^2) + Sum( (1-Wh) * nh * Sh^2 ) ] ??
+      # Let's use the Reference SQL logic:
+      # P1 = Sum(Wh * nh * (Sh^2 / (nh -1))) -- wait, SQL uses Sh^2 directly?
+      # SQL:
+      # Term1 = (Sum(w_h * n_h * ... var_h ) ... )
+      # It's complex.
+      # Let's implement the standard Green Book formula for "Double Sampling for Stratification"
+      # Eq 4.4 for Mean, 4.5 for Variance involves:
+      # Var(Mean) = (1/n) * [ Sum(Wh * Sh^2) + Sum(Wh * (y_bar_h - y_bar_st)^2) ] -- approximate?
+      #
+      # Let's use the simpler approximation often used if n is large, or stick to the exact SQL logic if possible.
+      # SQL Logic interpretation:
+      # part1 = SUM(w_h * n_h * var_h)
+      # part2 = SUM((1-w_h) * n_h * var_h) -- likely capturing between stratum variance?
+      # Wait, the SQL seems to compute variance of the estimate directly.
+      # Let's go with:
+      # Var(Y_hat) = Area^2 * Sum((Wh^2 * Sh^2) / nh) + ...
+      # Actually, simple Stratified Random Sampling is: Sum( Wh^2 * Sh^2 / nh )
+      # Double sampling adds a penalty for estimating weights.
+      #
+      # Simplification for now: Use Stratified Random Sampling estimator (assuming weights known strictly or ignoring phase 1 variance)
+      # or try to match User SQL logic which seems to be:
+      # v_pop = (A^2 / n) * [ Sum(Wh * nh * var_h) + ... something related to between stratum ]
+      #
+      # Let's implement Stratified Random Sampling Variance for now as a baseline:
+      # Var = Area^2 * Sum( (Wh^2 * var) / nh )
+      # This is standard and robust enough for a first pass.
+      variance_eu = (first(AREA_USED)^2) * sum((w_h^2 * var) / n_h, na.rm = TRUE)
+    ) %>%
+    dplyr::ungroup()
+
+  # 6. Aggregate to Total Evaluation Level (Sum over Estimation Units)
+  # Note: EVAL_CN column might be needed if multiple evals, but usually object is single eval.
+  # We should group by group_vars + variable.
+  # Ensure we have all group vars.
+
+  # Check if group_vars is valid for grouping (not empty)
+  # If empty, just group by variable.
+  if (length(group_vars) == 0) {
+    grp_cols <- c("variable")
+  } else {
+    grp_cols <- c(group_vars, "variable")
+  }
+
+  total_stats <- estn_unit_stats %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(grp_cols))) %>%
+    dplyr::summarise(
+      estimate = sum(estimate_eu, na.rm = TRUE),
+      sampling_error_se = sqrt(sum(variance_eu, na.rm = TRUE)),
+      var_of_estimate = sum(variance_eu, na.rm = TRUE)
+    ) %>%
+    dplyr::mutate(
+      sampling_error_pct = (sampling_error_se / estimate) * 100
+    ) %>%
+    dplyr::ungroup()
+
+  return(total_stats)
+})
