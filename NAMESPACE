@@ -2,6 +2,8 @@
 
 export(aggregate_cond)
 export(aggregate_tree)
+export(estimate_cond)
+export(estimate_cond_eu)
 export(estimate_cond_strata)
 export(estimate_tree)
 export(estimate_tree_strata)

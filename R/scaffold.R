@@ -24,12 +24,13 @@
   if (length(domain_vars) > 0) {
     # Extract distinct combinations of domain variables from the aggregated data
     observed_domains <- aggregated_qry %>%
+      dplyr::ungroup() %>%
       dplyr::select(dplyr::all_of(domain_vars)) %>%
       dplyr::distinct()
 
     # Cross join: All Plots x Observed Domains
     scaffold <- all_plots %>%
-      dplyr::cross_join(observed_domains, copy = TRUE)
+      dplyr::cross_join(observed_domains)
 
     # Join key
     join_by <- c(plot_keys, domain_vars)
@@ -37,10 +38,6 @@
     scaffold <- all_plots
     join_by <- plot_keys
   }
-
-  # ----------------------------------------------------------------
-  # FINAL MERGE
-  # ----------------------------------------------------------------
 
   # Left join aggregated data onto the scaffold
   final_res <- scaffold %>%
