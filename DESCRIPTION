@@ -15,9 +15,9 @@ Imports:
 Collate:
     'methods.R'
     'aggregate.R'
-    'estimate.R'
     'BaseHandler.R'
     'EvalHandler.R'
+    'Estimator.R'
     'utils.R'
     'scaffold.R'
 Roxygen: list(markdown = TRUE)
