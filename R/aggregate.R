@@ -88,8 +88,12 @@
   target_vars <- dplyr::quos(...)
 
   # Group by PLOT keys and user defined domains
+  if (length(object@cond_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!object@cond_domains)
+  }
+  
   if (length(object@tree_domains) > 0) {
-    res <- res %>% dplyr::group_by(!!!object@tree_domains)
+    res <- res %>% dplyr::group_by(!!!object@tree_domains, .add = TRUE)
   }
 
   # We also need to group by plot keys to ensure plot-level summary
@@ -106,7 +110,7 @@
   } else {
     aggregated <- res %>%
       dplyr::summarise(
-        dplyr::across(c(...), ~ sum(TPA_UNADJ * .x, na.rm = TRUE))
+        dplyr::across(!!!target_vars, function(x) sum(TPA_UNADJ * x, na.rm = TRUE))
       ) %>%
       dplyr::ungroup()
   }
