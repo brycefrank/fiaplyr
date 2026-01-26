@@ -2,7 +2,7 @@
 output: github_document
 ---
 
-# fiaplyr
+# fiaplyr <img src="inst/logo.png" align="right" height="139" />
 
 <!-- badges: start -->
 <!-- badges: end -->
@@ -87,9 +87,9 @@ You can perform more complex analyses by grouping (defining domains) and creatin
 ```{r}
 # Calculate Basal Area per acre by Species
 plot_ba_by_sp <- handler |>
-  specify_tree_domains(SPCD) |> # Group by Species Code
+  set_tree_domains(SPCD) |> # Group by Species Code
   mutate_tree(BA = 0.005454 * DIA^2) |> # Calculate Basal Area per tree
-  summarize_tree(BA) # Sum to plot level (weighted by TPA)
+  aggregate_tree(BA) # Sum to plot level (weighted by TPA)
 
 # Verify the output
 # Note: This will result in multiple rows per plot (one for each species present)

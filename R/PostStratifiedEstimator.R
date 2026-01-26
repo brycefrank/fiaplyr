@@ -30,7 +30,83 @@ PostStratifiedEstimator <- function(handler) {
   )
 }
 
-setMethod("estimate_cond_strata", "PostStratifiedEstimator", function(object, ...) {
+
+#' Estimate Population Parameters
+#'
+#' @param object A PostStratifiedEstimator object.
+#' @param ... A formula specifying the estimation target (e.g., tree ~ VOLCFGRS).
+#' @return A dataframe with estimates.
+#' @export
+setMethod("estimate", "PostStratifiedEstimator", function(object, ...) {
+  args <- list(...)
+  if (length(args) == 0) stop("Must provide a formula.")
+  formula <- args[[1]]
+
+  parsed <- parse_formula(formula)
+  slot_name <- parsed$slot
+  targets <- parsed$targets
+
+  if (slot_name == "cond") {
+    if (!all(targets == "1")) {
+      stop("Only 'cond ~ 1' is currently supported for condition estimates.")
+    }
+    return(.estimate_cond_internal(object))
+  } else if (slot_name == "tree") {
+    return(.estimate_tree_internal(object, targets))
+  } else {
+    stop("Unsupported slot: ", slot_name)
+  }
+})
+
+# Internal helper for condition estimation
+.estimate_cond_internal <- function(object) {
+  # Calculate eu weights
+  eu_weights <- object@handler@pop_estn_unit |>
+    dplyr::mutate(
+      w_eu = P1PNTCNT_EU / sum(P1PNTCNT_EU, na.rm = TRUE)
+    ) |>
+    dplyr::select(CN, w_eu)
+
+  eu_stats <- .estimate_cond_eu_internal(object)
+
+  eu_keys <- c("ESTN_UNIT_CN")
+
+  # All columns in eu_stats
+  all_cols <- colnames(eu_stats)
+  group_vars <- setdiff(all_cols, c(eu_keys, "p_eu", "w_eu"))
+
+  eu_stats |>
+    dplyr::left_join(eu_weights, by = c("ESTN_UNIT_CN" = "CN")) |>
+    dplyr::group_by(dplyr::across(dplyr::all_of(group_vars))) |>
+    dplyr::summarise(
+      p = sum(p_eu * w_eu, na.rm = TRUE)
+    ) |>
+    dplyr::ungroup()
+}
+
+.estimate_cond_eu_internal <- function(object) {
+  strata_stats <- .estimate_cond_strata_internal(object) |>
+    dplyr::left_join(
+      object@handler@pop_estn_unit |> dplyr::select(CN),
+      by = c("ESTN_UNIT_CN" = "CN")
+    )
+
+  strat_keys <- c("STRATUM_CN", "ESTN_UNIT_CN", "EVAL_CN", "w_h", "n_h", "n")
+  plot_keys <- c("PLT_CN", "STATECD", "INVYR", "PLOT", "COUNTYCD")
+
+  # All columns in strata_stats
+  all_cols <- colnames(strata_stats)
+  group_vars <- setdiff(all_cols, c(plot_keys, strat_keys, "p_strat"))
+
+  strata_stats |>
+    dplyr::group_by(dplyr::across(dplyr::all_of(c("ESTN_UNIT_CN", group_vars)))) |>
+    dplyr::summarise(
+      p_eu = sum(w_h * p_strat, na.rm = TRUE)
+    ) |>
+    dplyr::ungroup()
+}
+
+.estimate_cond_strata_internal <- function(object) {
   cond_values <- .make_cond_aggregates(object@handler, adjusted = TRUE)
   strata_summary <- .get_strata_summary(object@handler)
 
@@ -45,11 +121,10 @@ setMethod("estimate_cond_strata", "PostStratifiedEstimator", function(object, ..
   strat_keys <- c("STRATUM_CN", "ESTN_UNIT_CN", "EVAL_CN", "w_h", "n_h", "n")
   plot_keys <- c("PLT_CN", "STATECD", "INVYR", "PLOT", "COUNTYCD")
 
-  # All columns in combined_data
   all_cols <- colnames(combined_data)
   group_vars <- setdiff(all_cols, c(plot_keys, strat_keys, "prop"))
 
-  stratum_stats <- combined_data %>%
+  combined_data %>%
     dplyr::group_by(
       dplyr::across(
         dplyr::all_of(
@@ -61,17 +136,35 @@ setMethod("estimate_cond_strata", "PostStratifiedEstimator", function(object, ..
       p_strat = sum(prop, na.rm = TRUE) / n_h
     ) %>%
     dplyr::ungroup()
+}
 
-  return(stratum_stats)
-})
+# Internal helper for tree estimation
+.estimate_tree_internal <- function(object, targets) {
+  # Calculate eu weights
+  eu_weights <- object@handler@pop_estn_unit |>
+    dplyr::mutate(
+      w_eu = P1PNTCNT_EU / sum(P1PNTCNT_EU, na.rm = TRUE)
+    ) |>
+    dplyr::select(CN, w_eu)
 
-#' Estimate Condition Variables for Estimation Units
-#'
-#' @param object A PostStratifiedEstimator object.
-#' @param ... Variables to estimate.
-#' @return A dataframe with estimates.
-setMethod("estimate_cond_eu", "PostStratifiedEstimator", function(object, ...) {
-  strata_stats <- estimate_cond_strata(object) |>
+  eu_stats <- .estimate_tree_eu_internal(object, targets)
+
+  eu_keys <- c("ESTN_UNIT_CN")
+
+  all_cols <- colnames(eu_stats)
+  group_vars <- setdiff(all_cols, c(eu_keys, targets, "w_eu"))
+
+  eu_stats |>
+    dplyr::left_join(eu_weights, by = c("ESTN_UNIT_CN" = "CN")) |>
+    dplyr::group_by(dplyr::across(dplyr::all_of(group_vars))) |>
+    dplyr::summarise(
+      dplyr::across(dplyr::all_of(targets), ~ sum(.x * w_eu, na.rm = TRUE))
+    ) |>
+    dplyr::ungroup()
+}
+
+.estimate_tree_eu_internal <- function(object, targets) {
+  strata_stats <- .estimate_tree_strata_internal(object, targets) |>
     dplyr::left_join(
       object@handler@pop_estn_unit |> dplyr::select(CN),
       by = c("ESTN_UNIT_CN" = "CN")
@@ -80,52 +173,21 @@ setMethod("estimate_cond_eu", "PostStratifiedEstimator", function(object, ...) {
   strat_keys <- c("STRATUM_CN", "ESTN_UNIT_CN", "EVAL_CN", "w_h", "n_h", "n")
   plot_keys <- c("PLT_CN", "STATECD", "INVYR", "PLOT", "COUNTYCD")
 
-  # All columns in combined_data
   all_cols <- colnames(strata_stats)
-  group_vars <- setdiff(all_cols, c(plot_keys, strat_keys, "p_strat"))
+  group_vars <- setdiff(all_cols, c(plot_keys, strat_keys, targets))
 
   strata_stats |>
     dplyr::group_by(dplyr::across(dplyr::all_of(c("ESTN_UNIT_CN", group_vars)))) |>
     dplyr::summarise(
-      p_eu = sum(w_h * p_strat, na.rm = TRUE)
+      dplyr::across(dplyr::all_of(targets), ~ sum(w_h * .x, na.rm = TRUE))
     ) |>
     dplyr::ungroup()
-})
+}
 
-setMethod("estimate_cond", "PostStratifiedEstimator", function(object, ...) {
-  # Calculate eu weights
-  eu_weights <- object@handler@pop_estn_unit |>
-    dplyr::mutate(
-      w_eu = P1PNTCNT_EU / sum(P1PNTCNT_EU, na.rm = TRUE)
-    ) |>
-    dplyr::select(CN, w_eu)
-
-
-  eu_stats <- estimate_cond_eu(object)
-
-  eu_keys <- c("ESTN_UNIT_CN")
-
-  # All columns in combined_data
-  all_cols <- colnames(eu_stats)
-  group_vars <- setdiff(all_cols, c(eu_keys, "p_eu", "w_eu"))
-
-  eu_stats |>
-    dplyr::left_join(eu_weights, by = c("ESTN_UNIT_CN" = "CN")) |>
-    dplyr::group_by(dplyr::across(dplyr::all_of(group_vars))) |>
-    dplyr::summarise(
-      p = sum(p_eu * w_eu, na.rm = TRUE)
-    ) |>
-    dplyr::ungroup()
-})
-
-
-setMethod("estimate_tree_strata", "PostStratifiedEstimator", function(object, ...) {
-  tree_values <- .make_tree_aggregates(object@handler, ..., adjusted = TRUE)
+.estimate_tree_strata_internal <- function(object, targets) {
+  syms <- rlang::syms(targets)
+  tree_values <- .make_tree_aggregates(object@handler, !!!syms, adjusted = TRUE)
   strata_summary <- .get_strata_summary(object@handler)
-
-  # Capture target variable names
-  target_vars <- dplyr::quos(...)
-  target_var_names <- purrr::map_chr(target_vars, rlang::as_name)
 
   combined_data <- tree_values %>%
     dplyr::inner_join(
@@ -138,11 +200,10 @@ setMethod("estimate_tree_strata", "PostStratifiedEstimator", function(object, ..
   strat_keys <- c("STRATUM_CN", "ESTN_UNIT_CN", "EVAL_CN", "w_h", "n_h", "n")
   plot_keys <- c("PLT_CN", "STATECD", "INVYR", "PLOT", "COUNTYCD")
 
-  # All columns in combined_data
   all_cols <- colnames(combined_data)
-  group_vars <- setdiff(all_cols, c(plot_keys, strat_keys, target_var_names))
+  group_vars <- setdiff(all_cols, c(plot_keys, strat_keys, targets))
 
-  stratum_stats <- combined_data %>%
+  combined_data %>%
     dplyr::group_by(
       dplyr::across(
         dplyr::all_of(
@@ -151,65 +212,7 @@ setMethod("estimate_tree_strata", "PostStratifiedEstimator", function(object, ..
       )
     ) %>%
     dplyr::summarise(
-      dplyr::across(dplyr::all_of(target_var_names), ~ sum(.x, na.rm = TRUE) / n_h)
+      dplyr::across(dplyr::all_of(targets), ~ sum(.x, na.rm = TRUE) / n_h)
     ) %>%
     dplyr::ungroup()
-
-  return(stratum_stats)
-
-})
-
-setMethod("estimate_tree_eu", "PostStratifiedEstimator", function(object, ...) {
-  strata_stats <- estimate_tree_strata(object, ...) |>
-    dplyr::left_join(
-      object@handler@pop_estn_unit |> dplyr::select(CN),
-      by = c("ESTN_UNIT_CN" = "CN")
-    )
-
-  # Capture target variable names
-  target_vars <- dplyr::quos(...)
-  target_var_names <- purrr::map_chr(target_vars, rlang::as_name)
-
-  strat_keys <- c("STRATUM_CN", "ESTN_UNIT_CN", "EVAL_CN", "w_h", "n_h", "n")
-  plot_keys <- c("PLT_CN", "STATECD", "INVYR", "PLOT", "COUNTYCD")
-
-  # All columns in strata_stats
-  all_cols <- colnames(strata_stats)
-  group_vars <- setdiff(all_cols, c(plot_keys, strat_keys, target_var_names))
-
-  strata_stats |>
-    dplyr::group_by(dplyr::across(dplyr::all_of(c("ESTN_UNIT_CN", group_vars)))) |>
-    dplyr::summarise(
-      dplyr::across(dplyr::all_of(target_var_names), ~ sum(w_h * .x, na.rm = TRUE))
-    ) |>
-    dplyr::ungroup()
-})
-
-setMethod("estimate_tree", "PostStratifiedEstimator", function(object, ...) {
-  # Calculate eu weights
-  eu_weights <- object@handler@pop_estn_unit |>
-    dplyr::mutate(
-      w_eu = P1PNTCNT_EU / sum(P1PNTCNT_EU, na.rm = TRUE)
-    ) |>
-    dplyr::select(CN, w_eu)
-
-  eu_stats <- estimate_tree_eu(object, ...)
-
-  # Capture target variable names
-  target_vars <- dplyr::quos(...)
-  target_var_names <- purrr::map_chr(target_vars, rlang::as_name)
-
-  eu_keys <- c("ESTN_UNIT_CN")
-
-  # All columns in eu_stats
-  all_cols <- colnames(eu_stats)
-  group_vars <- setdiff(all_cols, c(eu_keys, target_var_names, "w_eu"))
-
-  eu_stats |>
-    dplyr::left_join(eu_weights, by = c("ESTN_UNIT_CN" = "CN")) |>
-    dplyr::group_by(dplyr::across(dplyr::all_of(group_vars))) |>
-    dplyr::summarise(
-      dplyr::across(dplyr::all_of(target_var_names), ~ sum(.x * w_eu, na.rm = TRUE))
-    ) |>
-    dplyr::ungroup()
-})
+}

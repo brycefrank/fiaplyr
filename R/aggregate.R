@@ -79,7 +79,7 @@
 #' @param ... Variables to aggregate (tidy-select supported)
 #' @param level The level to aggregate to. Can be "plot" or "subplot".
 #' @keywords internal
-.make_tree_aggregates <- function(object, ..., level = "plot") {
+.make_tree_aggregates <- function(object, ..., adjusted = FALSE, level = "plot") {
   res <- .build_tree_data(object)
 
   plot_keys <- c("CN", "STATECD", "INVYR", "PLOT", "COUNTYCD")
@@ -91,7 +91,7 @@
   if (length(object@cond_domains) > 0) {
     res <- res %>% dplyr::group_by(!!!object@cond_domains)
   }
-  
+
   if (length(object@tree_domains) > 0) {
     res <- res %>% dplyr::group_by(!!!object@tree_domains, .add = TRUE)
   }
@@ -110,7 +110,7 @@
   } else {
     aggregated <- res %>%
       dplyr::summarise(
-        dplyr::across(!!!target_vars, function(x) sum(TPA_UNADJ * x, na.rm = TRUE))
+        dplyr::across(c(!!!target_vars), function(x) sum(TPA_UNADJ * x, na.rm = TRUE))
       ) %>%
       dplyr::ungroup()
   }

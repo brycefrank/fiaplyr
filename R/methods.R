@@ -24,20 +24,9 @@ setGeneric("set_tree_domains", function(.data, ...) standardGeneric("set_tree_do
 #' @export
 setGeneric("set_cond_domains", function(.data, ...) standardGeneric("set_cond_domains"))
 
+#' Estimate Population Parameters
+#'
+#' @param object An estimator object.
+#' @param ... Additional arguments (typically a formula).
 #' @export
-setGeneric("estimate_tree_strata", function(object, ...) standardGeneric("estimate_tree_strata"))
-
-#' @export
-setGeneric("estimate_cond_strata", function(object, ...) standardGeneric("estimate_cond_strata"))
-
-#' @export
-setGeneric("estimate_cond_eu", function(object, ...) standardGeneric("estimate_cond_eu"))
-
-#' @export
-setGeneric("estimate_tree_eu", function(object, ...) standardGeneric("estimate_tree_eu"))
-
-#' @export
-setGeneric("estimate_cond", function(object, ...) standardGeneric("estimate_cond"))
-
-#' @export
-setGeneric("estimate_tree", function(object, ...) standardGeneric("estimate_tree"))
+setGeneric("estimate", function(object, ...) standardGeneric("estimate"))

@@ -1,5 +1,5 @@
 
-# fiaplyr
+# fiaplyr <img src="inst/logo.png" align="right" height="139" />
 
 <!-- badges: start -->
 <!-- badges: end -->
@@ -84,12 +84,12 @@ tree variables by `TPA_UNADJ` (Trees Per Acre) during aggregation.
 ``` r
 # Calculate Net Cubic Foot Volume per acre for each plot
 plot_vol <- handler |>
-  summarize_tree(VOLCFNET)
+  aggregate_tree(VOLCFNET)
 
 # The result is a lazy query. Collect to execute.
 head(collect(plot_vol))
 #> # A tibble: 6 × 6
-#>   CN             STATECD INVYR  PLOT COUNTYCD VOLCFNET
+#>   PLT_CN         STATECD INVYR  PLOT COUNTYCD VOLCFNET
 #>   <chr>            <int> <int> <int>    <int>    <dbl>
 #> 1 23871905010900      41  2001 65609       43    6937.
 #> 2 23872085010900      41  2001 92815       43    4165.
@@ -107,15 +107,15 @@ creating new variables on the fly.
 ``` r
 # Calculate Basal Area per acre by Species
 plot_ba_by_sp <- handler |>
-  specify_tree_domains(SPCD) |>                    # Group by Species Code
-  mutate_tree(BA = 0.005454 * DIA^2) |>            # Calculate Basal Area per tree
-  summarize_tree(BA)                               # Sum to plot level (weighted by TPA)
+  set_tree_domains(SPCD) |> # Group by Species Code
+  mutate_tree(BA = 0.005454 * DIA^2) |> # Calculate Basal Area per tree
+  aggregate_tree(BA) # Sum to plot level (weighted by TPA)
 
 # Verify the output
 # Note: This will result in multiple rows per plot (one for each species present)
 head(collect(plot_ba_by_sp))
 #> # A tibble: 6 × 7
-#>   CN             STATECD INVYR  PLOT COUNTYCD  SPCD    BA
+#>   PLT_CN         STATECD INVYR  PLOT COUNTYCD  SPCD    BA
 #>   <chr>            <int> <int> <int>    <int> <dbl> <dbl>
 #> 1 23871905010900      41  2001 65609       43    11     0
 #> 2 23871905010900      41  2001 65609       43    15     0

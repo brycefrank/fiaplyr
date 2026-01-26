@@ -263,3 +263,28 @@ setMethod("aggregate_tree", "EvalHandler", function(object, ...) {
 setMethod("aggregate_cond", "EvalHandler", function(object) {
   .make_cond_aggregates(object)
 })
+#' Get Evaluation ID
+#'
+#' @param object A EvalHandler object.
+#' @return The evaluation ID.
+#' @export
+setGeneric("evalid", function(object) standardGeneric("evalid"))
+
+#' @describeIn evalid Get evaluation ID for EvalHandler
+setMethod("evalid", "EvalHandler", function(object) {
+  object@evalid
+})
+
+#' Set Evaluation ID
+#'
+#' @param object A EvalHandler object.
+#' @param value The new evaluation ID.
+#' @return The modified object.
+#' @export
+setGeneric("evalid<-", function(object, value) standardGeneric("evalid<-"))
+
+#' @describeIn evalid Set evaluation ID for EvalHandler
+setMethod("evalid<-", "EvalHandler", function(object, value) {
+  object@evalid <- value
+  object
+})
