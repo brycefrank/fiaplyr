@@ -1,5 +1,5 @@
 
-# fiaplyr <img src="inst/logo.png" align="right" height="139" />
+# fiaplyr <img src="inst/logo.png" align="right" height="200" />
 
 <!-- badges: start -->
 <!-- badges: end -->
