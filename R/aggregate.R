@@ -69,6 +69,10 @@
     res <- res %>% dplyr::mutate(!!!object@cond_mutations)
   }
 
+  if (length(object@cond_filters) > 0) {
+    res <- res %>% dplyr::filter(!!!object@cond_filters)
+  }
+
   return(res)
 }
 
@@ -153,6 +157,10 @@
   # These are user-defined expressions queued via mutate_tree()
   if (length(object@tree_mutations) > 0) {
     res <- res %>% dplyr::mutate(!!!object@tree_mutations)
+  }
+
+  if (length(object@tree_filters) > 0) {
+    res <- res %>% dplyr::filter(!!!object@tree_filters)
   }
 
   return(res)

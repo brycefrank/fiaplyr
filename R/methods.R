@@ -19,6 +19,12 @@ setGeneric("mutate_tree", function(.data, ...) standardGeneric("mutate_tree"))
 setGeneric("mutate_cond", function(.data, ...) standardGeneric("mutate_cond"))
 
 #' @export
+setGeneric("filter_tree", function(.data, ...) standardGeneric("filter_tree"))
+
+#' @export
+setGeneric("filter_cond", function(.data, ...) standardGeneric("filter_cond"))
+
+#' @export
 setGeneric("set_tree_domains", function(.data, ...) standardGeneric("set_tree_domains"))
 
 #' @export

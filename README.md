@@ -7,12 +7,8 @@
 `fiaplyr` provides a modern, `dplyr`-style interface for working with
 Forest Inventory and Analysis (FIA) databases. It simplifies the process
 of querying complex FIA database structures by abstracting away the
-joins and filtering logic required for officially recognized
-“Evaluations” (EVALIDs).
-
-With `fiaplyr`, you can chain together operations to compute plot-level
-estimates (like volume per acre) while offloading the heavy lifting to
-the database.
+joins and filtering logic required to produce standard estimates and
+plot-level aggregations.
 
 ## Features
 
@@ -21,8 +17,6 @@ the database.
   Estimation Units, Strata, Plots, Conditions, Trees).
 - **Lazy Evaluation**: Uses `dbplyr` to construct queries lazily. Data
   is only pulled into R when you explicitly `collect()` it.
-- **Tidy Syntax**: Use familiar verbs like `summarize_tree`,
-  `summarize_cond`, `mutate_tree`, and `mutate_cond`.
 - **Zero-Fill**: Automatically handles missing domains (e.g., if a plot
   has no trees of a specific species, it correctly reports 0 instead of
   dropping the record).
@@ -33,7 +27,7 @@ You can install the development version of fiaplyr from GitHub:
 
 ``` r
 # install.packages("devtools")
-devtools::install_github("yourusername/fiaplyr")
+devtools::install_github("brycefrank/fiaplyr")
 ```
 
 ## Usage

@@ -25,7 +25,9 @@ setClass("EvalHandler",
     tree_mutations = "list",
     cond_mutations = "list",
     tree_domains = "ANY",
-    cond_domains = "ANY"
+    cond_domains = "ANY",
+    tree_filters = "list",
+    cond_filters = "list"
   )
 )
 
@@ -80,7 +82,9 @@ eval_handler <- function(db, evalid) {
     tree_mutations = list(),
     cond_mutations = list(),
     tree_domains = list(),
-    cond_domains = list()
+    cond_domains = list(),
+    tree_filters = list(),
+    cond_filters = list()
   )
 }
 
@@ -240,6 +244,40 @@ setMethod("set_cond_domains", "EvalHandler", function(.data, ...) {
 
   # Overwrite existing grouping
   .data@cond_domains <- new_groups
+
+  return(.data)
+})
+
+#' Filter Tree Table
+#'
+#' @param .data A EvalHandler object.
+#' @param ... Logical predicates defined in terms of the variables in the tree table.
+#' @return A EvalHandler object with pending filters.
+#' @importFrom dplyr filter
+#' @export
+setMethod("filter_tree", "EvalHandler", function(.data, ...) {
+  # Capture expressions as quosures
+  new_filters <- dplyr::quos(...)
+
+  # Append to existing filters
+  .data@tree_filters <- c(.data@tree_filters, new_filters)
+
+  return(.data)
+})
+
+#' Filter Condition Table
+#'
+#' @param .data A EvalHandler object.
+#' @param ... Logical predicates defined in terms of the variables in the condition table.
+#' @return A EvalHandler object with pending filters.
+#' @importFrom dplyr filter
+#' @export
+setMethod("filter_cond", "EvalHandler", function(.data, ...) {
+  # Capture expressions as quosures
+  new_filters <- dplyr::quos(...)
+
+  # Append to existing filters
+  .data@cond_filters <- c(.data@cond_filters, new_filters)
 
   return(.data)
 })

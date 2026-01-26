@@ -56,7 +56,7 @@
       </header><div class="row">
   <div class="contents col-md-9">
 <div class="section level1">
-<div class="page-header"><h1 id="fiaplyr">fiaplyr<a class="anchor" aria-label="anchor" href="#fiaplyr"></a>
+<div class="page-header"><h1 id="fiaplyr-">fiaplyr <img src="inst/logo.png" align="right" height="200"><a class="anchor" aria-label="anchor" href="#fiaplyr-"></a>
 </h1></div>
 <!-- badges: start -->
 <!-- badges: end -->
@@ -129,12 +129,12 @@
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Calculate Net Cubic Foot Volume per acre for each plot</span></span>
 <span><span class="va">plot_vol</span> <span class="op">&lt;-</span> <span class="va">handler</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu">summarize_tree</span><span class="op">(</span><span class="va">VOLCFNET</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="reference/aggregate_tree.html">aggregate_tree</a></span><span class="op">(</span><span class="va">VOLCFNET</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># The result is a lazy query. Collect to execute.</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect</a></span><span class="op">(</span><span class="va">plot_vol</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # A tibble: 6 × 6</span></span>
-<span><span class="co">#&gt;   CN             STATECD INVYR  PLOT COUNTYCD VOLCFNET</span></span>
+<span><span class="co">#&gt;   PLT_CN         STATECD INVYR  PLOT COUNTYCD VOLCFNET</span></span>
 <span><span class="co">#&gt;   &lt;chr&gt;            &lt;int&gt; &lt;int&gt; &lt;int&gt;    &lt;int&gt;    &lt;dbl&gt;</span></span>
 <span><span class="co">#&gt; 1 23871905010900      41  2001 65609       43    6937.</span></span>
 <span><span class="co">#&gt; 2 23872085010900      41  2001 92815       43    4165.</span></span>
@@ -150,15 +150,15 @@
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Calculate Basal Area per acre by Species</span></span>
 <span><span class="va">plot_ba_by_sp</span> <span class="op">&lt;-</span> <span class="va">handler</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu">specify_tree_domains</span><span class="op">(</span><span class="va">SPCD</span><span class="op">)</span> <span class="op">|&gt;</span>                    <span class="co"># Group by Species Code</span></span>
-<span>  <span class="fu">mutate_tree</span><span class="op">(</span>BA <span class="op">=</span> <span class="fl">0.005454</span> <span class="op">*</span> <span class="va">DIA</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span> <span class="op">|&gt;</span>            <span class="co"># Calculate Basal Area per tree</span></span>
-<span>  <span class="fu">summarize_tree</span><span class="op">(</span><span class="va">BA</span><span class="op">)</span>                               <span class="co"># Sum to plot level (weighted by TPA)</span></span>
+<span>  <span class="fu">set_tree_domains</span><span class="op">(</span><span class="va">SPCD</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="co"># Group by Species Code</span></span>
+<span>  <span class="fu">mutate_tree</span><span class="op">(</span>BA <span class="op">=</span> <span class="fl">0.005454</span> <span class="op">*</span> <span class="va">DIA</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="co"># Calculate Basal Area per tree</span></span>
+<span>  <span class="fu"><a href="reference/aggregate_tree.html">aggregate_tree</a></span><span class="op">(</span><span class="va">BA</span><span class="op">)</span> <span class="co"># Sum to plot level (weighted by TPA)</span></span>
 <span></span>
 <span><span class="co"># Verify the output</span></span>
 <span><span class="co"># Note: This will result in multiple rows per plot (one for each species present)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect</a></span><span class="op">(</span><span class="va">plot_ba_by_sp</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # A tibble: 6 × 7</span></span>
-<span><span class="co">#&gt;   CN             STATECD INVYR  PLOT COUNTYCD  SPCD    BA</span></span>
+<span><span class="co">#&gt;   PLT_CN         STATECD INVYR  PLOT COUNTYCD  SPCD    BA</span></span>
 <span><span class="co">#&gt;   &lt;chr&gt;            &lt;int&gt; &lt;int&gt; &lt;int&gt;    &lt;int&gt; &lt;dbl&gt; &lt;dbl&gt;</span></span>
 <span><span class="co">#&gt; 1 23871905010900      41  2001 65609       43    11     0</span></span>
 <span><span class="co">#&gt; 2 23871905010900      41  2001 65609       43    15     0</span></span>
