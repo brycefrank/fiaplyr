@@ -30,6 +30,12 @@ setClass("EvalHandler",
 eval_handler <- function(db, evalid, schema = new("StatusAnalysis")) {
   tables <- initialize_tables(schema, db, evalid)
 
+  if (!is.null(tables$pop_eval)) {
+    if (tables$pop_eval %>% dplyr::tally() %>% dplyr::collect() %>% dplyr::pull(n) == 0) {
+      stop(paste0("EVALID ", evalid, " does not exist in the database."))
+    }
+  }
+
   new("EvalHandler",
     db = db,
     evalid = evalid,
