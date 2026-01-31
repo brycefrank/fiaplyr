@@ -23,6 +23,7 @@ Collate:
     'PostStratifiedEstimator.R'
     'PostStratifiedRatioEstimator.R'
     'utils.R'
+    'explore.R'
     'scaffold.R'
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
