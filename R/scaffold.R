@@ -10,34 +10,29 @@
 #' @return A lazy query with the full scaffold joined to the aggregated data.
 #' @noRd
 .complete_scaffold <- function(plot_qry, aggregated_qry, plot_keys, domain_vars) {
-  # 1. Get all plots (Full Plot List)
-  all_plots <- plot_qry %>%
-    dplyr::select(dplyr::all_of(plot_keys))
-
-  # 2. Identify Target Variables (Response variables)
+  # 1. Identify Target Variables (Response variables)
   # Any column in the aggregated result that is NOT a plot key or a domain variable is a target variable.
   # We assume these are numeric and should be filled with 0 where missing.
   agg_cols <- colnames(aggregated_qry)
   target_vars <- setdiff(agg_cols, c(plot_keys, domain_vars))
 
-  # Construct the scaffold
+  # 2. Get all plots (Full Plot List)
+  all_plots <- plot_qry %>%
+    dplyr::select(dplyr::all_of(plot_keys))
+
   if (length(domain_vars) > 0) {
-    # Extract distinct combinations of domain variables from the aggregated data
-    observed_domains <- aggregated_qry %>%
-      dplyr::ungroup() %>%
-      dplyr::select(dplyr::all_of(domain_vars)) %>%
-      dplyr::distinct()
-
-    # Cross join: All Plots x Observed Domains
-    scaffold <- all_plots %>%
-      dplyr::cross_join(observed_domains, copy = TRUE)
-
-    # Join key
-    join_by <- c(plot_keys, domain_vars)
-  } else {
-    scaffold <- all_plots
-    join_by <- plot_keys
+    # Optimization: Densification with zeros is mathematically redundant for
+    # summation aggregation and causes exponential data growth.
+    # We return the aggregated data directly, ensuring it matches the plot list.
+    return(
+      aggregated_qry %>%
+        dplyr::ungroup() %>%
+        dplyr::semi_join(all_plots, by = plot_keys)
+    )
   }
+
+  scaffold <- all_plots
+  join_by <- plot_keys
 
   # Left join aggregated data onto the scaffold
   final_res <- scaffold %>%
