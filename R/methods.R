@@ -1,3 +1,11 @@
+#' Aggregate Data to Plot Level
+#'
+#' @param x A handler object.
+#' @param ... Additional arguments.
+#' @importFrom stats aggregate
+#' @export
+setGeneric("aggregate")
+
 #' Aggregate Trees to Plot Level
 #'
 #' @param object A handler object.
