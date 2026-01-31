@@ -1,11 +1,13 @@
 # Examples of Status and Change Analysis using the new Composition Pattern
-
 library(fiaplyr)
 library(dplyr)
 library(dbplyr)
+library(duckdb)
 
 # Mock DB connection (replace with actual connection)
-# db <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+db <- DBI::dbConnect(duckdb::duckdb(), "./db/fiadb_or.duckdb")
+
+explore_evals(db)
 
 # -----------------------------------------------------------------------------
 # Case 1: Status Analysis (Default)
@@ -14,16 +16,12 @@ library(dbplyr)
 # Initialize handler for a specific evaluation (e.g., EVALID 12345)
 # By default, this uses the StatusAnalysis schema.
 # It automatically loads PLOT, TREE, COND, etc.
-status_handler <- eval_handler(db, evalid = 12345)
+status_handler <- eval_handler(db, evalid = 411001)
 
 # Perform standard aggregation
 # This delegates to StatusAnalysis::aggregate_data -> .make_tree_aggregates
 status_agg <- status_handler %>%
-  aggregate(tree ~ VOLCFGRS)
-
-# You can also be explicit:
-status_handler_explicit <- eval_handler(db, evalid = 12345, schema = new("StatusAnalysis"))
-
+  aggregate(tree ~ VOLCFGRS | 1 | VOLCFNET)
 
 # -----------------------------------------------------------------------------
 # Case 2: Change Analysis (Future Implementation)
@@ -31,7 +29,7 @@ status_handler_explicit <- eval_handler(db, evalid = 12345, schema = new("Status
 
 # Initialize handler with the ChangeAnalysis schema.
 # This would load change-specific tables (e.g., TREE_GRM_COMPONENT) in the future.
-change_handler <- eval_handler(db, evalid = 1234503, schema = new("ChangeAnalysis"))
+change_handler <- eval_handler(db, evalid = 411703, schema = new("ChangeAnalysis"))
 
 # Perform change aggregation
 # The API will support timepoint wrappers: b() for beginning, m() for midpoint, e() for ending.

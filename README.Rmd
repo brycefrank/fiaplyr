@@ -45,14 +45,14 @@ devtools::install_github("yourusername/fiaplyr")
 Everything starts with a connection to your FIA SQLite database.
 
 ```{r}
-library(fiaplyr)
+devtools::load_all() # Load fiaplyr package from local source
 library(dplyr)
 library(DBI)
 library(RSQLite)
 
 # Establish a backend connection
-db_path <- "C:/fia/SQLite_FIADB_OR.db"
-con <- dbConnect(SQLite(), db_path)
+db_path <- "./db/fiadb_or.duckdb"
+con <- dbConnect(duckdb::duckdb(), db_path)
 ```
 
 ### The Evaluation Handler
