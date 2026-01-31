@@ -25,6 +25,8 @@ PostStratifiedRatioEstimator <- function(numerator, denominator = numerator) {
   }
 
   # Calculate strata weights (using numerator, as they share EVALID)
+  # Note: This returns a lazy query or local df depending on input.
+  # We store it as is.
   strata_weights <- numerator@tables$pop_stratum %>%
     dplyr::inner_join(
       numerator@tables$pop_estn_unit,
@@ -60,13 +62,11 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
   f_num <- args[[1]]
   f_den <- args[[2]]
 
-  # 1. Aggregate Numerator and Denominator
-  # --------------------------------------
-  agg_num_lazy <- aggregate(object@numerator, f_num)
-  agg_den_lazy <- aggregate(object@denominator, f_den)
-
-  dat_num <- dplyr::collect(agg_num_lazy)
-  dat_den <- dplyr::collect(agg_den_lazy)
+  # 1. Aggregate Numerator and Denominator (Lazy)
+  # ---------------------------------------------
+  # We use sparse = FALSE to ensure the scaffolding is complete in the DB query
+  agg_num_lazy <- aggregate(object@numerator, f_num, sparse = FALSE)
+  agg_den_lazy <- aggregate(object@denominator, f_den, sparse = FALSE)
 
   # 2. Identify Columns (Keys, Domains, Values)
   # -------------------------------------------
@@ -81,148 +81,170 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
   if (length(vals_num) == 1 && vals_num == "1") vals_num <- "1"
   if (length(vals_den) == 1 && vals_den == "1") vals_den <- "1"
 
-  cols_num <- colnames(dat_num)
-  doms_num <- setdiff(cols_num, c(plot_keys, vals_num))
+  # Use colnames() on lazy objects to inspect schema without pulling data
+  cols_num <- colnames(agg_num_lazy)
+  cols_den <- colnames(agg_den_lazy)
 
-  cols_den <- colnames(dat_den)
+  doms_num <- setdiff(cols_num, c(plot_keys, vals_num))
   doms_den <- setdiff(cols_den, c(plot_keys, vals_den))
 
-  # 3. Pivot to Wide Format
-  # -----------------------
-  p_num <- .process_wide(dat_num, doms_num, vals_num, "N")
-  p_den <- .process_wide(dat_den, doms_den, vals_den, "D")
+  # 3. Rename with Suffixes (Lazy)
+  # ------------------------------
+  suffix_num <- "_n"
+  suffix_den <- "_d"
 
-  # 4. Join and Attach Weights
-  # --------------------------
-  joined <- dplyr::full_join(p_num$wide, p_den$wide, by = "PLT_CN")
+  # Helper to generate rename mapping
+  get_rename_map <- function(vars, suffix) {
+    setNames(vars, paste0(vars, suffix))
+  }
 
-  data_cols <- c(p_num$meta$col_name, p_den$meta$col_name)
-  joined <- joined %>%
-    dplyr::mutate(dplyr::across(dplyr::all_of(data_cols), ~ tidyr::replace_na(., 0)))
+  # Rename numerator columns
+  map_dom_n <- get_rename_map(doms_num, suffix_num)
+  map_val_n <- get_rename_map(vals_num, suffix_num)
+  agg_num_renamed <- agg_num_lazy %>%
+    dplyr::rename(!!!map_dom_n, !!!map_val_n)
 
-  plt_cns <- joined$PLT_CN
+  # Rename denominator columns
+  map_dom_d <- get_rename_map(doms_den, suffix_den)
+  map_val_d <- get_rename_map(vals_den, suffix_den)
+  agg_den_renamed <- agg_den_lazy %>%
+    dplyr::rename(!!!map_dom_d, !!!map_val_d)
+
+  # Update lists of names with suffixes
+  doms_num_suf <- names(map_dom_n)
+  vals_num_suf <- names(map_val_n)
+  doms_den_suf <- names(map_dom_d)
+  vals_den_suf <- names(map_val_d)
+
+  all_doms <- c(doms_num_suf, doms_den_suf)
+  all_vals <- c(vals_num_suf, vals_den_suf)
+
+  # 4. Join and Fill Zeros (Lazy)
+  # -----------------------------
+  joined <- dplyr::full_join(agg_num_renamed, agg_den_renamed, by = plot_keys)
+
+  # Fill NAs with 0 using coalesce
+  # mutate(col = coalesce(col, 0))
+  mutate_args <- lapply(all_vals, function(v) {
+    rlang::expr(dplyr::coalesce(!!rlang::sym(v), 0))
+  })
+  names(mutate_args) <- all_vals
+
+  joined_filled <- joined %>%
+    dplyr::mutate(!!!mutate_args)
+
+  # 5. Attach Weights (Lazy)
+  # ------------------------
+  # We access the handler's tables directly to ensure we stay in the same lazy source
+  # Note: object@strata_weights might be a collected DF if the constructor ran collect().
+  # To be safe and keep it lazy, we re-derive the weights query from the numerator handler.
+
+  strata_weights_lazy <- object@numerator@tables$pop_stratum %>%
+    dplyr::inner_join(
+      object@numerator@tables$pop_estn_unit,
+      by = c("ESTN_UNIT_CN" = "CN"),
+      suffix = c("", ".eu")
+    ) %>%
+    dplyr::mutate(
+      w_h = P1POINTCNT / P1PNTCNT_EU # Keep as DB numeric type
+    ) %>%
+    dplyr::select(
+      STRATUM_CN = CN, ESTN_UNIT_CN, w_h, P2POINTCNT, AREA_USED
+    )
 
   plot_stratum <- object@numerator@tables$pop_plot_stratum_assgn %>%
-    dplyr::collect() %>%
     dplyr::select(PLT_CN, STRATUM_CN)
 
-  joined_strat <- joined %>%
-    dplyr::inner_join(plot_stratum, by = "PLT_CN")
+  final_dat <- joined_filled %>%
+    dplyr::inner_join(plot_stratum, by = "PLT_CN") %>%
+    dplyr::inner_join(strata_weights_lazy, by = "STRATUM_CN")
 
-  strata_weights <- dplyr::collect(object@strata_weights)
+  # 6. Estimate Totals (Means) - Lazy Aggregation
+  # ---------------------------------------------
 
-  final_dat <- joined_strat %>%
-    dplyr::inner_join(strata_weights, by = "STRATUM_CN")
+  # Step 6a: Stratum Means
+  # Group by EstUnit, Stratum, and all Domains
+  group_cols_strat <- c("ESTN_UNIT_CN", "STRATUM_CN", "w_h", "P2POINTCNT", all_doms)
 
-  # 5. Estimate Totals (Means)
-  # --------------------------
-  strat_means <- final_dat %>%
-    dplyr::group_by(ESTN_UNIT_CN, STRATUM_CN, w_h, P2POINTCNT) %>%
+  # mean = sum(val) / P2POINTCNT
+  # Note: P2POINTCNT is constant for the stratum, so min/max/mean works.
+  # We use sum(val) then divide.
+  strat_sums <- final_dat %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(group_cols_strat))) %>%
     dplyr::summarise(
-      dplyr::across(dplyr::all_of(data_cols), ~ sum(.x) / unique(P2POINTCNT)),
+      dplyr::across(dplyr::all_of(all_vals), sum, .names = "sum_{.col}"),
       .groups = "drop"
     )
+
+  # Calculate means from sums
+  # val_mean = sum_val / P2POINTCNT
+  mean_args <- lapply(all_vals, function(v) {
+    rlang::expr(!!rlang::sym(paste0("sum_", v)) / P2POINTCNT)
+  })
+  names(mean_args) <- all_vals
+
+  strat_means <- strat_sums %>%
+    dplyr::mutate(!!!mean_args) %>%
+    dplyr::select(-dplyr::starts_with("sum_"))
+
+  # Step 6b: Estimation Unit Totals
+  # Weighted Sum: sum(mean * w_h)
+  group_cols_eu <- c("ESTN_UNIT_CN", all_doms)
 
   eu_means <- strat_means %>%
-    dplyr::group_by(ESTN_UNIT_CN) %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(group_cols_eu))) %>%
     dplyr::summarise(
-      dplyr::across(dplyr::all_of(data_cols), ~ sum(.x * w_h)),
+      dplyr::across(dplyr::all_of(all_vals), ~ sum(.x * w_h, na.rm = TRUE)),
       .groups = "drop"
     )
 
+  # Step 6c: Population Totals
+  # Weighted Sum across EstUnits
   eu_weights <- object@numerator@tables$pop_estn_unit %>%
-    dplyr::collect() %>%
     dplyr::mutate(w_eu = P1PNTCNT_EU / sum(P1PNTCNT_EU, na.rm = TRUE)) %>%
     dplyr::select(ESTN_UNIT_CN = CN, w_eu)
 
-  pop_est <- eu_means %>%
+  pop_est_lazy <- eu_means %>%
     dplyr::left_join(eu_weights, by = "ESTN_UNIT_CN") %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(all_doms))) %>%
     dplyr::summarise(
-      dplyr::across(dplyr::all_of(data_cols), ~ sum(.x * w_eu, na.rm = TRUE))
+      dplyr::across(dplyr::all_of(all_vals), ~ sum(.x * w_eu, na.rm = TRUE)),
+      .groups = "drop"
     )
 
-  # 6. Compute Ratios
-  # -----------------
-  vals <- as.list(pop_est)
+  # 7. Collect and Compute Ratios (Local)
+  # -------------------------------------
+  # At this point, the data is aggregated to (Domains x 1)
+  # It is small enough to collect.
+  pop_est <- dplyr::collect(pop_est_lazy)
 
-  res_grid <- tidyr::expand_grid(
-    num_col = p_num$meta$col_name,
-    den_col = p_den$meta$col_name
-  )
+  # Iterate over all pairs of Numerator x Denominator variables
+  results <- list()
 
-  res_annotated <- res_grid %>%
-    dplyr::left_join(p_num$meta, by = c("num_col" = "col_name")) %>%
-    dplyr::left_join(p_den$meta, by = c("den_col" = "col_name"), suffix = c("", "_den"))
+  for (n_col in vals_num_suf) {
+    for (d_col in vals_den_suf) {
+      # Remove suffix for clean variable name
+      n_name <- substr(n_col, 1, nchar(n_col) - nchar(suffix_num))
+      d_name <- substr(d_col, 1, nchar(d_col) - nchar(suffix_den))
 
-  res_annotated$estimate <- mapply(function(n, d) {
-    vn <- vals[[n]]
-    vd <- vals[[d]]
-    if (vd == 0) return(NA_real_)
-    vn / vd
-  }, res_annotated$num_col, res_annotated$den_col)
+      tmp_res <- pop_est %>%
+        dplyr::mutate(
+          estimate = .data[[n_col]] / .data[[d_col]],
+          variable = n_name,
+          den_variable = d_name
+        ) %>%
+        dplyr::select(
+          dplyr::all_of(all_doms),
+          variable,
+          den_variable,
+          estimate
+        )
 
-  final_res <- res_annotated %>%
-    dplyr::select(-num_col, -den_col)
+      results[[paste(n_col, d_col)]] <- tmp_res
+    }
+  }
+
+  final_res <- dplyr::bind_rows(results)
 
   return(final_res)
 })
-
-
-#' Helper to process data into wide format with metadata
-#' @keywords internal
-.process_wide <- function(dat, doms, vals, prefix) {
-  if (length(doms) == 0) {
-    wide <- dat %>%
-      dplyr::select(dplyr::all_of(c("PLT_CN", vals))) %>%
-      dplyr::rename_with(~ paste0(prefix, "_", .), .cols = dplyr::all_of(vals))
-
-    meta <- tidyr::expand_grid(variable = vals) %>%
-      dplyr::mutate(col_name = paste0(prefix, "_", variable))
-
-    return(list(wide = wide, meta = meta))
-  }
-
-  unique_doms <- dat %>%
-    dplyr::select(dplyr::all_of(doms)) %>%
-    dplyr::distinct() %>%
-    dplyr::mutate(dom_id = dplyr::row_number())
-
-  dat_with_id <- dat %>%
-    dplyr::inner_join(unique_doms, by = doms)
-
-  wide <- dat_with_id %>%
-    dplyr::select(PLT_CN, dom_id, dplyr::all_of(vals)) %>%
-    tidyr::pivot_wider(
-      id_cols = PLT_CN,
-      names_from = dom_id,
-      values_from = dplyr::all_of(vals),
-      names_glue = "{.value}_dom{dom_id}",
-      values_fill = 0
-    )
-
-  wide_cols <- setdiff(colnames(wide), "PLT_CN")
-
-  matches <- regexec("^(.*)_dom(\\d+)$", wide_cols)
-  extracted <- regmatches(wide_cols, matches)
-
-  meta_list <- lapply(seq_along(wide_cols), function(i) {
-    parts <- extracted[[i]]
-    var_name <- parts[2]
-    d_id <- as.integer(parts[3])
-
-    d_vals <- unique_doms %>% dplyr::filter(dom_id == !!d_id)
-
-    cbind(
-      data.frame(col_name = wide_cols[i], variable = var_name, stringsAsFactors = FALSE),
-      d_vals %>% dplyr::select(-dom_id)
-    )
-  })
-
-  meta <- do.call(rbind, meta_list)
-
-  new_names <- paste0(prefix, "_", wide_cols)
-  colnames(wide)[match(wide_cols, colnames(wide))] <- new_names
-  meta$col_name <- new_names
-
-  list(wide = wide, meta = meta)
-}
