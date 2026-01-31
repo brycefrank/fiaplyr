@@ -9,23 +9,13 @@ devtools::load_all()
 db_path <- "./db/fiadb_or.duckdb"
 con <- dbConnect(duckdb::duckdb(), dbdir = db_path, read_only = TRUE)
 
-handler <- eval_handler(con, 411001) |>
-  mutate_tree(
-    BA = DIA^2 * 0.005454
-  ) |>
-  mutate_cond(
-    # round FORTYPCD to the nearest tens
-    FORGRP = round(FORTYPCD, -1)
-  ) |>
-  set_cond_domains(FORGRP, OWNCD)
+handler_a <- eval_handler(con, 411001) |>
+  set_cond_domains(OWNCD)
 
-ps <- PostStratifiedEstimator(handler)
+handler_b <- eval_handler(con, 411001) |>
+  set_cond_domains(COND_STATUS_CD)
 
-ps |>
-  estimate(tree ~ VOLCFGRS | BA | DRYBIO_BOLE) |>
-  collect()
+psr <- PostStratifiedRatioEstimator(handler_a, handler_b)
 
-handler@tree
-
-ps |>
-  estimate(cond ~ 1)
+psr |>
+  estimate_ratio(tree ~ VOLCFGRS,  tree ~ VOLCFGRS)

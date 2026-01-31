@@ -62,11 +62,8 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
   f_num <- args[[1]]
   f_den <- args[[2]]
 
-  # 1. Aggregate Numerator and Denominator (Lazy)
-  # ---------------------------------------------
-  # We use sparse = FALSE to ensure the scaffolding is complete in the DB query
-  agg_num_lazy <- aggregate(object@numerator, f_num, sparse = FALSE)
-  agg_den_lazy <- aggregate(object@denominator, f_den, sparse = FALSE)
+  agg_num <- aggregate(object@numerator, f_num, sparse = FALSE)
+  agg_den <- aggregate(object@denominator, f_den, sparse = FALSE)
 
   # 2. Identify Columns (Keys, Domains, Values)
   # -------------------------------------------
@@ -82,8 +79,8 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
   if (length(vals_den) == 1 && vals_den == "1") vals_den <- "1"
 
   # Use colnames() on lazy objects to inspect schema without pulling data
-  cols_num <- colnames(agg_num_lazy)
-  cols_den <- colnames(agg_den_lazy)
+  cols_num <- colnames(agg_num)
+  cols_den <- colnames(agg_den)
 
   doms_num <- setdiff(cols_num, c(plot_keys, vals_num))
   doms_den <- setdiff(cols_den, c(plot_keys, vals_den))
@@ -101,13 +98,13 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
   # Rename numerator columns
   map_dom_n <- get_rename_map(doms_num, suffix_num)
   map_val_n <- get_rename_map(vals_num, suffix_num)
-  agg_num_renamed <- agg_num_lazy %>%
+  agg_num_renamed <- agg_num %>%
     dplyr::rename(!!!map_dom_n, !!!map_val_n)
 
   # Rename denominator columns
   map_dom_d <- get_rename_map(doms_den, suffix_den)
   map_val_d <- get_rename_map(vals_den, suffix_den)
-  agg_den_renamed <- agg_den_lazy %>%
+  agg_den_renamed <- agg_den %>%
     dplyr::rename(!!!map_dom_d, !!!map_val_d)
 
   # Update lists of names with suffixes
@@ -119,8 +116,6 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
   all_doms <- c(doms_num_suf, doms_den_suf)
   all_vals <- c(vals_num_suf, vals_den_suf)
 
-  # 4. Join and Fill Zeros (Lazy)
-  # -----------------------------
   joined <- dplyr::full_join(agg_num_renamed, agg_den_renamed, by = plot_keys)
 
   # Fill NAs with 0 using coalesce
@@ -133,13 +128,7 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
   joined_filled <- joined %>%
     dplyr::mutate(!!!mutate_args)
 
-  # 5. Attach Weights (Lazy)
-  # ------------------------
-  # We access the handler's tables directly to ensure we stay in the same lazy source
-  # Note: object@strata_weights might be a collected DF if the constructor ran collect().
-  # To be safe and keep it lazy, we re-derive the weights query from the numerator handler.
-
-  strata_weights_lazy <- object@numerator@tables$pop_stratum %>%
+  strata_weights <- object@numerator@tables$pop_stratum %>%
     dplyr::inner_join(
       object@numerator@tables$pop_estn_unit,
       by = c("ESTN_UNIT_CN" = "CN"),
@@ -157,18 +146,11 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
 
   final_dat <- joined_filled %>%
     dplyr::inner_join(plot_stratum, by = "PLT_CN") %>%
-    dplyr::inner_join(strata_weights_lazy, by = "STRATUM_CN")
+    dplyr::inner_join(strata_weights, by = "STRATUM_CN")
 
-  # 6. Estimate Totals (Means) - Lazy Aggregation
-  # ---------------------------------------------
-
-  # Step 6a: Stratum Means
-  # Group by EstUnit, Stratum, and all Domains
+  # Estimate Totals (Means) - Lazy Aggregation
   group_cols_strat <- c("ESTN_UNIT_CN", "STRATUM_CN", "w_h", "P2POINTCNT", all_doms)
 
-  # mean = sum(val) / P2POINTCNT
-  # Note: P2POINTCNT is constant for the stratum, so min/max/mean works.
-  # We use sum(val) then divide.
   strat_sums <- final_dat %>%
     dplyr::group_by(dplyr::across(dplyr::all_of(group_cols_strat))) %>%
     dplyr::summarise(
@@ -187,8 +169,7 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
     dplyr::mutate(!!!mean_args) %>%
     dplyr::select(-dplyr::starts_with("sum_"))
 
-  # Step 6b: Estimation Unit Totals
-  # Weighted Sum: sum(mean * w_h)
+
   group_cols_eu <- c("ESTN_UNIT_CN", all_doms)
 
   eu_means <- strat_means %>%
@@ -198,13 +179,12 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
       .groups = "drop"
     )
 
-  # Step 6c: Population Totals
   # Weighted Sum across EstUnits
   eu_weights <- object@numerator@tables$pop_estn_unit %>%
     dplyr::mutate(w_eu = P1PNTCNT_EU / sum(P1PNTCNT_EU, na.rm = TRUE)) %>%
     dplyr::select(ESTN_UNIT_CN = CN, w_eu)
 
-  pop_est_lazy <- eu_means %>%
+  pop_est <- eu_means %>%
     dplyr::left_join(eu_weights, by = "ESTN_UNIT_CN") %>%
     dplyr::group_by(dplyr::across(dplyr::all_of(all_doms))) %>%
     dplyr::summarise(
@@ -216,8 +196,6 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
   # -------------------------------------
   # At this point, the data is aggregated to (Domains x 1)
   # It is small enough to collect.
-  pop_est <- dplyr::collect(pop_est_lazy)
-
   # Iterate over all pairs of Numerator x Denominator variables
   results <- list()
 
