@@ -129,3 +129,26 @@ vol_by_sp_est <- handler |>
 
 head(vol_by_sp_est)
 ```
+
+## Change Analysis
+
+For Change Evaluations (EVALIDs ending in '03'), `fiaplyr` automatically uses the `ChangeAnalysis` schema. This allows you to access Growth, Removals, and Mortality (GRM) data.
+
+You can target variables at specific timepoints using `b()` (begin), `m()` (midpoint), and `e()` (end) in your aggregation formulas.
+
+```{r}
+# Initialize handler for a Change Evaluation (e.g., 411003)
+# Note: EVALIDs ending in '03' automatically trigger ChangeAnalysis
+change_handler <- eval_handler(con, 411003, schema = new("ChangeAnalysis"))
+
+# Calculate Net Volume at Beginning and End of the period
+# This allows you to compute Net Growth (End - Begin)
+growth_data <- change_handler |>
+  aggregate(tree ~ b(VOLCFNET) | e(VOLCFNET))
+
+# Collect and calculate growth
+growth_data |>
+  collect() |>
+  mutate(NetGrowth = e_VOLCFNET - b_VOLCFNET) |>
+  head()
+```
