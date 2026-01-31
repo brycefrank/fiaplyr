@@ -107,7 +107,8 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ...) {
 }
 
 .estimate_cond_strata_internal <- function(object) {
-  cond_values <- .make_cond_aggregates(object@handler, adjusted = TRUE)
+  # Use sparse = TRUE for performance optimization
+  cond_values <- .make_cond_aggregates(object@handler, adjusted = TRUE, sparse = TRUE)
   strata_summary <- .get_strata_summary(object@handler)
 
   combined_data <- cond_values %>%
@@ -186,7 +187,8 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ...) {
 
 .estimate_tree_strata_internal <- function(object, targets) {
   syms <- rlang::syms(targets)
-  tree_values <- .make_tree_aggregates(object@handler, !!!syms, adjusted = TRUE)
+  # Use sparse = TRUE for performance optimization
+  tree_values <- .make_tree_aggregates(object@handler, !!!syms, adjusted = TRUE, sparse = TRUE)
   strata_summary <- .get_strata_summary(object@handler)
 
   combined_data <- tree_values %>%

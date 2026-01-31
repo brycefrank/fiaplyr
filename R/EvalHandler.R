@@ -286,20 +286,21 @@ setMethod("filter_cond", "EvalHandler", function(.data, ...) {
 #'
 #' @param object A EvalHandler object.
 #' @param ... Variables to aggregate (tidy-select supported)
+#' @param sparse Logical. If TRUE, returns a sparse result (only observed combinations). Defaults to FALSE.
 #' @return A lazy query with plot-level summaries.
 #' @export
-setMethod("aggregate_tree", "EvalHandler", function(object, ...) {
-  .make_tree_aggregates(object, ...)
+setMethod("aggregate_tree", "EvalHandler", function(object, ..., sparse = FALSE) {
+  .make_tree_aggregates(object, ..., sparse = sparse)
 })
 
 #' Aggregate Conditions to Plot Level
 #'
 #' @param object A EvalHandler object.
-#' @param ... Variables to aggregate (tidy-select supported)
+#' @param sparse Logical. If TRUE, returns a sparse result (only observed combinations). Defaults to FALSE.
 #' @return A lazy query with plot-level summaries.
 #' @export
-setMethod("aggregate_cond", "EvalHandler", function(object) {
-  .make_cond_aggregates(object)
+setMethod("aggregate_cond", "EvalHandler", function(object, sparse = FALSE) {
+  .make_cond_aggregates(object, sparse = sparse)
 })
 #' Get Evaluation ID
 #'

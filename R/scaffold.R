@@ -6,10 +6,11 @@
 #' @param aggregated_qry The query with aggregated results.
 #' @param plot_keys A character vector of columns that uniquely identify a plot (e.g., c("CN", "STATECD", "INVYR", "PLOT", "COUNTYCD")).
 #' @param domain_vars A character vector of grouping variables (domains) that form the scaffold with plot_keys.
+#' @param sparse Logical. If TRUE, returns a sparse result (only observed combinations) to optimize performance. Defaults to FALSE.
 #'
 #' @return A lazy query with the full scaffold joined to the aggregated data.
 #' @noRd
-.complete_scaffold <- function(plot_qry, aggregated_qry, plot_keys, domain_vars) {
+.complete_scaffold <- function(plot_qry, aggregated_qry, plot_keys, domain_vars, sparse = FALSE) {
   # 1. Identify Target Variables (Response variables)
   # Any column in the aggregated result that is NOT a plot key or a domain variable is a target variable.
   # We assume these are numeric and should be filled with 0 where missing.
@@ -20,7 +21,7 @@
   all_plots <- plot_qry %>%
     dplyr::select(dplyr::all_of(plot_keys))
 
-  if (length(domain_vars) > 0) {
+  if (sparse && length(domain_vars) > 0) {
     # Optimization: Densification with zeros is mathematically redundant for
     # summation aggregation and causes exponential data growth.
     # We return the aggregated data directly, ensuring it matches the plot list.
@@ -31,8 +32,23 @@
     )
   }
 
-  scaffold <- all_plots
-  join_by <- plot_keys
+  if (length(domain_vars) > 0) {
+    # Extract distinct combinations of domain variables from the aggregated data
+    observed_domains <- aggregated_qry %>%
+      dplyr::ungroup() %>%
+      dplyr::select(dplyr::all_of(domain_vars)) %>%
+      dplyr::distinct()
+
+    # Cross join: All Plots x Observed Domains
+    scaffold <- all_plots %>%
+      dplyr::cross_join(observed_domains, copy = TRUE)
+
+    # Join key
+    join_by <- c(plot_keys, domain_vars)
+  } else {
+    scaffold <- all_plots
+    join_by <- plot_keys
+  }
 
   # Left join aggregated data onto the scaffold
   final_res <- scaffold %>%
