@@ -16,7 +16,7 @@ setClass("Estimator",
 .get_subptype_adjustment_factors <- function(object, subptypes = c("MACR", "SUBP", "MICR")) {
   subptype_vars <- paste0("ADJ_FACTOR_", subptypes)
 
-  object@pop_stratum %>%
+  object@tables$pop_stratum %>%
     dplyr::select(
       CN,
       dplyr::all_of(subptype_vars)
@@ -40,9 +40,9 @@ setClass("Estimator",
 #' @return A dataframe with strata summary statistics.
 #' @keywords internal
 .get_strata_summary <- function(handler) {
-  handler@pop_stratum %>%
+  handler@tables$pop_stratum %>%
     dplyr::inner_join(
-      handler@pop_estn_unit,
+      handler@tables$pop_estn_unit,
       by = c("ESTN_UNIT_CN" = "CN"),
       suffix = c("", ".eu")
     ) %>%

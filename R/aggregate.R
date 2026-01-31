@@ -23,7 +23,7 @@
 
     aggregated <- res |>
       dplyr::left_join(
-        object@pop_plot_stratum_assgn %>% dplyr::select(PLT_CN, STRATUM_CN),
+        object@tables$pop_plot_stratum_assgn %>% dplyr::select(PLT_CN, STRATUM_CN),
         by = c("CN" = "PLT_CN")
       ) |>
       dplyr::left_join(
@@ -47,7 +47,7 @@
 
   # Use helper to build complete scaffold and merge
   final_res <- .complete_scaffold(
-    plot_qry = object@plot,
+    plot_qry = object@tables$plot,
     aggregated_qry = aggregated,
     plot_keys = plot_keys,
     domain_vars = domain_vars,
@@ -62,8 +62,8 @@
 
 
 .build_cond_data <- function(object) {
-  res <- object@plot %>%
-    dplyr::inner_join(object@cond, by = c("CN" = "PLT_CN"), suffix = c("", ".cond"))
+  res <- object@tables$plot %>%
+    dplyr::inner_join(object@tables$cond, by = c("CN" = "PLT_CN"), suffix = c("", ".cond"))
 
   # Apply pending mutations from the handler object
   if (length(object@cond_mutations) > 0) {
@@ -126,7 +126,7 @@
 
   # Use helper to build complete scaffold and merge
   final_res <- .complete_scaffold(
-    plot_qry = object@plot,
+    plot_qry = object@tables$plot,
     aggregated_qry = aggregated,
     plot_keys = plot_keys,
     domain_vars = domain_vars,
@@ -141,9 +141,9 @@
 
 #' @keywords internal
 .build_tree_data <- function(object) {
-  res <- object@plot %>%
-    dplyr::inner_join(object@cond, by = c("CN" = "PLT_CN"), suffix = c("", ".cond")) %>%
-    dplyr::inner_join(object@tree, by = c("CN" = "PLT_CN", "CONDID" = "CONDID"), suffix = c("", ".tree"))
+  res <- object@tables$plot %>%
+    dplyr::inner_join(object@tables$cond, by = c("CN" = "PLT_CN"), suffix = c("", ".cond")) %>%
+    dplyr::inner_join(object@tables$tree, by = c("CN" = "PLT_CN", "CONDID" = "CONDID"), suffix = c("", ".tree"))
 
   # Apply standard filtering
   res <- res %>%

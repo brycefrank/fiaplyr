@@ -25,9 +25,9 @@ PostStratifiedRatioEstimator <- function(numerator, denominator = numerator) {
   }
 
   # Calculate strata weights (using numerator, as they share EVALID)
-  strata_weights <- numerator@pop_stratum %>%
+  strata_weights <- numerator@tables$pop_stratum %>%
     dplyr::inner_join(
-      numerator@pop_estn_unit,
+      numerator@tables$pop_estn_unit,
       by = c("ESTN_UNIT_CN" = "CN"),
       suffix = c("", ".eu")
     ) %>%

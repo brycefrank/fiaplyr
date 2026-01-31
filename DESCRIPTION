@@ -17,6 +17,7 @@ Collate:
     'aggregate.R'
     'utils-formula.R'
     'BaseHandler.R'
+    'AnalysisSchema.R'
     'EvalHandler.R'
     'Estimator.R'
     'PostStratifiedEstimator.R'
