@@ -11,7 +11,9 @@ Imports:
     dplyr,
     dbplyr,
     DBI,
-    cli
+    cli,
+    tidyr,
+    rlang
 Collate:
     'methods.R'
     'aggregate.R'

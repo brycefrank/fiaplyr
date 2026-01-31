@@ -13,6 +13,8 @@ setup_test_db <- function() {
   DBI::dbWriteTable(con, "POP_ESTN_UNIT", data.frame(
     CN = 1,
     EVAL_CN = 1,
+    P1PNTCNT_EU = 100,
+    AREA_USED = 1000,
     stringsAsFactors = FALSE
   ))
 
@@ -20,6 +22,8 @@ setup_test_db <- function() {
   DBI::dbWriteTable(con, "POP_STRATUM", data.frame(
     CN = c(1, 2),
     ESTN_UNIT_CN = 1,
+    P1POINTCNT = c(50, 50),
+    P2POINTCNT = c(2, 2),
     stringsAsFactors = FALSE
   ))
 
@@ -36,6 +40,9 @@ setup_test_db <- function() {
     CN = c(101, 102, 103, 104),
     INVYR = 2020,
     MEASYEAR = 2020,
+    STATECD = 1,
+    COUNTYCD = 1,
+    PLOT = c(1, 2, 3, 4),
     stringsAsFactors = FALSE
   ))
 
@@ -46,6 +53,7 @@ setup_test_db <- function() {
     CONDID = c(1, 1, 1, 1, 2),
     FORTYPCD = c(100, 100, 200, 200, 300),
     OWNCD = c(1, 1, 2, 2, 2),
+    CONDPROP_UNADJ = c(1, 1, 1, 0.5, 0.5),
     stringsAsFactors = FALSE
   ))
 
@@ -57,6 +65,8 @@ setup_test_db <- function() {
     DIA = c(10, 12, 8, 14),
     VOLCFNET = c(10, 15, 5, 20),
     VOLCFGRS = c(11, 16, 6, 21),
+    SPCD = c(1, 2, 1, 2), # 1=Pine, 2=Oak
+    TPA_UNADJ = c(6.0, 6.0, 6.0, 6.0),
     stringsAsFactors = FALSE
   ))
 
