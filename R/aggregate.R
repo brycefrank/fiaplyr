@@ -2,7 +2,7 @@
 #'
 #' @param object A EvalHandler object.
 #' @keywords internal
-.make_cond_aggregates <- function(object, adjusted = FALSE) {
+.make_cond_aggregates <- function(object, adjusted = FALSE, sparse = FALSE) {
   res <- .build_cond_data(object)
 
   # Standard PLOT keys
@@ -50,7 +50,8 @@
     plot_qry = object@plot,
     aggregated_qry = aggregated,
     plot_keys = plot_keys,
-    domain_vars = domain_vars
+    domain_vars = domain_vars,
+    sparse = sparse
   )
 
   final_res <- final_res %>%
@@ -83,7 +84,7 @@
 #' @param ... Variables to aggregate (tidy-select supported)
 #' @param level The level to aggregate to. Can be "plot" or "subplot".
 #' @keywords internal
-.make_tree_aggregates <- function(object, ..., adjusted = FALSE, level = "plot") {
+.make_tree_aggregates <- function(object, ..., adjusted = FALSE, level = "plot", sparse = FALSE) {
   res <- .build_tree_data(object)
 
   plot_keys <- c("CN", "STATECD", "INVYR", "PLOT", "COUNTYCD")
@@ -128,7 +129,8 @@
     plot_qry = object@plot,
     aggregated_qry = aggregated,
     plot_keys = plot_keys,
-    domain_vars = domain_vars
+    domain_vars = domain_vars,
+    sparse = sparse
   )
 
   final_res <- final_res %>%
