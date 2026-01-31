@@ -1,26 +1,16 @@
 #' Class for Evaluation Pipeline
 #'
 #' @slot evalid The evaluation ID (numeric).
-#' @slot plot Lazy query for PLOT table.
-#' @slot tree Lazy query for TREE table.
-#' @slot cond Lazy query for COND table.
-#' @slot pop_estn_unit Lazy query for POP_ESTN_UNIT table.
-#' @slot pop_stratum Lazy query for POP_STRATUM table.
-#' @slot pop_plot_stratum_assgn Lazy query for POP_PLOT_STRATUM_ASSGN table.
-#' @slot subp_cond Lazy query for SUBP_COND table.
+#' @slot tables A list of lazy queries for the tables.
+#' @slot schema The AnalysisSchema used.
 #' @slot internal_cache Environment for caching intermediate results.
 #' @export
 setClass("EvalHandler",
   contains = "BaseHandler",
   slots = list(
     evalid = "numeric",
-    plot = "ANY",
-    tree = "ANY",
-    cond = "ANY",
-    pop_estn_unit = "ANY",
-    pop_stratum = "ANY",
-    pop_plot_stratum_assgn = "ANY",
-    subp_cond = "ANY",
+    tables = "list",
+    schema = "AnalysisSchema",
     internal_cache = "environment",
     tree_mutations = "list",
     cond_mutations = "list",
@@ -35,49 +25,16 @@ setClass("EvalHandler",
 #'
 #' @param db A DBIConnection object.
 #' @param evalid A numeric identifier for the evaluation.
+#' @param schema An AnalysisSchema object. Defaults to StatusAnalysis.
 #' @export
-eval_handler <- function(db, evalid) {
-  pop_eval_qry <- dplyr::tbl(db, "POP_EVAL") %>%
-    dplyr::filter(EVALID == !!evalid)
-
-  # Filter POP_ESTN_UNIT first using EVALID
-  pop_estn_unit_qry <- dplyr::tbl(db, "POP_ESTN_UNIT") %>%
-    dplyr::semi_join(pop_eval_qry, by = c("EVAL_CN" = "CN"))
-
-  # Filter POP_STRATUM using POP_ESTN_UNIT
-  pop_stratum_qry <- dplyr::tbl(db, "POP_STRATUM") %>%
-    dplyr::semi_join(pop_estn_unit_qry, by = c("ESTN_UNIT_CN" = "CN"))
-
-  # Filter POP_PLOT_STRATUM_ASSGN using POP_STRATUM
-  pop_plot_stratum_assgn_qry <- dplyr::tbl(db, "POP_PLOT_STRATUM_ASSGN") %>%
-    dplyr::semi_join(pop_stratum_qry, by = c("STRATUM_CN" = "CN"))
-
-  # Filter PLOT using POP_PLOT_STRATUM_ASSGN
-  plot_qry <- dplyr::tbl(db, "PLOT") %>%
-    dplyr::semi_join(pop_plot_stratum_assgn_qry, by = c("CN" = "PLT_CN"))
-
-  # Filter COND using PLOT
-  cond_qry <- dplyr::tbl(db, "COND") %>%
-    dplyr::semi_join(plot_qry, by = c("PLT_CN" = "CN"))
-
-  # Filter TREE using COND
-  tree_qry <- dplyr::tbl(db, "TREE") %>%
-    dplyr::semi_join(cond_qry, by = c("PLT_CN", "CONDID"))
-
-  # Filter SUBP_COND using COND
-  subp_cond_qry <- dplyr::tbl(db, "SUBP_COND") %>%
-    dplyr::semi_join(cond_qry, by = c("PLT_CN", "CONDID"))
+eval_handler <- function(db, evalid, schema = new("StatusAnalysis")) {
+  tables <- initialize_tables(schema, db, evalid)
 
   new("EvalHandler",
     db = db,
     evalid = evalid,
-    plot = plot_qry,
-    tree = tree_qry,
-    cond = cond_qry,
-    pop_estn_unit = pop_estn_unit_qry,
-    pop_stratum = pop_stratum_qry,
-    pop_plot_stratum_assgn = pop_plot_stratum_assgn_qry,
-    subp_cond = subp_cond_qry,
+    tables = tables,
+    schema = schema,
     internal_cache = new.env(parent = emptyenv()),
     tree_mutations = list(),
     cond_mutations = list(),
@@ -108,19 +65,19 @@ setMethod("summary", "EvalHandler", function(object) {
   if (length(eval_descr) == 0) eval_descr <- NA_character_
 
   # Estimation Unit count
-  n_estn_units <- object@pop_estn_unit %>%
+  n_estn_units <- object@tables$pop_estn_unit %>%
     dplyr::tally() %>%
     dplyr::collect() %>%
     dplyr::pull(n)
 
   # Strata count
-  n_strata <- object@pop_stratum %>%
+  n_strata <- object@tables$pop_stratum %>%
     dplyr::tally() %>%
     dplyr::collect() %>%
     dplyr::pull(n)
 
   # Plot stats
-  plot_stats <- object@plot %>%
+  plot_stats <- object@tables$plot %>%
     dplyr::summarise(
       n_plots = dplyr::n(),
       min_invyr = min(INVYR, na.rm = TRUE),
@@ -289,32 +246,7 @@ setMethod("filter_cond", "EvalHandler", function(.data, ...) {
 #' @return A lazy query with plot-level summaries.
 #' @export
 setMethod("aggregate", "EvalHandler", function(x, ...) {
-  args <- list(...)
-  if (length(args) == 0 || !inherits(args[[1]], "formula")) {
-    stop("Must provide a formula as the first argument (e.g., tree ~ VOLCFGRS).")
-  }
-
-  formula <- args[[1]]
-  sparse <- if ("sparse" %in% names(args)) args[["sparse"]] else FALSE
-
-  parsed <- parse_formula(formula)
-  slot_name <- parsed$slot
-  targets <- parsed$targets
-
-  if (slot_name == "tree") {
-    if (length(targets) == 1 && targets == "1") {
-      return(.make_tree_aggregates(x, sparse = sparse))
-    }
-    syms <- rlang::syms(targets)
-    return(.make_tree_aggregates(x, !!!syms, sparse = sparse))
-  } else if (slot_name == "cond") {
-    if (!all(targets == "1")) {
-      stop("Only 'cond ~ 1' is currently supported for condition aggregation.")
-    }
-    return(.make_cond_aggregates(x, sparse = sparse))
-  } else {
-    stop("Unsupported slot: ", slot_name)
-  }
+  aggregate_data(x@schema, x, ...)
 })
 
 #' Aggregate Trees to Plot Level

@@ -11,9 +11,9 @@ setClass("PostStratifiedEstimator",
 #' @export
 PostStratifiedEstimator <- function(handler) {
   # Calculate strata weights
-  strata_weights <- handler@pop_stratum %>%
+  strata_weights <- handler@tables$pop_stratum %>%
     dplyr::inner_join(
-      handler@pop_estn_unit,
+      handler@tables$pop_estn_unit,
       by = c("ESTN_UNIT_CN" = "CN"),
       suffix = c("", ".eu")
     ) %>%
@@ -61,7 +61,7 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ...) {
 # Internal helper for condition estimation
 .estimate_cond_internal <- function(object) {
   # Calculate eu weights
-  eu_weights <- object@handler@pop_estn_unit |>
+  eu_weights <- object@handler@tables$pop_estn_unit |>
     dplyr::mutate(
       w_eu = P1PNTCNT_EU / sum(P1PNTCNT_EU, na.rm = TRUE)
     ) |>
@@ -87,7 +87,7 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ...) {
 .estimate_cond_eu_internal <- function(object) {
   strata_stats <- .estimate_cond_strata_internal(object) |>
     dplyr::left_join(
-      object@handler@pop_estn_unit |> dplyr::select(CN),
+      object@handler@tables$pop_estn_unit |> dplyr::select(CN),
       by = c("ESTN_UNIT_CN" = "CN")
     )
 
@@ -113,7 +113,7 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ...) {
 
   combined_data <- cond_values %>%
     dplyr::inner_join(
-      object@handler@pop_plot_stratum_assgn %>%
+      object@handler@tables$pop_plot_stratum_assgn %>%
         dplyr::select(PLT_CN, STRATUM_CN),
       by = "PLT_CN"
     ) |>
@@ -142,7 +142,7 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ...) {
 # Internal helper for tree estimation
 .estimate_tree_internal <- function(object, targets) {
   # Calculate eu weights
-  eu_weights <- object@handler@pop_estn_unit |>
+  eu_weights <- object@handler@tables$pop_estn_unit |>
     dplyr::mutate(
       w_eu = P1PNTCNT_EU / sum(P1PNTCNT_EU, na.rm = TRUE)
     ) |>
@@ -167,7 +167,7 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ...) {
 .estimate_tree_eu_internal <- function(object, targets) {
   strata_stats <- .estimate_tree_strata_internal(object, targets) |>
     dplyr::left_join(
-      object@handler@pop_estn_unit |> dplyr::select(CN),
+      object@handler@tables$pop_estn_unit |> dplyr::select(CN),
       by = c("ESTN_UNIT_CN" = "CN")
     )
 
@@ -193,7 +193,7 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ...) {
 
   combined_data <- tree_values %>%
     dplyr::inner_join(
-      object@handler@pop_plot_stratum_assgn %>%
+      object@handler@tables$pop_plot_stratum_assgn %>%
         dplyr::select(PLT_CN, STRATUM_CN),
       by = "PLT_CN"
     ) |>
