@@ -69,9 +69,62 @@ setMethod("initialize_tables", "StatusAnalysis", function(schema, db, evalid) {
 
 #' @describeIn initialize_tables Initialize tables for Change Analysis (Skeleton)
 setMethod("initialize_tables", "ChangeAnalysis", function(schema, db, evalid) {
-  # TODO: Implement change analysis table loading
-  # This will likely involve loading TREE_GRM_COMPONENT, TREE_GRM_MIDPT, etc.
-  list()
+  pop_eval_qry <- dplyr::tbl(db, "POP_EVAL") %>%
+    dplyr::filter(EVALID == !!evalid)
+
+  # Filter POP_ESTN_UNIT first using EVALID
+  pop_estn_unit_qry <- dplyr::tbl(db, "POP_ESTN_UNIT") %>%
+    dplyr::semi_join(pop_eval_qry, by = c("EVAL_CN" = "CN"))
+
+  # Filter POP_STRATUM using POP_ESTN_UNIT
+  pop_stratum_qry <- dplyr::tbl(db, "POP_STRATUM") %>%
+    dplyr::semi_join(pop_estn_unit_qry, by = c("ESTN_UNIT_CN" = "CN"))
+
+  # Filter POP_PLOT_STRATUM_ASSGN using POP_STRATUM
+  pop_plot_stratum_assgn_qry <- dplyr::tbl(db, "POP_PLOT_STRATUM_ASSGN") %>%
+    dplyr::semi_join(pop_stratum_qry, by = c("STRATUM_CN" = "CN"))
+
+  # Filter PLOT using POP_PLOT_STRATUM_ASSGN
+  plot_qry <- dplyr::tbl(db, "PLOT") %>%
+    dplyr::semi_join(pop_plot_stratum_assgn_qry, by = c("CN" = "PLT_CN"))
+
+  # Filter COND using PLOT
+  cond_qry <- dplyr::tbl(db, "COND") %>%
+    dplyr::semi_join(plot_qry, by = c("PLT_CN" = "CN"))
+
+  # Filter TREE using COND
+  tree_qry <- dplyr::tbl(db, "TREE") %>%
+    dplyr::semi_join(cond_qry, by = c("PLT_CN", "CONDID"))
+
+  # Filter SUBP_COND using COND
+  subp_cond_qry <- dplyr::tbl(db, "SUBP_COND") %>%
+    dplyr::semi_join(cond_qry, by = c("PLT_CN", "CONDID"))
+
+  # GRM Component (End/Change)
+  tree_grm_component_qry <- dplyr::tbl(db, "TREE_GRM_COMPONENT") %>%
+    dplyr::semi_join(cond_qry, by = c("PLT_CN"))
+
+  # GRM Begin
+  tree_grm_begin_qry <- dplyr::tbl(db, "TREE_GRM_BEGIN") %>%
+    dplyr::semi_join(cond_qry, by = c("PLT_CN"))
+
+  # GRM Midpoint
+  tree_grm_midpt_qry <- dplyr::tbl(db, "TREE_GRM_MIDPT") %>%
+    dplyr::semi_join(cond_qry, by = c("PLT_CN"))
+
+  list(
+    pop_eval = pop_eval_qry,
+    pop_estn_unit = pop_estn_unit_qry,
+    pop_stratum = pop_stratum_qry,
+    pop_plot_stratum_assgn = pop_plot_stratum_assgn_qry,
+    plot = plot_qry,
+    cond = cond_qry,
+    tree = tree_qry,
+    subp_cond = subp_cond_qry,
+    tree_grm_component = tree_grm_component_qry,
+    tree_grm_begin = tree_grm_begin_qry,
+    tree_grm_midpt = tree_grm_midpt_qry
+  )
 })
 
 #' Aggregate Data
@@ -115,9 +168,22 @@ setMethod("aggregate_data", "StatusAnalysis", function(schema, handler, ...) {
 
 #' @describeIn aggregate_data Aggregate data for Change Analysis
 setMethod("aggregate_data", "ChangeAnalysis", function(schema, handler, ...) {
-   args <- list(...)
-   # formula <- args[[1]]
-   # Here we would implement the logic for b(), m(), e()
+  args <- list(...)
+  if (length(args) == 0 || !inherits(args[[1]], "formula")) {
+    stop("Must provide a formula as the first argument (e.g., tree ~ b(VOLCFGRS)).")
+  }
 
-   stop("Change analysis aggregation not yet implemented.")
+  formula <- args[[1]]
+  sparse <- if ("sparse" %in% names(args)) args[["sparse"]] else FALSE
+
+  parsed <- parse_formula(formula)
+  slot_name <- parsed$slot
+  targets <- parsed$targets
+
+  if (slot_name == "tree") {
+    syms <- rlang::syms(targets)
+    return(.make_change_tree_aggregates(handler, !!!syms, sparse = sparse))
+  } else {
+    stop("Only 'tree' slot is currently supported for change analysis.")
+  }
 })

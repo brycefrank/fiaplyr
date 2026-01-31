@@ -35,11 +35,8 @@ parse_formula <- function(f) {
       return(c(collect_vars(expr[[2]]), collect_vars(expr[[3]])))
     } else {
       # If it's effectively a single term (like a function call or just a symbol not separated by |), treat as one
-      # But wait, user said "slot ~ variable_1 | variable_2"
-      # If it is `grouping` type syntax, `|` is special.
-      # If the user passes `tree ~ VOLCFGRS`, expr is just `VOLCFGRS` (symbol).
-      # If `tree ~ VOLCFGRS | VOLCFNET`, expr is `|(VOLCFGRS, VOLCFNET)` (call).
-      return(as.character(expr)) # This might fail for complex expressions, but keeping simple for now
+      # Use deparse to capture function calls like b(VOL) as a string
+      return(deparse(expr))
     }
   }
 

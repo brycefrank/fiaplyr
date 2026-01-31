@@ -28,6 +28,15 @@ setClass("EvalHandler",
 #' @param schema An AnalysisSchema object. Defaults to StatusAnalysis.
 #' @export
 eval_handler <- function(db, evalid, schema = new("StatusAnalysis")) {
+  # Validate Schema against EVALID
+  # Change Evaluations always end in '03'
+  evalid_str <- as.character(evalid)
+  is_change <- substr(evalid_str, nchar(evalid_str) - 1, nchar(evalid_str)) == "03"
+
+  if (is_change && inherits(schema, "StatusAnalysis")) {
+    stop("EVALIDs ending in '03' are Change Evaluations and require the ChangeAnalysis schema.")
+  }
+
   tables <- initialize_tables(schema, db, evalid)
 
   new("EvalHandler",
