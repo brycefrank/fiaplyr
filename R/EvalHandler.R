@@ -282,6 +282,41 @@ setMethod("filter_cond", "EvalHandler", function(.data, ...) {
   return(.data)
 })
 
+#' Aggregate Data to Plot Level
+#'
+#' @param x A EvalHandler object.
+#' @param ... A formula specifying the aggregation target (e.g., tree ~ VOLCFGRS), and optional arguments like `sparse`.
+#' @return A lazy query with plot-level summaries.
+#' @export
+setMethod("aggregate", "EvalHandler", function(x, ...) {
+  args <- list(...)
+  if (length(args) == 0 || !inherits(args[[1]], "formula")) {
+    stop("Must provide a formula as the first argument (e.g., tree ~ VOLCFGRS).")
+  }
+
+  formula <- args[[1]]
+  sparse <- if ("sparse" %in% names(args)) args[["sparse"]] else FALSE
+
+  parsed <- parse_formula(formula)
+  slot_name <- parsed$slot
+  targets <- parsed$targets
+
+  if (slot_name == "tree") {
+    if (length(targets) == 1 && targets == "1") {
+      return(.make_tree_aggregates(x, sparse = sparse))
+    }
+    syms <- rlang::syms(targets)
+    return(.make_tree_aggregates(x, !!!syms, sparse = sparse))
+  } else if (slot_name == "cond") {
+    if (!all(targets == "1")) {
+      stop("Only 'cond ~ 1' is currently supported for condition aggregation.")
+    }
+    return(.make_cond_aggregates(x, sparse = sparse))
+  } else {
+    stop("Unsupported slot: ", slot_name)
+  }
+})
+
 #' Aggregate Trees to Plot Level
 #'
 #' @param object A EvalHandler object.
@@ -290,6 +325,7 @@ setMethod("filter_cond", "EvalHandler", function(.data, ...) {
 #' @return A lazy query with plot-level summaries.
 #' @export
 setMethod("aggregate_tree", "EvalHandler", function(object, ..., sparse = FALSE) {
+  .Deprecated("aggregate")
   .make_tree_aggregates(object, ..., sparse = sparse)
 })
 
@@ -300,6 +336,7 @@ setMethod("aggregate_tree", "EvalHandler", function(object, ..., sparse = FALSE)
 #' @return A lazy query with plot-level summaries.
 #' @export
 setMethod("aggregate_cond", "EvalHandler", function(object, sparse = FALSE) {
+  .Deprecated("aggregate")
   .make_cond_aggregates(object, sparse = sparse)
 })
 #' Get Evaluation ID
