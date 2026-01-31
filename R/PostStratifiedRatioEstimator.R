@@ -1,9 +1,3 @@
-#' PostStratifiedRatioEstimator Class
-#'
-#' @slot numerator A EvalHandler object for the numerator.
-#' @slot denominator A EvalHandler object for the denominator.
-#' @slot strata_weights A dataframe containing strata weights.
-#' @export
 setClass("PostStratifiedRatioEstimator",
   contains = "Estimator",
   slots = list(
@@ -54,6 +48,56 @@ setGeneric("estimate_ratio", function(object, ...) standardGeneric("estimate_rat
 
 #' @describeIn estimate_ratio Estimate ratio for PostStratifiedRatioEstimator
 setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...) {
-  # Boilerplate for now
-  stop("Not implemented yet")
+  args <- list(...)
+  if (length(args) == 0) stop("Must provide a formula.")
+  formula <- args[[1]]
+
+  parsed <- parse_ratio_formula(formula)
+
+  if (parsed$slot != "tree") {
+     stop("Only 'tree' slot is supported for ratio estimates currently.")
+  }
+
+  ratios <- parsed$ratios
+
+  # Identify all unique numerator and denominator variables
+  all_nums <- unique(sapply(ratios, function(x) x$numerator))
+  all_dens <- unique(sapply(ratios, function(x) x$denominator))
+
+  # Estimate means for all numerators
+  num_est <- estimate_tree_means(object@numerator, all_nums)
+
+  # Estimate means for all denominators
+  den_est <- estimate_tree_means(object@denominator, all_dens)
+
+  # Identify group vars
+  # Get group vars from num_est (excluding ESTN_UNIT_CN and targets)
+  num_cols <- colnames(num_est)
+  group_vars <- setdiff(num_cols, c("ESTN_UNIT_CN", all_nums))
+
+  # Rename columns to avoid collisions and clarify source
+  num_est <- num_est |> dplyr::rename_with(~ paste0(., ".num"), dplyr::all_of(all_nums))
+  den_est <- den_est |> dplyr::rename_with(~ paste0(., ".den"), dplyr::all_of(all_dens))
+
+  # Join
+  combined <- num_est |>
+    dplyr::inner_join(den_est, by = c("ESTN_UNIT_CN", group_vars))
+
+  # Calculate each ratio
+  for (r in ratios) {
+    n_var <- r$numerator
+    d_var <- r$denominator
+    # Naming convention: R_NUM_DEN
+    ratio_name <- paste0("R_", n_var, "_", d_var)
+
+    combined <- combined |>
+       dplyr::mutate(!!ratio_name := .data[[paste0(n_var, ".num")]] / .data[[paste0(d_var, ".den")]])
+  }
+
+  # Select only key columns and ratio columns
+  # But maybe user wants components too? For now, just return ratios + keys.
+  ratio_cols <- sapply(ratios, function(r) paste0("R_", r$numerator, "_", r$denominator))
+
+  combined |>
+    dplyr::select(dplyr::all_of(c("ESTN_UNIT_CN", group_vars, ratio_cols)))
 })
