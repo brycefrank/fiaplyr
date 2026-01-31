@@ -118,37 +118,3 @@ head(collect(plot_ba_by_sp))
 #> 5 23871905010900      41  2001 65609       43    20     0
 #> 6 23871905010900      41  2001 65609       43    21     0
 ```
-
-## Estimation
-
-`fiaplyr` supports design-based estimation using post-stratification.
-
-### Post-Stratified Estimator
-
-To produce population estimates (e.g., total volume, total area), use the
-`PostStratifiedEstimator` class.
-
-``` r
-# Create an estimator from the handler
-estimator <- PostStratifiedEstimator(handler)
-
-# Estimate total Net Cubic Foot Volume
-# The formula syntax is `slot ~ variable`
-vol_est <- estimate(estimator, tree ~ VOLCFNET)
-
-head(vol_est)
-```
-
-### Domain Estimation
-
-Estimates respect any grouping (domains) applied to the handler.
-
-``` r
-# Estimate Volume by Species
-vol_by_sp_est <- handler |>
-  set_tree_domains(SPCD) |>
-  PostStratifiedEstimator() |>
-  estimate(tree ~ VOLCFNET)
-
-head(vol_by_sp_est)
-```
