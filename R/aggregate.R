@@ -92,6 +92,12 @@
   # Determine target variables for aggregation
   target_vars <- dplyr::quos(...)
 
+  # Check if "1" is in the targets (implicit stem density)
+  vars_as_strings <- vapply(target_vars, rlang::as_label, character(1))
+  if ("1" %in% vars_as_strings) {
+    res <- res %>% dplyr::mutate(`1` = 1)
+  }
+
   # Group by PLOT keys and user defined domains
   if (length(object@cond_domains) > 0) {
     res <- res %>% dplyr::group_by(!!!object@cond_domains)
