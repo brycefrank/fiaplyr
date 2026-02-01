@@ -8,14 +8,14 @@ test_that("EvalHandler initializes correctly", {
   expect_equal(evalid(handler), 1001)
 
   # Check if tables are lazily loaded
-  expect_true(dplyr::is.tbl(handler@plot))
-  expect_true(dplyr::is.tbl(handler@tree))
+  expect_true(dplyr::is.tbl(handler@tables$plot))
+  expect_true(dplyr::is.tbl(handler@tables$tree))
 
   # Check content helper (simple check to see if join worked and valid data exists)
-  plots <- handler@plot %>% dplyr::collect()
+  plots <- handler@tables$plot %>% dplyr::collect()
   expect_equal(nrow(plots), 4)
 
-  trees <- handler@tree %>% dplyr::collect()
+  trees <- handler@tables$tree %>% dplyr::collect()
   expect_equal(nrow(trees), 4) # 4 trees in setup
 })
 

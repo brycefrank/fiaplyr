@@ -72,16 +72,31 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
   parsed_num <- parse_formula(f_num)
   parsed_den <- parse_formula(f_den)
 
-  vals_num <- parsed_num$targets
-  vals_den <- parsed_den$targets
-
-  if (length(vals_num) == 1 && vals_num == "1") vals_num <- "1"
-  if (length(vals_den) == 1 && vals_den == "1") vals_den <- "1"
-
-  # Use colnames() on lazy objects to inspect schema without pulling data
+  # Get actual column names from aggregated data
   cols_num <- colnames(agg_num)
   cols_den <- colnames(agg_den)
 
+  # Target variables from formula (what we're aggregating)
+  targets_num <- parsed_num$targets
+  targets_den <- parsed_den$targets
+
+  # Value columns: Find actual column names that match the targets
+  # For "1", the aggregated column is "prop" (from cond aggregation)
+  # For variable names, they appear as-is
+  vals_num <- if (length(targets_num) == 1 && targets_num == "1") {
+    "prop"
+  } else {
+    # Match target names to actual columns
+    intersect(cols_num, targets_num)
+  }
+  
+  vals_den <- if (length(targets_den) == 1 && targets_den == "1") {
+    "prop"
+  } else {
+    intersect(cols_den, targets_den)
+  }
+
+  # Domain columns: everything else (excluding plot keys and values)
   doms_num <- setdiff(cols_num, c(plot_keys, vals_num))
   doms_den <- setdiff(cols_den, c(plot_keys, vals_den))
 
@@ -198,11 +213,14 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
       .groups = "drop"
     )
 
-  # 7. Reshape and Compute Ratios (Lazy)
+  # 7. Reshape and Compute Ratios
   # ------------------------------------
+  # Collect the aggregated data since it's now small and we need to do
+  # string manipulation (substr) which doesn't translate well to SQL
+  pop_est_local <- pop_est %>% dplyr::collect()
 
   # Pivot Numerator
-  long_n <- pop_est %>%
+  long_n <- pop_est_local %>%
     dplyr::select(dplyr::all_of(c(all_doms, vals_num_suf, "n_observed", "n_missing"))) %>%
     tidyr::pivot_longer(
       cols = dplyr::all_of(vals_num_suf),
@@ -214,7 +232,7 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
     )
 
   # Pivot Denominator
-  long_d <- pop_est %>%
+  long_d <- pop_est_local %>%
     dplyr::select(dplyr::all_of(c(all_doms, vals_den_suf, "n_observed", "n_missing"))) %>%
     tidyr::pivot_longer(
       cols = dplyr::all_of(vals_den_suf),
