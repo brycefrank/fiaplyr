@@ -62,8 +62,8 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
   f_num <- args[[1]]
   f_den <- args[[2]]
 
-  agg_num <- aggregate(object@numerator, f_num, sparse = FALSE)
-  agg_den <- aggregate(object@denominator, f_den, sparse = FALSE)
+  agg_num <- aggregate(object@numerator, f_num, sparse = TRUE)
+  agg_den <- aggregate(object@denominator, f_den, sparse = TRUE)
 
   # 2. Identify Columns (Keys, Domains, Values)
   # -------------------------------------------
@@ -155,6 +155,8 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
     dplyr::group_by(dplyr::across(dplyr::all_of(group_cols_strat))) %>%
     dplyr::summarise(
       dplyr::across(dplyr::all_of(all_vals), sum, .names = "sum_{.col}"),
+      n_observed = dplyr::n(),
+      n_missing = dplyr::first(P2POINTCNT) - dplyr::n(),
       .groups = "drop"
     )
 
@@ -176,6 +178,8 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
     dplyr::group_by(dplyr::across(dplyr::all_of(group_cols_eu))) %>%
     dplyr::summarise(
       dplyr::across(dplyr::all_of(all_vals), ~ sum(.x * w_h, na.rm = TRUE)),
+      n_observed = sum(n_observed, na.rm = TRUE),
+      n_missing = sum(n_missing, na.rm = TRUE),
       .groups = "drop"
     )
 
@@ -189,6 +193,8 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
     dplyr::group_by(dplyr::across(dplyr::all_of(all_doms))) %>%
     dplyr::summarise(
       dplyr::across(dplyr::all_of(all_vals), ~ sum(.x * w_eu, na.rm = TRUE)),
+      n_observed = sum(n_observed, na.rm = TRUE),
+      n_missing = sum(n_missing, na.rm = TRUE),
       .groups = "drop"
     )
 
@@ -197,7 +203,7 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
 
   # Pivot Numerator
   long_n <- pop_est %>%
-    dplyr::select(dplyr::all_of(c(all_doms, vals_num_suf))) %>%
+    dplyr::select(dplyr::all_of(c(all_doms, vals_num_suf, "n_observed", "n_missing"))) %>%
     tidyr::pivot_longer(
       cols = dplyr::all_of(vals_num_suf),
       names_to = "var_n_raw",
@@ -209,7 +215,7 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
 
   # Pivot Denominator
   long_d <- pop_est %>%
-    dplyr::select(dplyr::all_of(c(all_doms, vals_den_suf))) %>%
+    dplyr::select(dplyr::all_of(c(all_doms, vals_den_suf, "n_observed", "n_missing"))) %>%
     tidyr::pivot_longer(
       cols = dplyr::all_of(vals_den_suf),
       names_to = "var_d_raw",
@@ -221,7 +227,7 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
 
   # Join and Estimate
   final_res <- long_n %>%
-    dplyr::inner_join(long_d, by = all_doms) %>%
+    dplyr::inner_join(long_d, by = c(all_doms, "n_observed", "n_missing")) %>%
     dplyr::mutate(
       estimate = val_n / val_d
     ) %>%
@@ -229,7 +235,9 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
       dplyr::all_of(all_doms),
       var_n,
       var_d,
-      estimate
+      estimate,
+      n_observed,
+      n_missing
     )
 
   return(final_res)
