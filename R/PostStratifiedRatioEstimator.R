@@ -192,37 +192,45 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
       .groups = "drop"
     )
 
-  # 7. Collect and Compute Ratios (Local)
-  # -------------------------------------
-  # At this point, the data is aggregated to (Domains x 1)
-  # It is small enough to collect.
-  # Iterate over all pairs of Numerator x Denominator variables
-  results <- list()
+  # 7. Reshape and Compute Ratios (Lazy)
+  # ------------------------------------
 
-  for (n_col in vals_num_suf) {
-    for (d_col in vals_den_suf) {
-      # Remove suffix for clean variable name
-      n_name <- substr(n_col, 1, nchar(n_col) - nchar(suffix_num))
-      d_name <- substr(d_col, 1, nchar(d_col) - nchar(suffix_den))
+  # Pivot Numerator
+  long_n <- pop_est %>%
+    dplyr::select(dplyr::all_of(c(all_doms, vals_num_suf))) %>%
+    tidyr::pivot_longer(
+      cols = dplyr::all_of(vals_num_suf),
+      names_to = "var_n_raw",
+      values_to = "val_n"
+    ) %>%
+    dplyr::mutate(
+      var_n = substr(var_n_raw, 1, nchar(var_n_raw) - !!nchar(suffix_num))
+    )
 
-      tmp_res <- pop_est %>%
-        dplyr::mutate(
-          estimate = .data[[n_col]] / .data[[d_col]],
-          variable = n_name,
-          den_variable = d_name
-        ) %>%
-        dplyr::select(
-          dplyr::all_of(all_doms),
-          variable,
-          den_variable,
-          estimate
-        )
+  # Pivot Denominator
+  long_d <- pop_est %>%
+    dplyr::select(dplyr::all_of(c(all_doms, vals_den_suf))) %>%
+    tidyr::pivot_longer(
+      cols = dplyr::all_of(vals_den_suf),
+      names_to = "var_d_raw",
+      values_to = "val_d"
+    ) %>%
+    dplyr::mutate(
+      var_d = substr(var_d_raw, 1, nchar(var_d_raw) - !!nchar(suffix_den))
+    )
 
-      results[[paste(n_col, d_col)]] <- tmp_res
-    }
-  }
-
-  final_res <- dplyr::bind_rows(results)
+  # Join and Estimate
+  final_res <- long_n %>%
+    dplyr::inner_join(long_d, by = all_doms) %>%
+    dplyr::mutate(
+      estimate = val_n / val_d
+    ) %>%
+    dplyr::select(
+      dplyr::all_of(all_doms),
+      var_n,
+      var_d,
+      estimate
+    )
 
   return(final_res)
 })
