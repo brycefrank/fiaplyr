@@ -20,29 +20,33 @@ test_that("PostStratifiedRatioEstimator estimates correct ratios", {
   res <- estimate_ratio(ratio_est, tree ~ VOLCFNET, cond ~ 1)
 
   # Verify structure
-  expect_true(all(c("SPCD", "FORTYPCD", "estimate") %in% colnames(res)))
+  # Note: The estimator now suffixes domain variables to avoid collisions
+  # and includes variable metadata columns.
+  expected_cols <- c(
+    "SPCD_n", "FORTYPCD_d", "estimate",
+    "var_n", "var_d", "n_observed", "n_missing"
+  )
+  expect_true(all(expected_cols %in% colnames(res)))
 
-  # Verify values (See scratchpad in thought process for derivation)
+  # Verify values
   # Sp1 / F100
   r_sp1_f100 <- res |>
-    dplyr::filter(SPCD == 1, FORTYPCD == 100) |>
+    dplyr::filter(SPCD_n == 1, FORTYPCD_d == 100) |>
     dplyr::pull(estimate)
   expect_equal(r_sp1_f100, 45, tolerance = 0.01)
 
   # Sp2 / F200
   r_sp2_f200 <- res |>
-    dplyr::filter(SPCD == 2, FORTYPCD == 200) |>
+    dplyr::filter(SPCD_n == 2, FORTYPCD_d == 200) |>
     dplyr::pull(estimate)
   expect_equal(r_sp2_f200, 140, tolerance = 0.01)
 
   # Check Cross Product size
   # Species: 1, 2. Fortyp: 100, 200, 300.
-  # 2 * 3 = 6 rows expected (assuming all combinations are returned, even if Denom is 0?)
-  # If Denom is 0, Ratio is Inf or NaN.
   # F300 Area = 125.
   # Sp1 / F300 = 22500 / 125 = 180.
   r_sp1_f300 <- res |>
-    dplyr::filter(SPCD == 1, FORTYPCD == 300) |>
+    dplyr::filter(SPCD_n == 1, FORTYPCD_d == 300) |>
     dplyr::pull(estimate)
   expect_equal(r_sp1_f300, 180, tolerance = 0.01)
 })
