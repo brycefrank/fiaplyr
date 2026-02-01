@@ -14,6 +14,10 @@ Imports:
     cli,
     tidyr,
     rlang
+Suggests:
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
 Collate:
     'methods.R'
     'aggregate.R'
