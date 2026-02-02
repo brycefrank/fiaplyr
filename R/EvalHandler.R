@@ -26,9 +26,10 @@ setClass("EvalHandler",
 #' @param db A DBIConnection object.
 #' @param evalid A numeric identifier for the evaluation.
 #' @param schema An AnalysisSchema object. Defaults to StatusAnalysis.
+#' @param backend Optional DatabaseBackend for custom schema/table names.
 #' @export
-eval_handler <- function(db, evalid, schema = new("StatusAnalysis")) {
-  tables <- initialize_tables(schema, db, evalid)
+eval_handler <- function(db, evalid, schema = new("StatusAnalysis"), backend = NULL) {
+  tables <- initialize_tables(schema, db, evalid, backend)
 
   if (!is.null(tables$pop_eval)) {
     if (tables$pop_eval %>% dplyr::tally() %>% dplyr::collect() %>% dplyr::pull(n) == 0) {
@@ -61,9 +62,8 @@ setMethod("summary", "EvalHandler", function(object) {
     return(object@internal_cache$summary)
   }
 
-  # Eval Description
-  eval_descr <- dplyr::tbl(object@db, "POP_EVAL") %>%
-    dplyr::filter(EVALID == !!object@evalid) %>%
+  # Eval Description - use the already-loaded table instead of hardcoded name
+  eval_descr <- object@tables$pop_eval %>%
     dplyr::select(EVAL_DESCR) %>%
     dplyr::collect() %>%
     dplyr::pull(EVAL_DESCR)

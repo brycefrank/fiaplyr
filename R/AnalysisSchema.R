@@ -18,41 +18,43 @@ setClass("ChangeAnalysis", contains = "AnalysisSchema")
 #' @param schema An AnalysisSchema object.
 #' @param db A DBIConnection object.
 #' @param evalid The evaluation ID.
+#' @param backend Optional DatabaseBackend for custom schema/table names.
 #' @return A list of lazy queries.
 #' @export
-setGeneric("initialize_tables", function(schema, db, evalid) standardGeneric("initialize_tables"))
+setGeneric("initialize_tables", function(schema, db, evalid, backend = NULL) standardGeneric("initialize_tables"))
 
 #' @describeIn initialize_tables Initialize tables for Status Analysis
-setMethod("initialize_tables", "StatusAnalysis", function(schema, db, evalid) {
-  pop_eval_qry <- dplyr::tbl(db, "POP_EVAL") %>%
+setMethod("initialize_tables", "StatusAnalysis", function(schema, db, evalid, backend = NULL) {
+  # Use default backend if none provided
+  if (is.null(backend)) {
+    backend <- database_backend()
+  }
+  
+  # Helper to get table reference
+  tbl_ref <- function(name) get_table_ref(backend, name)
+  
+  pop_eval_qry <- dplyr::tbl(db, tbl_ref("POP_EVAL")) %>%
     dplyr::filter(EVALID == !!evalid)
 
-  # Filter POP_ESTN_UNIT first using EVALID
-  pop_estn_unit_qry <- dplyr::tbl(db, "POP_ESTN_UNIT") %>%
+  pop_estn_unit_qry <- dplyr::tbl(db, tbl_ref("POP_ESTN_UNIT")) %>%
     dplyr::semi_join(pop_eval_qry, by = c("EVAL_CN" = "CN"))
 
-  # Filter POP_STRATUM using POP_ESTN_UNIT
-  pop_stratum_qry <- dplyr::tbl(db, "POP_STRATUM") %>%
+  pop_stratum_qry <- dplyr::tbl(db, tbl_ref("POP_STRATUM")) %>%
     dplyr::semi_join(pop_estn_unit_qry, by = c("ESTN_UNIT_CN" = "CN"))
 
-  # Filter POP_PLOT_STRATUM_ASSGN using POP_STRATUM
-  pop_plot_stratum_assgn_qry <- dplyr::tbl(db, "POP_PLOT_STRATUM_ASSGN") %>%
+  pop_plot_stratum_assgn_qry <- dplyr::tbl(db, tbl_ref("POP_PLOT_STRATUM_ASSGN")) %>%
     dplyr::semi_join(pop_stratum_qry, by = c("STRATUM_CN" = "CN"))
 
-  # Filter PLOT using POP_PLOT_STRATUM_ASSGN
-  plot_qry <- dplyr::tbl(db, "PLOT") %>%
+  plot_qry <- dplyr::tbl(db, tbl_ref("PLOT")) %>%
     dplyr::semi_join(pop_plot_stratum_assgn_qry, by = c("CN" = "PLT_CN"))
 
-  # Filter COND using PLOT
-  cond_qry <- dplyr::tbl(db, "COND") %>%
+  cond_qry <- dplyr::tbl(db, tbl_ref("COND")) %>%
     dplyr::semi_join(plot_qry, by = c("PLT_CN" = "CN"))
 
-  # Filter TREE using COND
-  tree_qry <- dplyr::tbl(db, "TREE") %>%
+  tree_qry <- dplyr::tbl(db, tbl_ref("TREE")) %>%
     dplyr::semi_join(cond_qry, by = c("PLT_CN", "CONDID"))
 
-  # Filter SUBP_COND using COND
-  subp_cond_qry <- dplyr::tbl(db, "SUBP_COND") %>%
+  subp_cond_qry <- dplyr::tbl(db, tbl_ref("SUBP_COND")) %>%
     dplyr::semi_join(cond_qry, by = c("PLT_CN", "CONDID"))
 
   list(
@@ -72,6 +74,81 @@ setMethod("initialize_tables", "ChangeAnalysis", function(schema, db, evalid) {
   # TODO: Implement change analysis table loading
   # This will likely involve loading TREE_GRM_COMPONENT, TREE_GRM_MIDPT, etc.
   list()
+})
+
+#' Initialize Tables with Custom Schema
+#'
+#' @param schema An AnalysisSchema object.
+#' @param db A DBIConnection object.
+#' @param evalid The evaluation ID.
+#' @param db_schema Optional database schema name to prefix table names.
+#' @param table_names Optional named list mapping standard names to custom table names.
+#' @return A list of lazy queries.
+#' @export
+setGeneric("initialize_tables_custom", function(schema, db, evalid, db_schema = NULL, table_names = list()) {
+  standardGeneric("initialize_tables_custom")
+})
+
+#' @describeIn initialize_tables_custom Initialize tables for Status Analysis with custom schema
+setMethod("initialize_tables_custom", "StatusAnalysis", function(schema, db, evalid, db_schema = NULL, table_names = list()) {
+  # Default table names
+  defaults <- list(
+    pop_eval = "POP_EVAL",
+    pop_estn_unit = "POP_ESTN_UNIT",
+    pop_stratum = "POP_STRATUM",
+    pop_plot_stratum_assgn = "POP_PLOT_STRATUM_ASSGN",
+    plot = "PLOT",
+    cond = "COND",
+    tree = "TREE",
+    subp_cond = "SUBP_COND"
+  )
+  
+  # Override with user-provided names
+  table_names <- utils::modifyList(defaults, table_names)
+  
+  # Helper to get table reference
+  get_table <- function(name) {
+    if (!is.null(db_schema)) {
+      dbplyr::in_schema(db_schema, name)
+    } else {
+      name
+    }
+  }
+  
+  pop_eval_qry <- dplyr::tbl(db, get_table(table_names$pop_eval)) %>%
+    dplyr::filter(EVALID == !!evalid)
+
+  pop_estn_unit_qry <- dplyr::tbl(db, get_table(table_names$pop_estn_unit)) %>%
+    dplyr::semi_join(pop_eval_qry, by = c("EVAL_CN" = "CN"))
+
+  pop_stratum_qry <- dplyr::tbl(db, get_table(table_names$pop_stratum)) %>%
+    dplyr::semi_join(pop_estn_unit_qry, by = c("ESTN_UNIT_CN" = "CN"))
+
+  pop_plot_stratum_assgn_qry <- dplyr::tbl(db, get_table(table_names$pop_plot_stratum_assgn)) %>%
+    dplyr::semi_join(pop_stratum_qry, by = c("STRATUM_CN" = "CN"))
+
+  plot_qry <- dplyr::tbl(db, get_table(table_names$plot)) %>%
+    dplyr::semi_join(pop_plot_stratum_assgn_qry, by = c("CN" = "PLT_CN"))
+
+  cond_qry <- dplyr::tbl(db, get_table(table_names$cond)) %>%
+    dplyr::semi_join(plot_qry, by = c("PLT_CN" = "CN"))
+
+  tree_qry <- dplyr::tbl(db, get_table(table_names$tree)) %>%
+    dplyr::semi_join(cond_qry, by = c("PLT_CN", "CONDID"))
+
+  subp_cond_qry <- dplyr::tbl(db, get_table(table_names$subp_cond)) %>%
+    dplyr::semi_join(cond_qry, by = c("PLT_CN", "CONDID"))
+
+  list(
+    pop_eval = pop_eval_qry,
+    pop_estn_unit = pop_estn_unit_qry,
+    pop_stratum = pop_stratum_qry,
+    pop_plot_stratum_assgn = pop_plot_stratum_assgn_qry,
+    plot = plot_qry,
+    cond = cond_qry,
+    tree = tree_qry,
+    subp_cond = subp_cond_qry
+  )
 })
 
 #' Aggregate Data
