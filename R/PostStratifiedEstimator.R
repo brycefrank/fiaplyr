@@ -10,25 +10,52 @@ setClass("PostStratifiedEstimator",
 #' @param handler A EvalHandler object.
 #' @export
 PostStratifiedEstimator <- function(handler) {
-  # Calculate strata weights
-  strata_weights <- handler@tables$pop_stratum %>%
-    dplyr::inner_join(
-      handler@tables$pop_estn_unit,
-      by = c("ESTN_UNIT_CN" = "CN"),
-      suffix = c("", ".eu")
-    ) %>%
-    dplyr::mutate(
-      w_h = as.numeric(P1POINTCNT) / P1PNTCNT_EU
-    ) %>%
-    dplyr::select(
-      STRATUM_CN = CN, ESTN_UNIT_CN, w_h, P2POINTCNT, AREA_USED
-    )
-
   new("PostStratifiedEstimator",
     handler = handler,
-    strata_weights = strata_weights
+    strata_weights = get_strata_weights(handler)
   )
 }
+
+
+#' Show Method for PostStratifiedEstimator
+#'
+#' @param object A PostStratifiedEstimator object.
+#' @export
+setMethod("show", "PostStratifiedEstimator", function(object) {
+  cat("PostStratifiedEstimator\n")
+  cat("-----------------------\n")
+
+  s <- summary(object@handler)
+
+  cat("EVALID:         ", object@handler@evalid, "\n")
+
+  descr_label <- "Description:     "
+  descr_text <- if (is.na(s$eval_descr)) "NA" else s$eval_descr
+  wrapped_descr <- strwrap(descr_text, width = 60, indent = 0, exdent = 0)
+  cat(paste0(descr_label, wrapped_descr[1], "\n"))
+  if (length(wrapped_descr) > 1) {
+    indent_space <- paste(rep(" ", nchar(descr_label)), collapse = "")
+    for (i in 2:length(wrapped_descr)) {
+      cat(paste0(indent_space, wrapped_descr[i], "\n"))
+    }
+  }
+
+  cat("\n")
+
+  n_estn_units <- object@handler@tables$pop_estn_unit %>%
+    dplyr::tally() %>%
+    dplyr::collect() %>%
+    dplyr::pull(n)
+
+  n_strata <- object@handler@tables$pop_stratum %>%
+    dplyr::tally() %>%
+    dplyr::collect() %>%
+    dplyr::pull(n)
+
+  cat("Estn Units:     ", n_estn_units, "\n")
+  cat("Strata:         ", n_strata, "\n")
+  cat("Plots:          ", s$n_plots, "\n")
+})
 
 
 #' Estimate Population Parameters
@@ -60,161 +87,22 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ...) {
 
 # Internal helper for condition estimation
 .estimate_cond_internal <- function(object) {
-  # Calculate eu weights
-  eu_weights <- object@handler@tables$pop_estn_unit |>
-    dplyr::mutate(
-      w_eu = P1PNTCNT_EU / sum(P1PNTCNT_EU, na.rm = TRUE)
-    ) |>
-    dplyr::select(CN, w_eu)
+  plot_data <- .make_cond_aggregates(object@handler, adjusted = TRUE, sparse = TRUE)
+  targets <- "prop"
 
-  eu_stats <- .estimate_cond_eu_internal(object)
-
-  eu_keys <- c("ESTN_UNIT_CN")
-
-  # All columns in eu_stats
-  all_cols <- colnames(eu_stats)
-  group_vars <- setdiff(all_cols, c(eu_keys, "p_eu", "w_eu"))
-
-  eu_stats |>
-    dplyr::left_join(eu_weights, by = c("ESTN_UNIT_CN" = "CN")) |>
-    dplyr::group_by(dplyr::across(dplyr::all_of(group_vars))) |>
-    dplyr::summarise(
-      p = sum(p_eu * w_eu, na.rm = TRUE)
-    ) |>
-    dplyr::ungroup()
-}
-
-.estimate_cond_eu_internal <- function(object) {
-  strata_stats <- .estimate_cond_strata_internal(object) |>
-    dplyr::left_join(
-      object@handler@tables$pop_estn_unit |> dplyr::select(CN),
-      by = c("ESTN_UNIT_CN" = "CN")
-    )
-
-  strat_keys <- c("STRATUM_CN", "ESTN_UNIT_CN", "EVAL_CN", "w_h", "n_h", "n")
-  plot_keys <- c("PLT_CN", "STATECD", "INVYR", "PLOT", "COUNTYCD")
-
-  # All columns in strata_stats
-  all_cols <- colnames(strata_stats)
-  group_vars <- setdiff(all_cols, c(plot_keys, strat_keys, "p_strat"))
-
-  strata_stats |>
-    dplyr::group_by(dplyr::across(dplyr::all_of(c("ESTN_UNIT_CN", group_vars)))) |>
-    dplyr::summarise(
-      p_eu = sum(w_h * p_strat, na.rm = TRUE)
-    ) |>
-    dplyr::ungroup()
-}
-
-.estimate_cond_strata_internal <- function(object) {
-  # Use sparse = TRUE for performance optimization
-  cond_values <- .make_cond_aggregates(object@handler, adjusted = TRUE, sparse = TRUE)
-  strata_summary <- .get_strata_summary(object@handler)
-
-  combined_data <- cond_values %>%
-    dplyr::inner_join(
-      object@handler@tables$pop_plot_stratum_assgn %>%
-        dplyr::select(PLT_CN, STRATUM_CN),
-      by = "PLT_CN"
-    ) |>
-    dplyr::inner_join(strata_summary, by = "STRATUM_CN")
-
-  strat_keys <- c("STRATUM_CN", "ESTN_UNIT_CN", "EVAL_CN", "w_h", "n_h", "n")
-  plot_keys <- c("PLT_CN", "STATECD", "INVYR", "PLOT", "COUNTYCD")
-
-  all_cols <- colnames(combined_data)
-  group_vars <- setdiff(all_cols, c(plot_keys, strat_keys, "prop"))
-
-  combined_data %>%
-    dplyr::group_by(
-      dplyr::across(
-        dplyr::all_of(
-          c("ESTN_UNIT_CN", "STRATUM_CN", "w_h", "n_h", "n", group_vars)
-        )
-      )
-    ) %>%
-    dplyr::summarise(
-      p_strat = sum(prop, na.rm = TRUE) / n_h
-    ) %>%
-    dplyr::ungroup()
+  strata_data <- .ps_join_strata(plot_data, object@handler)
+  strata_means <- .ps_strata_means(strata_data, targets)
+  eu_data <- .ps_eu_estimates(strata_means, targets)
+  .ps_pop_estimates(eu_data, object@handler, targets)
 }
 
 # Internal helper for tree estimation
 .estimate_tree_internal <- function(object, targets) {
-  # Calculate eu weights
-  eu_weights <- object@handler@tables$pop_estn_unit |>
-    dplyr::mutate(
-      w_eu = P1PNTCNT_EU / sum(P1PNTCNT_EU, na.rm = TRUE)
-    ) |>
-    dplyr::select(CN, w_eu)
-
-  eu_stats <- .estimate_tree_eu_internal(object, targets)
-
-  eu_keys <- c("ESTN_UNIT_CN")
-
-  all_cols <- colnames(eu_stats)
-  group_vars <- setdiff(all_cols, c(eu_keys, targets, "w_eu"))
-
-  eu_stats |>
-    dplyr::left_join(eu_weights, by = c("ESTN_UNIT_CN" = "CN")) |>
-    dplyr::group_by(dplyr::across(dplyr::all_of(group_vars))) |>
-    dplyr::summarise(
-      dplyr::across(dplyr::all_of(targets), ~ sum(.x * w_eu, na.rm = TRUE))
-    ) |>
-    dplyr::ungroup()
-}
-
-.estimate_tree_eu_internal <- function(object, targets) {
-  strata_stats <- .estimate_tree_strata_internal(object, targets) |>
-    dplyr::left_join(
-      object@handler@tables$pop_estn_unit |> dplyr::select(CN),
-      by = c("ESTN_UNIT_CN" = "CN")
-    )
-
-  strat_keys <- c("STRATUM_CN", "ESTN_UNIT_CN", "EVAL_CN", "w_h", "n_h", "n")
-  plot_keys <- c("PLT_CN", "STATECD", "INVYR", "PLOT", "COUNTYCD")
-
-  all_cols <- colnames(strata_stats)
-  group_vars <- setdiff(all_cols, c(plot_keys, strat_keys, targets))
-
-  strata_stats |>
-    dplyr::group_by(dplyr::across(dplyr::all_of(c("ESTN_UNIT_CN", group_vars)))) |>
-    dplyr::summarise(
-      dplyr::across(dplyr::all_of(targets), ~ sum(w_h * .x, na.rm = TRUE))
-    ) |>
-    dplyr::ungroup()
-}
-
-.estimate_tree_strata_internal <- function(object, targets) {
   syms <- rlang::syms(targets)
-  # Use sparse = TRUE for performance optimization
-  tree_values <- .make_tree_aggregates(object@handler, !!!syms, adjusted = TRUE, sparse = TRUE)
-  strata_summary <- .get_strata_summary(object@handler)
+  plot_data <- .make_tree_aggregates(object@handler, !!!syms, adjusted = TRUE, sparse = TRUE)
 
-  combined_data <- tree_values %>%
-    dplyr::inner_join(
-      object@handler@tables$pop_plot_stratum_assgn %>%
-        dplyr::select(PLT_CN, STRATUM_CN),
-      by = "PLT_CN"
-    ) |>
-    dplyr::inner_join(strata_summary, by = "STRATUM_CN")
-
-  strat_keys <- c("STRATUM_CN", "ESTN_UNIT_CN", "EVAL_CN", "w_h", "n_h", "n")
-  plot_keys <- c("PLT_CN", "STATECD", "INVYR", "PLOT", "COUNTYCD")
-
-  all_cols <- colnames(combined_data)
-  group_vars <- setdiff(all_cols, c(plot_keys, strat_keys, targets))
-
-  combined_data %>%
-    dplyr::group_by(
-      dplyr::across(
-        dplyr::all_of(
-          c("ESTN_UNIT_CN", "STRATUM_CN", "w_h", "n_h", "n", group_vars)
-        )
-      )
-    ) %>%
-    dplyr::summarise(
-      dplyr::across(dplyr::all_of(targets), ~ sum(.x, na.rm = TRUE) / n_h)
-    ) %>%
-    dplyr::ungroup()
+  strata_data <- .ps_join_strata(plot_data, object@handler)
+  strata_means <- .ps_strata_means(strata_data, targets)
+  eu_data <- .ps_eu_estimates(strata_means, targets)
+  .ps_pop_estimates(eu_data, object@handler, targets)
 }

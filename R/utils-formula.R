@@ -1,9 +1,11 @@
 #' Parse Estimation Formula
 #'
-#' Parses a formula of the form `slot ~ variable | variable2` into its components.
+#' Parses a formula of the form `slot ~ variable | variable2` into its
+#' components.
 #'
 #' @param f A formula.
-#' @return A list containing the slot name and a character vector of target variables.
+#' @return A list containing the slot name and a character vector of target
+#'  variables.
 #' @export
 #' @examples
 #' parse_formula(tree ~ VOLCFGRS | VOLCFNET)
@@ -34,17 +36,9 @@ parse_formula <- function(f) {
     } else if (as.character(expr[[1]]) == "|") {
       return(c(collect_vars(expr[[2]]), collect_vars(expr[[3]])))
     } else {
-      # If it's effectively a single term (like a function call or just a symbol not separated by |), treat as one
-      # But wait, user said "slot ~ variable_1 | variable_2"
-      # If it is `grouping` type syntax, `|` is special.
-      # If the user passes `tree ~ VOLCFGRS`, expr is just `VOLCFGRS` (symbol).
-      # If `tree ~ VOLCFGRS | VOLCFNET`, expr is `|(VOLCFGRS, VOLCFNET)` (call).
       return(as.character(expr)) # This might fail for complex expressions, but keeping simple for now
     }
   }
-
-  # For `tree ~ VOLCFGRS | VOLCFNET`, the AST is `|`(VOLCFGRS, VOLCFNET)
-  # But `|` is binary. `a | b | c` is `|`(`|`(a, b), c) or similar.
 
   targets <- collect_vars(rhs)
 

@@ -38,6 +38,13 @@ setGeneric("set_tree_domains", function(.data, ...) standardGeneric("set_tree_do
 #' @export
 setGeneric("set_cond_domains", function(.data, ...) standardGeneric("set_cond_domains"))
 
+#' Get Strata Weights
+#'
+#' @param object A handler object.
+#' @return A lazy query with strata weights.
+#' @export
+setGeneric("get_strata_weights", function(object) standardGeneric("get_strata_weights"))
+
 #' Estimate Population Parameters
 #'
 #' @param object An estimator object.

@@ -192,9 +192,9 @@ setMethod("aggregate_data", "StatusAnalysis", function(schema, handler, ...) {
 
 #' @describeIn aggregate_data Aggregate data for Change Analysis
 setMethod("aggregate_data", "ChangeAnalysis", function(schema, handler, ...) {
-   args <- list(...)
-   # formula <- args[[1]]
-   # Here we would implement the logic for b(), m(), e()
+  args <- list(...)
+  # formula <- args[[1]]
+  # Here we would implement the logic for b(), m(), e()
 
-   stop("Change analysis aggregation not yet implemented.")
+  stop("Change analysis aggregation not yet implemented.")
 })

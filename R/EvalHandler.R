@@ -70,18 +70,6 @@ setMethod("summary", "EvalHandler", function(object) {
 
   if (length(eval_descr) == 0) eval_descr <- NA_character_
 
-  # Estimation Unit count
-  n_estn_units <- object@tables$pop_estn_unit %>%
-    dplyr::tally() %>%
-    dplyr::collect() %>%
-    dplyr::pull(n)
-
-  # Strata count
-  n_strata <- object@tables$pop_stratum %>%
-    dplyr::tally() %>%
-    dplyr::collect() %>%
-    dplyr::pull(n)
-
   # Plot stats
   plot_stats <- object@tables$plot %>%
     dplyr::summarise(
@@ -95,8 +83,6 @@ setMethod("summary", "EvalHandler", function(object) {
 
   res <- list(
     eval_descr = eval_descr,
-    n_estn_units = n_estn_units,
-    n_strata = n_strata,
     n_plots = plot_stats$n_plots,
     min_invyr = plot_stats$min_invyr,
     max_invyr = plot_stats$max_invyr,
@@ -136,11 +122,23 @@ setMethod("show", "EvalHandler", function(object) {
   }
 
   cat("\n")
-  cat("Estn Units:     ", s$n_estn_units, "\n")
-  cat("Strata:         ", s$n_strata, "\n")
   cat("Plots:          ", s$n_plots, "\n")
   cat("Inventory Years:", s$min_invyr, "-", s$max_invyr, "\n")
   cat("Measure Years:  ", s$min_meas, "-", s$max_meas, "\n")
+
+  # Display domain variables if set
+  tree_dom_labels <- vapply(object@tree_domains, rlang::as_label, character(1))
+  cond_dom_labels <- vapply(object@cond_domains, rlang::as_label, character(1))
+
+  if (length(tree_dom_labels) > 0 || length(cond_dom_labels) > 0) {
+    cat("\n")
+    if (length(tree_dom_labels) > 0) {
+      cat("Tree domains:   ", paste(tree_dom_labels, collapse = ", "), "\n")
+    }
+    if (length(cond_dom_labels) > 0) {
+      cat("Cond domains:   ", paste(cond_dom_labels, collapse = ", "), "\n")
+    }
+  }
 })
 
 #' Mutate Tree Table
@@ -177,11 +175,15 @@ setMethod("mutate_cond", "EvalHandler", function(.data, ...) {
   return(.data)
 })
 
-#' Set Tree Domains (Grouping)
+#' Set Tree Domain Variables
+#'
+#' Sets the domain variables used for grouping tree-level aggregations.
+#' A domain variable is a column (e.g., STATUSCD, SPCD) whose unique
+#' values or combinations define estimation domains.
 #'
 #' @param .data A EvalHandler object.
-#' @param ... Variables to group by.
-#' @return A EvalHandler object with pending grouping.
+#' @param ... Domain variable names (unquoted column names).
+#' @return A EvalHandler object with the tree domain variables set.
 #' @importFrom dplyr group_by
 #' @export
 setMethod("set_tree_domains", "EvalHandler", function(.data, ...) {
@@ -194,11 +196,15 @@ setMethod("set_tree_domains", "EvalHandler", function(.data, ...) {
   return(.data)
 })
 
-#' Set Condition Domains (Grouping)
+#' Set Condition Domain Variables
+#'
+#' Sets the domain variables used for grouping condition-level aggregations.
+#' A domain variable is a column (e.g., FORTYPCD, OWNGRPCD) whose unique
+#' values or combinations define estimation domains.
 #'
 #' @param .data A EvalHandler object.
-#' @param ... Variables to group by.
-#' @return A EvalHandler object with pending grouping.
+#' @param ... Domain variable names (unquoted column names).
+#' @return A EvalHandler object with the condition domain variables set.
 #' @importFrom dplyr group_by
 #' @export
 setMethod("set_cond_domains", "EvalHandler", function(.data, ...) {
@@ -277,6 +283,22 @@ setMethod("aggregate_cond", "EvalHandler", function(object, sparse = FALSE) {
   .Deprecated("aggregate")
   .make_cond_aggregates(object, sparse = sparse)
 })
+#' @describeIn get_strata_weights Get strata weights for EvalHandler
+setMethod("get_strata_weights", "EvalHandler", function(object) {
+  object@tables$pop_stratum %>%
+    dplyr::inner_join(
+      object@tables$pop_estn_unit,
+      by = c("ESTN_UNIT_CN" = "CN"),
+      suffix = c("", ".eu")
+    ) %>%
+    dplyr::mutate(
+      w_h = as.numeric(P1POINTCNT) / P1PNTCNT_EU
+    ) %>%
+    dplyr::select(
+      STRATUM_CN = CN, ESTN_UNIT_CN, w_h, P2POINTCNT, AREA_USED
+    )
+})
+
 #' Get Evaluation ID
 #'
 #' @param object A EvalHandler object.

@@ -24,26 +24,10 @@ PostStratifiedRatioEstimator <- function(numerator, denominator = numerator) {
     stop("Numerator and denominator must have the same EVALID.")
   }
 
-  # Calculate strata weights (using numerator, as they share EVALID)
-  # Note: This returns a lazy query or local df depending on input.
-  # We store it as is.
-  strata_weights <- numerator@tables$pop_stratum %>%
-    dplyr::inner_join(
-      numerator@tables$pop_estn_unit,
-      by = c("ESTN_UNIT_CN" = "CN"),
-      suffix = c("", ".eu")
-    ) %>%
-    dplyr::mutate(
-      w_h = as.numeric(P1POINTCNT) / P1PNTCNT_EU
-    ) %>%
-    dplyr::select(
-      STRATUM_CN = CN, ESTN_UNIT_CN, w_h, P2POINTCNT, AREA_USED
-    )
-
   new("PostStratifiedRatioEstimator",
     numerator = numerator,
     denominator = denominator,
-    strata_weights = strata_weights
+    strata_weights = get_strata_weights(numerator)
   )
 }
 
@@ -67,7 +51,7 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
 
   # 2. Identify Columns (Keys, Domains, Values)
   # -------------------------------------------
-  plot_keys <- c("PLT_CN", "STATECD", "INVYR", "PLOT", "COUNTYCD")
+  plot_keys <- .plot_keys
 
   parsed_num <- parse_formula(f_num)
   parsed_den <- parse_formula(f_den)
@@ -143,42 +127,23 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
   joined_filled <- joined %>%
     dplyr::mutate(!!!mutate_args)
 
-  strata_weights <- object@numerator@tables$pop_stratum %>%
-    dplyr::inner_join(
-      object@numerator@tables$pop_estn_unit,
-      by = c("ESTN_UNIT_CN" = "CN"),
-      suffix = c("", ".eu")
-    ) %>%
-    dplyr::mutate(
-      w_h = P1POINTCNT / P1PNTCNT_EU # Keep as DB numeric type
-    ) %>%
-    dplyr::select(
-      STRATUM_CN = CN, ESTN_UNIT_CN, w_h, P2POINTCNT, AREA_USED
-    )
-
-  plot_stratum <- object@numerator@tables$pop_plot_stratum_assgn %>%
-    dplyr::select(PLT_CN, STRATUM_CN)
-
-  final_dat <- joined_filled %>%
-    dplyr::inner_join(plot_stratum, by = "PLT_CN") %>%
-    dplyr::inner_join(strata_weights, by = "STRATUM_CN")
+  final_dat <- .ps_join_strata(joined_filled, object@numerator)
 
   # Estimate Totals (Means) - Lazy Aggregation
-  group_cols_strat <- c("ESTN_UNIT_CN", "STRATUM_CN", "w_h", "P2POINTCNT", all_doms)
+  group_cols_strat <- c("ESTN_UNIT_CN", "STRATUM_CN", "w_h", "n_h", "n", all_doms)
 
   strat_sums <- final_dat %>%
     dplyr::group_by(dplyr::across(dplyr::all_of(group_cols_strat))) %>%
     dplyr::summarise(
       dplyr::across(dplyr::all_of(all_vals), sum, .names = "sum_{.col}"),
       n_observed = dplyr::n(),
-      n_missing = dplyr::first(P2POINTCNT) - dplyr::n(),
+      n_missing = dplyr::first(n_h) - dplyr::n(),
       .groups = "drop"
     )
 
   # Calculate means from sums
-  # val_mean = sum_val / P2POINTCNT
   mean_args <- lapply(all_vals, function(v) {
-    rlang::expr(!!rlang::sym(paste0("sum_", v)) / P2POINTCNT)
+    rlang::expr(!!rlang::sym(paste0("sum_", v)) / n_h)
   })
   names(mean_args) <- all_vals
 
@@ -219,6 +184,10 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
   # string manipulation (substr) which doesn't translate well to SQL
   pop_est_local <- pop_est %>% dplyr::collect()
 
+  # Compute suffix lengths as regular R values
+  n_suffix_len <- nchar(suffix_num)
+  d_suffix_len <- nchar(suffix_den)
+
   # Pivot Numerator
   long_n <- pop_est_local %>%
     dplyr::select(dplyr::all_of(c(all_doms, vals_num_suf, "n_observed", "n_missing"))) %>%
@@ -228,7 +197,7 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
       values_to = "val_n"
     ) %>%
     dplyr::mutate(
-      var_n = substr(var_n_raw, 1, nchar(var_n_raw) - !!nchar(suffix_num))
+      var_n = substr(var_n_raw, 1, nchar(var_n_raw) - n_suffix_len)
     )
 
   # Pivot Denominator
@@ -240,7 +209,7 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
       values_to = "val_d"
     ) %>%
     dplyr::mutate(
-      var_d = substr(var_d_raw, 1, nchar(var_d_raw) - !!nchar(suffix_den))
+      var_d = substr(var_d_raw, 1, nchar(var_d_raw) - d_suffix_len)
     )
 
   # Join and Estimate
