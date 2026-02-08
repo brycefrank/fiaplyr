@@ -10,13 +10,13 @@ con <- dbConnect(duckdb::duckdb(), dbdir = db_path, read_only = TRUE)
 
 handler <- eval_handler(con, 411001) |>
   filter_tree(STATUSCD == 1) |>
-  set_tree_domains(SPCD) |>
-  set_cond_domains(COND_STATUS_CD, FORTYPCD)
+  filter_tree(COND_STATUS_CD == 1) |>
+  set_tree_domains(SPCD)
 
 handler |>
   aggregate(tree ~ VOLCFGRS | VOLCFNET)
 
-ps <- PostStratifiedEstimator(handler)
+psr <- PostStratifiedRatioEstimator(handler, handler)
 
-ps |>
-  estimate(tree ~ VOLCFGRS)
+psr |>
+  estimate_ratio(tree ~ VOLCFGRS, tree ~ VOLCFGRS)

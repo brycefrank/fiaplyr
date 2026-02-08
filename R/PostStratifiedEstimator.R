@@ -91,9 +91,9 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ...) {
   targets <- "prop"
 
   strata_data <- .ps_join_strata(plot_data, object@handler)
-  strata_means <- .ps_strata_means(strata_data, targets)
-  eu_data <- .ps_eu_estimates(strata_means, targets)
-  .ps_pop_estimates(eu_data, object@handler, targets)
+  strata_stats <- .ps_strata_stats(strata_data, targets)
+  eu_stats <- .ps_eu_stats(strata_stats, targets)
+  .ps_pop_stats(eu_stats, object@handler, targets)
 }
 
 # Internal helper for tree estimation
@@ -102,7 +102,7 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ...) {
   plot_data <- .make_tree_aggregates(object@handler, !!!syms, adjusted = TRUE, sparse = TRUE)
 
   strata_data <- .ps_join_strata(plot_data, object@handler)
-  strata_means <- .ps_strata_means(strata_data, targets)
-  eu_data <- .ps_eu_estimates(strata_means, targets)
-  .ps_pop_estimates(eu_data, object@handler, targets)
+  strata_stats <- .ps_strata_stats(strata_data, targets)
+  eu_stats <- .ps_eu_stats(strata_stats, targets)
+  .ps_pop_stats(eu_stats, object@handler, targets)
 }

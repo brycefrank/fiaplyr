@@ -24,6 +24,9 @@ setup_test_db <- function() {
     ESTN_UNIT_CN = 1,
     P1POINTCNT = c(50, 50),
     P2POINTCNT = c(2, 2),
+    ADJ_FACTOR_MICR = 1.0,
+    ADJ_FACTOR_SUBP = 1.0,
+    ADJ_FACTOR_MACR = 1.0,
     stringsAsFactors = FALSE
   ))
 
@@ -54,6 +57,7 @@ setup_test_db <- function() {
     FORTYPCD = c(100, 100, 200, 200, 300),
     OWNCD = c(1, 1, 2, 2, 2),
     CONDPROP_UNADJ = c(1, 1, 1, 0.5, 0.5),
+    PROP_BASIS = "SUBP",
     stringsAsFactors = FALSE
   ))
 
