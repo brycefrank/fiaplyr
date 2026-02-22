@@ -10,10 +10,12 @@ parse_formula(f)
 \item{f}{A formula.}
 }
 \value{
-A list containing the slot name and a character vector of target variables.
+A list containing the slot name and a character vector of target
+variables.
 }
 \description{
-Parses a formula of the form \code{slot ~ variable | variable2} into its components.
+Parses a formula of the form \code{slot ~ variable | variable2} into its
+components.
 }
 \examples{
 parse_formula(tree ~ VOLCFGRS | VOLCFNET)

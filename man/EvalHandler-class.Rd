@@ -12,19 +12,9 @@ Class for Evaluation Pipeline
 \describe{
 \item{\code{evalid}}{The evaluation ID (numeric).}
 
-\item{\code{plot}}{Lazy query for PLOT table.}
+\item{\code{tables}}{A list of lazy queries for the tables.}
 
-\item{\code{tree}}{Lazy query for TREE table.}
-
-\item{\code{cond}}{Lazy query for COND table.}
-
-\item{\code{pop_estn_unit}}{Lazy query for POP_ESTN_UNIT table.}
-
-\item{\code{pop_stratum}}{Lazy query for POP_STRATUM table.}
-
-\item{\code{pop_plot_stratum_assgn}}{Lazy query for POP_PLOT_STRATUM_ASSGN table.}
-
-\item{\code{subp_cond}}{Lazy query for SUBP_COND table.}
+\item{\code{schema}}{The AnalysisSchema used.}
 
 \item{\code{internal_cache}}{Environment for caching intermediate results.}
 }}

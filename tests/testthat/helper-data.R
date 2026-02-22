@@ -58,6 +58,7 @@ setup_test_db <- function() {
     OWNCD = c(1, 1, 2, 2, 2),
     CONDPROP_UNADJ = c(1, 1, 1, 0.5, 0.5),
     PROP_BASIS = "SUBP",
+    COND_STATUS_CD = c(1, 1, 1, 2, 1),
     stringsAsFactors = FALSE
   ))
 

@@ -5,7 +5,13 @@
 \title{Aggregate tree data to plot or subplot levels. This provides an unadjusted
 density for the plot.}
 \usage{
-.make_tree_aggregates(object, ..., level = "plot")
+.make_tree_aggregates(
+  object,
+  ...,
+  adjusted = FALSE,
+  level = "plot",
+  sparse = FALSE
+)
 }
 \arguments{
 \item{object}{A EvalHandler object.}

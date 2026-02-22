@@ -22,14 +22,15 @@ Collate:
     'methods.R'
     'aggregate.R'
     'utils-formula.R'
+    'DatabaseBackend.R'
     'BaseHandler.R'
     'AnalysisSchema.R'
     'EvalHandler.R'
     'Estimator.R'
+    'post_stratification.R'
     'PostStratifiedEstimator.R'
     'PostStratifiedRatioEstimator.R'
     'utils.R'
     'explore.R'
-    'scaffold.R'
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3

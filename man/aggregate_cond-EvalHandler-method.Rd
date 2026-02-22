@@ -4,12 +4,12 @@
 \alias{aggregate_cond,EvalHandler-method}
 \title{Aggregate Conditions to Plot Level}
 \usage{
-\S4method{aggregate_cond}{EvalHandler}(object)
+\S4method{aggregate_cond}{EvalHandler}(object, sparse = FALSE)
 }
 \arguments{
 \item{object}{A EvalHandler object.}
 
-\item{...}{Variables to aggregate (tidy-select supported)}
+\item{sparse}{Logical. If TRUE, returns a sparse result (only observed combinations). Defaults to FALSE.}
 }
 \value{
 A lazy query with plot-level summaries.

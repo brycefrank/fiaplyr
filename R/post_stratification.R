@@ -74,7 +74,7 @@
 #' @noRd
 .ps_pop_estimates <- function(eu_data, handler, targets) {
   eu_weights <- handler@tables$pop_estn_unit %>%
-    dplyr::mutate(w_eu = P1PNTCNT_EU / sum(P1PNTCNT_EU, na.rm = TRUE)) %>%
+    dplyr::mutate(w_eu = as.numeric(P1PNTCNT_EU) / sum(P1PNTCNT_EU, na.rm = TRUE)) %>%
     dplyr::select(CN, w_eu)
 
   all_cols <- colnames(eu_data)
@@ -117,7 +117,7 @@
         dplyr::all_of(targets),
         list(
           mean = ~ sum(.x, na.rm = TRUE) / n_h,
-          var  = ~ dplyr::case_when(
+          var = ~ dplyr::case_when(
             n_h <= 1 ~ 0,
             TRUE ~ (sum(.x^2, na.rm = TRUE) - n_h * (sum(.x, na.rm = TRUE) / n_h)^2) /
               (n_h * (n_h - 1))
@@ -174,7 +174,7 @@
 #' @noRd
 .ps_pop_stats <- function(eu_stats, handler, targets) {
   eu_weights <- handler@tables$pop_estn_unit %>%
-    dplyr::mutate(w_eu = P1PNTCNT_EU / sum(P1PNTCNT_EU, na.rm = TRUE)) %>%
+    dplyr::mutate(w_eu = as.numeric(P1PNTCNT_EU) / sum(P1PNTCNT_EU, na.rm = TRUE)) %>%
     dplyr::select(CN, w_eu)
 
   mean_targets <- paste0(targets, "_mean")

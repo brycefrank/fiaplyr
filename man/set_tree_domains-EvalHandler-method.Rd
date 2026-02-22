@@ -2,18 +2,20 @@
 % Please edit documentation in R/EvalHandler.R
 \name{set_tree_domains,EvalHandler-method}
 \alias{set_tree_domains,EvalHandler-method}
-\title{Set Tree Domains (Grouping)}
+\title{Set Tree Domain Variables}
 \usage{
 \S4method{set_tree_domains}{EvalHandler}(.data, ...)
 }
 \arguments{
 \item{.data}{A EvalHandler object.}
 
-\item{...}{Variables to group by.}
+\item{...}{Domain variable names (unquoted column names).}
 }
 \value{
-A EvalHandler object with pending grouping.
+A EvalHandler object with the tree domain variables set.
 }
 \description{
-Set Tree Domains (Grouping)
+Sets the domain variables used for grouping tree-level aggregations.
+A domain variable is a column (e.g., STATUSCD, SPCD) whose unique
+values or combinations define estimation domains.
 }

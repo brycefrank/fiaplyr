@@ -4,12 +4,16 @@
 \alias{eval_handler}
 \title{Constructor for EvalHandler}
 \usage{
-eval_handler(db, evalid)
+eval_handler(db, evalid, schema = new("StatusAnalysis"), backend = NULL)
 }
 \arguments{
 \item{db}{A DBIConnection object.}
 
 \item{evalid}{A numeric identifier for the evaluation.}
+
+\item{schema}{An AnalysisSchema object. Defaults to StatusAnalysis.}
+
+\item{backend}{Optional DatabaseBackend for custom schema/table names.}
 }
 \description{
 Constructor for EvalHandler

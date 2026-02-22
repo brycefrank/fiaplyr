@@ -2,18 +2,20 @@
 % Please edit documentation in R/EvalHandler.R
 \name{set_cond_domains,EvalHandler-method}
 \alias{set_cond_domains,EvalHandler-method}
-\title{Set Condition Domains (Grouping)}
+\title{Set Condition Domain Variables}
 \usage{
 \S4method{set_cond_domains}{EvalHandler}(.data, ...)
 }
 \arguments{
 \item{.data}{A EvalHandler object.}
 
-\item{...}{Variables to group by.}
+\item{...}{Domain variable names (unquoted column names).}
 }
 \value{
-A EvalHandler object with pending grouping.
+A EvalHandler object with the condition domain variables set.
 }
 \description{
-Set Condition Domains (Grouping)
+Sets the domain variables used for grouping condition-level aggregations.
+A domain variable is a column (e.g., FORTYPCD, OWNGRPCD) whose unique
+values or combinations define estimation domains.
 }

@@ -51,15 +51,9 @@ if (abs(filt_tpa - mut_filt_tpa) > 0.001) {
 
 # 4. Filter Cond
 handler_cond <- eval_handler(con, evalid) %>%
-  filter_cond(COND_STATUS_CD == 1)
+  filter_cond(COND_STATUS_CD == 1) %>%
+  set_cond_domains(FORTYPCD)
 
 cond_est <- PostStratifiedEstimator(handler_cond) %>%
   estimate(cond ~ 1) %>%
   collect()
-
-print(names(cond_est))
-# Assuming the column for cond ~ 1 might be 'prop' or similar, let's grab the first numeric column
-cond_area <- cond_est[[1]]
-print(paste("Filtered Area (COND_STATUS_CD=1):", cond_area))
-
-print("All Verification Tests Passed!")
