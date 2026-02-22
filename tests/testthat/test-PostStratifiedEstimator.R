@@ -15,7 +15,7 @@ test_that("PostStratifiedEstimator estimates correct forested area", {
     dplyr::collect()
 
   # Verify structure
-  expected_cols <- c("COND_STATUS_CD", "prop", "prop_se")
+  expected_cols <- c("COND_STATUS_CD", "var", "estimate", "se")
   expect_true(all(expected_cols %in% colnames(res)))
 
   # Expect forested (COND_STATUS_CD = 1) estimate
@@ -24,9 +24,9 @@ test_that("PostStratifiedEstimator estimates correct forested area", {
   expect_true(2 %in% res$COND_STATUS_CD)
 
   # Ensure props sum to 1
-  expect_equal(sum(res$prop), 1)
+  expect_equal(sum(res$estimate), 1)
 
   # Ensure variance is valid
-  expect_true(is.numeric(res$prop))
-  expect_true(is.numeric(res$prop_se))
+  expect_true(is.numeric(res$estimate))
+  expect_true(is.numeric(res$se))
 })

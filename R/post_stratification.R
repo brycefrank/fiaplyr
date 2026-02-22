@@ -200,13 +200,37 @@
     ) %>%
     dplyr::ungroup()
 
-  # Rename mean columns back to original target names and add SE columns
-  for (i in seq_along(targets)) {
-    result <- result %>%
-      dplyr::rename(!!targets[i] := !!mean_targets[i]) %>%
-      dplyr::mutate(!!se_targets[i] := sqrt(!!rlang::sym(var_targets[i]))) %>%
-      dplyr::select(-dplyr::all_of(var_targets[i]))
+  result <- result %>% dplyr::collect()
+
+  mean_long <- result %>%
+    dplyr::select(dplyr::all_of(c(domain_vars, mean_targets))) %>%
+    tidyr::pivot_longer(
+      cols = dplyr::all_of(mean_targets),
+      names_to = "var_raw",
+      values_to = "estimate"
+    ) %>%
+    dplyr::mutate(var = sub("_mean$", "", var_raw)) %>%
+    dplyr::select(-var_raw)
+
+  var_long <- result %>%
+    dplyr::select(dplyr::all_of(c(domain_vars, var_targets))) %>%
+    tidyr::pivot_longer(
+      cols = dplyr::all_of(var_targets),
+      names_to = "var_raw",
+      values_to = "var_val"
+    ) %>%
+    dplyr::mutate(var = sub("_var$", "", var_raw)) %>%
+    dplyr::select(-var_raw)
+
+  if (length(domain_vars) == 0) {
+    joined_long <- dplyr::inner_join(mean_long, var_long, by = "var")
+  } else {
+    joined_long <- dplyr::inner_join(mean_long, var_long, by = c(domain_vars, "var"))
   }
 
-  result
+  final_res <- joined_long %>%
+    dplyr::mutate(se = sqrt(var_val)) %>%
+    dplyr::select(dplyr::all_of(domain_vars), var, estimate, se)
+
+  final_res
 }

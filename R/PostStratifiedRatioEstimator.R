@@ -69,17 +69,29 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
   suffix_num <- "_n"
   suffix_den <- "_d"
 
-  rename_map <- function(vars, suffix) setNames(vars, paste0(vars, suffix))
+  rename_map <- function(vars, suffix) {
+    if (length(vars) == 0) {
+      return(character(0))
+    }
+    setNames(vars, paste0(vars, suffix))
+  }
 
   pop_num <- pop_num %>%
     dplyr::rename(!!!rename_map(doms_num, suffix_num), !!!rename_map(vals_num, suffix_num))
   pop_den <- pop_den %>%
     dplyr::rename(!!!rename_map(doms_den, suffix_den), !!!rename_map(vals_den, suffix_den))
 
-  doms_num_suf <- paste0(doms_num, suffix_num)
-  doms_den_suf <- paste0(doms_den, suffix_den)
-  vals_num_suf <- paste0(vals_num, suffix_num)
-  vals_den_suf <- paste0(vals_den, suffix_den)
+  add_suffix <- function(vars, suffix) {
+    if (length(vars) == 0) {
+      return(character(0))
+    }
+    paste0(vars, suffix)
+  }
+
+  doms_num_suf <- add_suffix(doms_num, suffix_num)
+  doms_den_suf <- add_suffix(doms_den, suffix_den)
+  vals_num_suf <- add_suffix(vals_num, suffix_num)
+  vals_den_suf <- add_suffix(vals_den, suffix_den)
 
   # 6. Cross-join and collect (results are small at pop level)
   pop_joined <- pop_num %>%
@@ -113,8 +125,13 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
       var_d = substr(var_d_raw, 1, nchar(var_d_raw) - d_suffix_len)
     )
 
-  final_res <- long_n %>%
-    dplyr::inner_join(long_d, by = all_doms) %>%
+  if (length(all_doms) == 0) {
+    joined_long <- dplyr::cross_join(long_n, long_d)
+  } else {
+    joined_long <- dplyr::inner_join(long_n, long_d, by = all_doms)
+  }
+
+  final_res <- joined_long %>%
     dplyr::mutate(
       estimate = val_n / val_d
     ) %>%
