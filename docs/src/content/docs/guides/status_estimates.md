@@ -3,7 +3,7 @@ title: "Status Estimates"
 ---
 
 ```r
-db_path <- "/home/bryce/Documents/fia/SQLite_FIADB_OR.db"
+db_path <- "../db/SQLite_FIADB_OR.db"
 ```
 
 One of the most frequent needs of FIA data are estimates of status variables.
