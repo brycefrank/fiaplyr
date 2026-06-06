@@ -31,7 +31,7 @@ You can install the development version of fiaplyr from GitHub:
 
 ``` r
 # install.packages("devtools")
-devtools::install_github("yourusername/fiaplyr")
+devtools::install_github("brycefrank/fiaplyr")
 ```
 
 ## Usage
@@ -49,16 +49,27 @@ library(DBI)
 library(RSQLite)
 
 # Establish a backend connection
-db_path <- "./db/fiadb_or.duckdb"
-con <- dbConnect(duckdb::duckdb(), db_path)
+db_path <- "./db/SQLite_FIADB_OR.db"
+con <- dbConnect(RSQLite::SQLite(), db_path)
 ```
 
-### The Evaluation Handler
+### Specifying a Handler
 
-Users primarily interact with an `eval_handler`, as the name suggests, the
-handler is anchored to a particular evaluation, specified by an EVALID. Here,
-we specify the handler for `411001`, which covers Oregon (`41`) for 2001-2010
-(`10`), and can be used to estimate status variables (`01`).
+A `handler` is the main way users create estimates and other inventory products
+from `fiaplyr`. Currently, users must specify an `eval_handler`, which interacts
+with an FIA-made data structure called an evaluation. Evaluations define an area
+of interest, a time period, and an analysis context. Though evaluation-free
+analysis is planned for implementation, we highly recommend them because they
+take advantage of quality assurance processes used by the FIA. Users can explore
+the available evaluations in the database by
+
+```{r}
+explore_evals(con) |>
+  head()
+```
+
+we will use  `411001`, which covers Oregon (`41`) for 2001-2010 (`10`), and can
+be used to estimate status variables (`01`). 
 
 ```{r}
 # Initialize handler for EVALID 411001
@@ -68,7 +79,10 @@ handler <- eval_handler(con, 411001)
 handler
 ```
 
-### Basic Aggregation
+Here, we see the evaluation number, a description, and a summary of the sample
+size and time range of data collection.
+
+### Aggregation to the Plot Level
 
 An essential step for nearly all FIA analyses is to aggregate inventory
 components, such as trees or conditions, to the plot level. This can be done
@@ -82,8 +96,7 @@ and `VOLCFGRS`, separating with a `|` as we go.
 plot_vol <- handler |>
   aggregate(tree ~ VOLCFNET | VOLCFGRS)
 
-# The result is a lazy query. Collect to execute.
-head(collect(plot_vol))
+head(plot_vol)
 ```
 
 Plot-level values are often used in remote sensing models and other
@@ -100,13 +113,14 @@ stored in the FIA database, but is a simple function of diameter.
 
 ```{r}
 # Calculate Basal Area per acre
-plot_ba <- handler |>
-  mutate_tree(BA = 0.005454 * DIA^2) |> # Calculate Basal Area per tree
-  aggregate(tree ~ BA) # Sum to plot level (weighted by TPA)
+ba_handler <- handler |>
+  mutate_tree(BA = 0.005454 * DIA^2)
+
+plot_ba <- ba_handler |>
+  aggregate(tree ~ BA)
 
 # Verify the output
-# Note: This will result in multiple rows per plot (one for each species present)
-head(collect(plot_ba_by_sp))
+head(plot_ba)
 ```
 
 ### Specifying Domains
@@ -116,22 +130,38 @@ of trees, conditions, or other inventory components. As an example, we can make
 species domains by using `set_tree_domains` on the `SPCD` column.
 
 ```{r}
-plot_vol_by_sp <- handler |>
+plot_ba_by_sp <- ba_handler |>
   set_tree_domains(SPCD) |>
-  aggregate(tree ~ VOLCFNET)
+  aggregate(tree ~ BA) |>
+  arrange(desc(BA))
 
-head(collect(plot_vol_by_sp))
+head(plot_ba_by_sp)
+```
+
+### Filters
+
+Filters can be applied to the handler with `filter_tree` and `filter_cond`.
+While conceptually similar to domains, `filters` discard data, while domains
+merely create partitions, making computations more efficient when data can be
+effectively discarded. For example, if we merely need basal area aggregates for
+Douglas-fir we can use
+
+```{r}
+plot_ba_douglas_fir <- ba_handler |>
+  filter_tree(SPCD == 202) |>
+  aggregate(tree ~ BA) |>
+  arrange(desc(BA))
+
+head(plot_ba_douglas_fir)
 ```
 
 ## Estimation
 
 Currently, `fiaplyr` supports post-stratified estimation used in tandem with
-evaluations, much in the same way as EVALIDator. However, the flexibility of
+evaluations, much in the same way as `EVALIDator`. However, the flexibility of
 domain specification and mutations makes a very expressive way to generate
 custom estimates. Extensions to other types of estimators is possible, but not
 currently implemented.
-
-### Post-Stratified Estimator
 
 To produce post-stratified estimates use the `PostStratifiedEstimator` class.
 The `estimate` method uses the same formula syntax as `aggregate`, but instead
@@ -141,16 +171,13 @@ for the area specified by the evaluation.
 Recall our desire to estimate basal area, this is now straightforward.
 
 ```{r}
-ba_handler <- handler |>
-  mutate_tree(BA = 0.005454 * DIA^2)
-
 # Create an estimator from the handler
 estimator <- PostStratifiedEstimator(ba_handler)
 
 # Estimate total Basal Area
 ba_est <- estimate(estimator, tree ~ BA)
 
-head(ba_est)
+ba_est
 ```
 
 By default, outputs are means, typically representing areal densities. An
@@ -158,6 +185,8 @@ estimate of the total can be made instead
 
 ```{r}
 ba_total_est <- estimate(estimator, tree ~ BA, output = "total")
+
+ba_total_est
 ```
 
 ### Domain Estimation
@@ -213,13 +242,8 @@ est_gross_bark <- estimate(estimator_gross_bark, tree ~ VOLCFNET)
 est_gross_bark
 ```
 
-while the latter approach yields
-
-```{r}
-handler_gross_bark <- handler |>
-  mutate_tree(gt5 = DIA >= 5) |>
-  set_tree_domains(STATUSCD, gt5, WOODLAND) |>
-  set_cond_domains(COND_STATUSCD == 1) |>
-  PostStratifiedEstimator()
-```
+Hence, some background knowledge is needed to understand the nuance of the
+mapping between `EVALIDator` variables and information needed to construct the
+proper filters. Still, we believe the explicitness is a strength, and creates
+code with clear intent.
 
