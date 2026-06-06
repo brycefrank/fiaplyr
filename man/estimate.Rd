@@ -4,12 +4,14 @@
 \alias{estimate}
 \title{Estimate Population Parameters}
 \usage{
-estimate(object, ...)
+estimate(object, ..., output = "mean")
 }
 \arguments{
 \item{object}{An estimator object.}
 
-\item{...}{Additional arguments (typically a formula).}
+\item{...}{One or more formulas specifying estimation targets.}
+
+\item{output}{Output scale, either \code{"mean"} (default) or \code{"total"}.}
 }
 \description{
 Estimate Population Parameters

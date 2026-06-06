@@ -4,12 +4,15 @@
 \alias{estimate,PostStratifiedEstimator-method}
 \title{Estimate Population Parameters}
 \usage{
-\S4method{estimate}{PostStratifiedEstimator}(object, ...)
+\S4method{estimate}{PostStratifiedEstimator}(object, ..., output = "mean")
 }
 \arguments{
 \item{object}{A PostStratifiedEstimator object.}
 
-\item{...}{A formula specifying the estimation target (e.g., tree ~ VOLCFGRS).}
+\item{...}{One or more formulas specifying estimation targets
+(e.g., tree ~ VOLCFGRS).}
+
+\item{output}{Output scale, either \code{"mean"} (default) or \code{"total"}.}
 }
 \value{
 A dataframe with estimates.

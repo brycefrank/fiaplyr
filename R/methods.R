@@ -48,6 +48,9 @@ setGeneric("get_strata_weights", function(object) standardGeneric("get_strata_we
 #' Estimate Population Parameters
 #'
 #' @param object An estimator object.
-#' @param ... Additional arguments (typically a formula).
+#' @param ... One or more formulas specifying estimation targets.
+#' @param output Output scale, either "mean" (default) or "total".
 #' @export
-setGeneric("estimate", function(object, ...) standardGeneric("estimate"))
+setGeneric("estimate", function(object, ..., output = "mean") {
+	standardGeneric("estimate")
+})

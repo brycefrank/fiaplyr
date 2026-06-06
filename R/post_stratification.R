@@ -170,12 +170,18 @@
 #' @param eu_stats Estimation-unit-level stats (output of .ps_eu_stats).
 #' @param handler A EvalHandler object.
 #' @param targets Character vector of original target column names.
+#' @param output Output scale: "mean" (default) or "total".
 #' @return A lazy query with population-level estimates and standard errors.
 #' @noRd
-.ps_pop_stats <- function(eu_stats, handler, targets) {
+.ps_pop_stats <- function(eu_stats, handler, targets, output = "mean") {
+  output <- match.arg(output, c("mean", "total"))
+
   eu_weights <- handler@tables$pop_estn_unit %>%
-    dplyr::mutate(w_eu = as.numeric(P1PNTCNT_EU) / sum(P1PNTCNT_EU, na.rm = TRUE)) %>%
-    dplyr::select(CN, w_eu)
+    dplyr::mutate(
+      w_eu = as.numeric(P1PNTCNT_EU) / sum(P1PNTCNT_EU, na.rm = TRUE),
+      eu_area = as.numeric(AREA_USED)
+    ) %>%
+    dplyr::select(CN, w_eu, eu_area)
 
   mean_targets <- paste0(targets, "_mean")
   var_targets <- paste0(targets, "_var")
@@ -187,15 +193,19 @@
 
   result <- eu_stats %>%
     dplyr::left_join(eu_weights, by = c("ESTN_UNIT_CN" = "CN")) %>%
+    dplyr::mutate(
+      coeff_mean = dplyr::if_else(output == "mean", w_eu, eu_area),
+      coeff_var = dplyr::if_else(output == "mean", w_eu^2, eu_area^2)
+    ) %>%
     dplyr::group_by(dplyr::across(dplyr::all_of(domain_vars))) %>%
     dplyr::summarise(
       dplyr::across(
         dplyr::all_of(mean_targets),
-        ~ sum(.x * w_eu, na.rm = TRUE)
+        ~ sum(.x * coeff_mean, na.rm = TRUE)
       ),
       dplyr::across(
         dplyr::all_of(var_targets),
-        ~ sum(.x * w_eu^2, na.rm = TRUE)
+        ~ sum(.x * coeff_var, na.rm = TRUE)
       )
     ) %>%
     dplyr::ungroup()

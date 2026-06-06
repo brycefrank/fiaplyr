@@ -61,48 +61,61 @@ setMethod("show", "PostStratifiedEstimator", function(object) {
 #' Estimate Population Parameters
 #'
 #' @param object A PostStratifiedEstimator object.
-#' @param ... A formula specifying the estimation target (e.g., tree ~ VOLCFGRS).
+#' @param ... One or more formulas specifying estimation targets
+#'   (e.g., tree ~ VOLCFGRS).
+#' @param output Output scale, either "mean" (default) or "total".
 #' @return A dataframe with estimates.
 #' @export
-setMethod("estimate", "PostStratifiedEstimator", function(object, ...) {
-  args <- list(...)
-  if (length(args) == 0) stop("Must provide a formula.")
-  formula <- args[[1]]
-
-  parsed <- parse_formula(formula)
-  slot_name <- parsed$slot
-  targets <- parsed$targets
-
-  if (slot_name == "cond") {
-    if (!all(targets == "1")) {
-      stop("Only 'cond ~ 1' is currently supported for condition estimates.")
-    }
-    return(.estimate_cond_internal(object))
-  } else if (slot_name == "tree") {
-    return(.estimate_tree_internal(object, targets))
-  } else {
-    stop("Unsupported slot: ", slot_name)
+setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = "mean") {
+  formulas <- list(...)
+  if (length(formulas) == 0) stop("Must provide at least one formula.")
+  if (!all(vapply(formulas, inherits, logical(1), "formula"))) {
+    stop("All unnamed arguments must be formulas.")
   }
+  output <- match.arg(output, c("mean", "total"))
+
+  results <- lapply(formulas, function(formula) {
+    parsed <- parse_formula(formula)
+    slot_name <- parsed$slot
+    targets <- parsed$targets
+
+    if (slot_name == "cond") {
+      if (!all(targets == "1")) {
+        stop("Only 'cond ~ 1' is currently supported for condition estimates.")
+      }
+      return(.estimate_cond_internal(object, output = output))
+    } else if (slot_name == "tree") {
+      return(.estimate_tree_internal(object, targets, output = output))
+    } else {
+      stop("Unsupported slot: ", slot_name)
+    }
+  })
+
+  if (length(results) == 1) {
+    return(results[[1]])
+  }
+
+  dplyr::bind_rows(results)
 })
 
 # Internal helper for condition estimation
-.estimate_cond_internal <- function(object) {
+.estimate_cond_internal <- function(object, output = "mean") {
   plot_data <- .make_cond_aggregates(object@handler, adjusted = TRUE, sparse = TRUE)
   targets <- "prop"
 
   strata_data <- .ps_join_strata(plot_data, object@handler)
   strata_stats <- .ps_strata_stats(strata_data, targets)
   eu_stats <- .ps_eu_stats(strata_stats, targets)
-  .ps_pop_stats(eu_stats, object@handler, targets)
+  .ps_pop_stats(eu_stats, object@handler, targets, output = output)
 }
 
 # Internal helper for tree estimation
-.estimate_tree_internal <- function(object, targets) {
+.estimate_tree_internal <- function(object, targets, output = "mean") {
   syms <- rlang::syms(targets)
   plot_data <- .make_tree_aggregates(object@handler, !!!syms, adjusted = TRUE, sparse = TRUE)
 
   strata_data <- .ps_join_strata(plot_data, object@handler)
   strata_stats <- .ps_strata_stats(strata_data, targets)
   eu_stats <- .ps_eu_stats(strata_stats, targets)
-  .ps_pop_stats(eu_stats, object@handler, targets)
+  .ps_pop_stats(eu_stats, object@handler, targets, output = output)
 }
