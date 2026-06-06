@@ -1,0 +1,13 @@
+/* src/styles/custom.css */
+
+/* Target the hero section wrapper */
+.hero {
+  padding-top: 2rem !important;    /* Default is usually much larger */
+  padding-bottom: 2rem !important; 
+  min-height: auto !important;     /* Removes any forced minimum height */
+}
+
+/* Optional: Reduce the gap between the text and the hero image */
+.hero > .copy {
+  gap: 1rem !important; 
+}
