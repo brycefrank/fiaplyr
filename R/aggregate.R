@@ -218,6 +218,13 @@
     dplyr::inner_join(object@tables$cond, by = c("CN" = "PLT_CN"), suffix = c("", ".cond")) %>%
     dplyr::inner_join(object@tables$tree, by = c("CN" = "PLT_CN", "CONDID" = "CONDID"), suffix = c("", ".tree"))
 
+  if (!is.null(object@tables$ref_species)) {
+    res <- res %>%
+      dplyr::left_join(object@tables$ref_species, by = "SPCD", suffix = c("", ".ref"))
+  } else {
+    warning("REF_SPECIES table not available; continuing without species reference columns.", call. = FALSE)
+  }
+
   # Apply standard filtering
   res <- res %>%
     dplyr::filter(

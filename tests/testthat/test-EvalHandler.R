@@ -10,6 +10,7 @@ test_that("EvalHandler initializes correctly", {
   # Check if tables are lazily loaded
   expect_true(dplyr::is.tbl(handler@tables$plot))
   expect_true(dplyr::is.tbl(handler@tables$tree))
+  expect_true(dplyr::is.tbl(handler@tables$ref_species))
 
   # Check content helper (simple check to see if join worked and valid data exists)
   plots <- handler@tables$plot %>% dplyr::collect()
@@ -35,4 +36,41 @@ test_that("EvalHandler filters correctly by evalid", {
 
   desc <- summary(handler)$eval_descr
   expect_equal(desc, "Test Evaluation")
+})
+
+test_that("filter_tree can use WOODLAND after REF_SPECIES join", {
+  con <- setup_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001)
+
+  base <- handler %>%
+    aggregate(tree ~ VOLCFGRS) %>%
+    dplyr::collect()
+
+  woodland_filtered <- handler %>%
+    filter_tree(WOODLAND != "N") %>%
+    aggregate(tree ~ VOLCFGRS) %>%
+    dplyr::collect()
+
+  expect_true(sum(woodland_filtered$VOLCFGRS) < sum(base$VOLCFGRS))
+})
+
+test_that("missing REF_SPECIES warns and continues", {
+  con <- setup_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  DBI::dbRemoveTable(con, "REF_SPECIES")
+
+  handler <- eval_handler(con, evalid = 1001)
+
+  expect_warning(
+    {
+      res <- handler %>%
+        aggregate(tree ~ VOLCFGRS) %>%
+        dplyr::collect()
+      expect_true(nrow(res) > 0)
+    },
+    "REF_SPECIES table not available"
+  )
 })

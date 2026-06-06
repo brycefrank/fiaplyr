@@ -75,6 +75,13 @@ setup_test_db <- function() {
     stringsAsFactors = FALSE
   ))
 
+  # REF_SPECIES
+  DBI::dbWriteTable(con, "REF_SPECIES", data.frame(
+    SPCD = c(1, 2),
+    WOODLAND = c("N", "Y"),
+    stringsAsFactors = FALSE
+  ))
+
   # SUBP_COND
   # Minimal subp_cond table
   DBI::dbWriteTable(con, "SUBP_COND", data.frame(

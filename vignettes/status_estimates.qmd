@@ -20,11 +20,6 @@ produce estimates for three use cases:
 
 1. The proportion of forested land in the state.
 2. Growing stock by species group.
-3. The average diameter of standing dead trees.
-
-The first two use cases are post-stratified estimates, while the third is a
-post-stratified ratio estimate. A standalone vignette is available for ratio
-estimates [here, todo].
 
 ## Establishing the Handler
 
@@ -81,10 +76,10 @@ for_prop_est
 
 ```{r include=FALSE}
 est_vec <- for_prop_est |>
-  pull(prop)
+  pull(estimate)
 
 sd_vec <- for_prop_est |>
-  pull(prop_se)
+  pull(se)
 ```
 
 The proportion of forested land in Oregon between 2001 and 2010 was
@@ -104,7 +99,7 @@ growing_stock_handler <- handler |>
 ps_estimator <- PostStratifiedEstimator(growing_stock_handler)
 
 growing_stock_est <- ps_estimator |>
-  estimate(tree ~ VOLCFGRS)
+  estimate(tree ~ VOLCFGRS | VOLCFNET)
 
 growing_stock_est
 ```
@@ -119,17 +114,3 @@ sd_vec <- growing_stock_est |>
 
 The total volume of growing stock in Oregon between 2001 and 2010 was
 `r est_vec[1]` $\pm$ `r sd_vec[1]` cubic feet per acre.
-
-## Average Diameter of Standing Dead Trees
-
-```{r}
-standing_dead_handler <- handler |>
-  filter_tree(DIA >= 5, STATUSCD == 2) |>
-  set_tree_domains(SPGRPCD)
-
-psr_estimator <- PostStratifiedRatioEstimator(standing_dead_handler)
-
-psr_estimator |>
-  estimate_ratio(tree ~ DIA, tree ~ 1) |>
-  filter(SPGRPCD_n == SPGRPCD_d)
-```

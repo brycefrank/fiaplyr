@@ -54,6 +54,11 @@ setMethod("initialize_tables", "StatusAnalysis", function(schema, db, evalid, ba
   tree_qry <- dplyr::tbl(db, tbl_ref("TREE")) %>%
     dplyr::semi_join(cond_qry, by = c("PLT_CN", "CONDID"))
 
+  ref_species_qry <- tryCatch(
+    dplyr::tbl(db, tbl_ref("REF_SPECIES")),
+    error = function(e) NULL
+  )
+
   subp_cond_qry <- dplyr::tbl(db, tbl_ref("SUBP_COND")) %>%
     dplyr::semi_join(cond_qry, by = c("PLT_CN", "CONDID"))
 
@@ -65,6 +70,7 @@ setMethod("initialize_tables", "StatusAnalysis", function(schema, db, evalid, ba
     plot = plot_qry,
     cond = cond_qry,
     tree = tree_qry,
+    ref_species = ref_species_qry,
     subp_cond = subp_cond_qry
   )
 })
@@ -100,6 +106,7 @@ setMethod("initialize_tables_custom", "StatusAnalysis", function(schema, db, eva
     plot = "PLOT",
     cond = "COND",
     tree = "TREE",
+    ref_species = "REF_SPECIES",
     subp_cond = "SUBP_COND"
   )
   
@@ -136,6 +143,11 @@ setMethod("initialize_tables_custom", "StatusAnalysis", function(schema, db, eva
   tree_qry <- dplyr::tbl(db, get_table(table_names$tree)) %>%
     dplyr::semi_join(cond_qry, by = c("PLT_CN", "CONDID"))
 
+  ref_species_qry <- tryCatch(
+    dplyr::tbl(db, get_table(table_names$ref_species)),
+    error = function(e) NULL
+  )
+
   subp_cond_qry <- dplyr::tbl(db, get_table(table_names$subp_cond)) %>%
     dplyr::semi_join(cond_qry, by = c("PLT_CN", "CONDID"))
 
@@ -147,6 +159,7 @@ setMethod("initialize_tables_custom", "StatusAnalysis", function(schema, db, eva
     plot = plot_qry,
     cond = cond_qry,
     tree = tree_qry,
+    ref_species = ref_species_qry,
     subp_cond = subp_cond_qry
   )
 })

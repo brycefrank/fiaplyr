@@ -14,8 +14,6 @@ test_that("PostStratifiedRatioEstimator estimates correct ratios", {
   # Create Ratio Estimator
   ratio_est <- PostStratifiedRatioEstimator(handler_num, handler_den)
 
-  browser()
-
   # Calculate Ratio: Volume per Area (by Species and Forest Type)
   # Num: tree ~ VOLCFNET
   # Den: cond ~ 1 (Implicit Area)
