@@ -3,8 +3,6 @@ title: "Get Table Reference"
 description: "Get Table Reference"
 ---
 
-Auto-generated from `man/` Rd files. Do not edit this page by hand.
-
 ## Description
 
 Get Table Reference

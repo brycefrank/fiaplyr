@@ -87,9 +87,6 @@ sd_vec <- for_prop_est |>
   pull(se)
 ```
 
-The proportion of forested land in Vermont between 2003 and 2006 was
-`r est_vec[1]` $\pm$ `r sd_vec[1]`.
-
 ## Growing Stock by Species Group
 
 The estimation of growing stock is frequently used to assess the amount of

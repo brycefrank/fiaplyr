@@ -3,8 +3,6 @@ title: "Filter Condition Table"
 description: "Filter Condition Table"
 ---
 
-Auto-generated from `man/` Rd files. Do not edit this page by hand.
-
 ## Description
 
 Filter Condition Table

@@ -3,8 +3,6 @@ title: "Estimate Ratio"
 description: "Estimate Ratio"
 ---
 
-Auto-generated from `man/` Rd files. Do not edit this page by hand.
-
 ## Description
 
 Estimate Ratio

@@ -3,8 +3,6 @@ title: "Explore Available Evaluations"
 description: "Lists all available evaluations in the database with their descriptions."
 ---
 
-Auto-generated from `man/` Rd files. Do not edit this page by hand.
-
 ## Description
 
 Lists all available evaluations in the database with their

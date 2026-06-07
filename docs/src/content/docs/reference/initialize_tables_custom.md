@@ -3,8 +3,6 @@ title: "Initialize Tables with Custom Schema"
 description: "Initialize Tables with Custom Schema"
 ---
 
-Auto-generated from `man/` Rd files. Do not edit this page by hand.
-
 ## Description
 
 Initialize Tables with Custom Schema

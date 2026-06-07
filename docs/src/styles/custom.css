@@ -1,5 +1,7 @@
 /* src/styles/custom.css */
 
+@import "katex/dist/katex.min.css";
+
 /* Target the hero section wrapper */
 .hero {
   padding-top: 2rem !important;    /* Default is usually much larger */

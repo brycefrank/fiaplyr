@@ -5,8 +5,11 @@ setClass("PostStratifiedEstimator",
   )
 )
 
-#' Constructor for PostStratifiedEstimator
-#'
+#' PostStratifiedEstimator
+#' 
+#' Create an object that can be used to make post-stratified estimates. The
+#' estimator is initialized with an `EvalHandler` that defines the evaluation.
+#' 
 #' @param handler A EvalHandler object.
 #' @export
 PostStratifiedEstimator <- function(handler) {

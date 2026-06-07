@@ -3,8 +3,6 @@ title: "Get Strata Weights"
 description: "Get Strata Weights"
 ---
 
-Auto-generated from `man/` Rd files. Do not edit this page by hand.
-
 ## Description
 
 Get Strata Weights

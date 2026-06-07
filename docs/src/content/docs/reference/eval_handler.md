@@ -3,8 +3,6 @@ title: "Constructor for EvalHandler"
 description: "Constructor for EvalHandler"
 ---
 
-Auto-generated from `man/` Rd files. Do not edit this page by hand.
-
 ## Description
 
 Constructor for EvalHandler

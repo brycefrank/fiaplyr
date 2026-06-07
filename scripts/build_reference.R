@@ -214,8 +214,6 @@ markdown_for_rd <- function(rd_path) {
     paste0('title: "', escape_yaml(title), '"'),
     paste0('description: "', escape_yaml(description_line), '"'),
     "---",
-    "",
-    "Auto-generated from `man/` Rd files. Do not edit this page by hand.",
     ""
   )
 

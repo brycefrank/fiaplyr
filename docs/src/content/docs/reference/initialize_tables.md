@@ -3,8 +3,6 @@ title: "Initialize Tables"
 description: "Initialize Tables"
 ---
 
-Auto-generated from `man/` Rd files. Do not edit this page by hand.
-
 ## Description
 
 Initialize Tables

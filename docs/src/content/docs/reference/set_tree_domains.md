@@ -3,8 +3,6 @@ title: "Set Tree Domain Variables"
 description: "Sets the domain variables used for grouping tree-level aggregations. A domain variable is a column (e.g., STATUSCD, SPCD) whose unique values or combinations define estimation domains."
 ---
 
-Auto-generated from `man/` Rd files. Do not edit this page by hand.
-
 ## Description
 
 Sets the domain variables used for grouping tree-level

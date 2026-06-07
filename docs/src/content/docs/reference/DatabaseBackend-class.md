@@ -3,8 +3,6 @@ title: "Database Backend Class"
 description: "Handles database-specific schema and table naming conventions."
 ---
 
-Auto-generated from `man/` Rd files. Do not edit this page by hand.
-
 ## Description
 
 Handles database-specific schema and table naming conventions.

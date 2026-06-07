@@ -3,8 +3,6 @@ title: "Get Evaluation ID"
 description: "Get Evaluation ID"
 ---
 
-Auto-generated from `man/` Rd files. Do not edit this page by hand.
-
 ## Description
 
 Get Evaluation ID

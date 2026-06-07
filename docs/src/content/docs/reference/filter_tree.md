@@ -3,8 +3,6 @@ title: "Filter Tree Table"
 description: "Filter Tree Table"
 ---
 
-Auto-generated from `man/` Rd files. Do not edit this page by hand.
-
 ## Description
 
 Filter Tree Table

@@ -3,8 +3,6 @@ title: "Constructor for PostStratifiedRatioEstimator"
 description: "Constructor for PostStratifiedRatioEstimator"
 ---
 
-Auto-generated from `man/` Rd files. Do not edit this page by hand.
-
 ## Description
 
 Constructor for PostStratifiedRatioEstimator

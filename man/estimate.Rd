@@ -11,7 +11,7 @@ estimate(object, ..., output = "mean")
 
 \item{...}{One or more formulas specifying estimation targets.}
 
-\item{output}{Output scale, either \code{"mean"} (default) or \code{"total"}.}
+\item{output}{Output scale, either "mean" (default) or "total".}
 }
 \description{
 Estimate Population Parameters

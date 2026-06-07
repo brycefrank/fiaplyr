@@ -90,9 +90,6 @@ for_prop_est
       <chr>    <dbl>   <dbl>
     1 prop     0.772 0.00909
 
-The proportion of forested land in Vermont between 2003 and 2006 was
-0.7721442 $\pm$ 0.0090872.
-
 ## Growing Stock by Species Group
 
 The estimation of growing stock is frequently used to assess the amount

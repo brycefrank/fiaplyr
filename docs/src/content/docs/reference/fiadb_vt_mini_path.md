@@ -3,8 +3,6 @@ title: "Path to packaged Vermont mini FIADB DuckDB"
 description: "Returns the installed path to the DuckDB file distributed with ‘fiaplyr’."
 ---
 
-Auto-generated from `man/` Rd files. Do not edit this page by hand.
-
 ## Description
 
 Returns the installed path to the DuckDB file distributed with

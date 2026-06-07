@@ -2,7 +2,7 @@
 % Please edit documentation in R/PostStratifiedEstimator.R
 \name{PostStratifiedEstimator}
 \alias{PostStratifiedEstimator}
-\title{Constructor for PostStratifiedEstimator}
+\title{PostStratifiedEstimator}
 \usage{
 PostStratifiedEstimator(handler)
 }
@@ -10,5 +10,6 @@ PostStratifiedEstimator(handler)
 \item{handler}{A EvalHandler object.}
 }
 \description{
-Constructor for PostStratifiedEstimator
+Create an object that can be used to make post-stratified estimates. The
+estimator is initialized with an \code{EvalHandler} that defines the evaluation.
 }

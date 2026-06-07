@@ -7,7 +7,8 @@
 fiadb_vt_mini_path(mustWork = TRUE)
 }
 \arguments{
-\item{mustWork}{Logical. If TRUE (default), throws an error when the file is not found.}
+\item{mustWork}{Logical. If TRUE (default), throws an error when the file
+is not found.}
 }
 \value{
 A length-1 character vector containing the file path.

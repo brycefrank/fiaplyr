@@ -1,13 +1,13 @@
 ---
-title: "Constructor for PostStratifiedEstimator"
-description: "Constructor for PostStratifiedEstimator"
+title: "PostStratifiedEstimator"
+description: "Create an object that can be used to make post-stratified estimates. The estimator is initialized with an ‘EvalHandler’ that defines the evaluation."
 ---
-
-Auto-generated from `man/` Rd files. Do not edit this page by hand.
 
 ## Description
 
-Constructor for PostStratifiedEstimator
+Create an object that can be used to make post-stratified
+estimates. The estimator is initialized with an ‘EvalHandler’ that
+defines the evaluation.
 
 ## Usage
 

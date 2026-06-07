@@ -3,8 +3,6 @@ title: "PostStratifiedRatioEstimator Class"
 description: "PostStratifiedRatioEstimator Class"
 ---
 
-Auto-generated from `man/` Rd files. Do not edit this page by hand.
-
 ## Description
 
 PostStratifiedRatioEstimator Class

@@ -12,7 +12,7 @@
 \item{...}{One or more formulas specifying estimation targets
 (e.g., tree ~ VOLCFGRS).}
 
-\item{output}{Output scale, either \code{"mean"} (default) or \code{"total"}.}
+\item{output}{Output scale, either "mean" (default) or "total".}
 }
 \value{
 A dataframe with estimates.

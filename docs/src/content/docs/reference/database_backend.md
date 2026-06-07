@@ -3,8 +3,6 @@ title: "Create a Database Backend"
 description: "Create a Database Backend"
 ---
 
-Auto-generated from `man/` Rd files. Do not edit this page by hand.
-
 ## Description
 
 Create a Database Backend

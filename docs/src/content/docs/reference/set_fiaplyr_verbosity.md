@@ -3,8 +3,6 @@ title: "Set fiaplyr verbosity"
 description: "Controls whether long-running operations show progress messages."
 ---
 
-Auto-generated from `man/` Rd files. Do not edit this page by hand.
-
 ## Description
 
 Controls whether long-running operations show progress messages.

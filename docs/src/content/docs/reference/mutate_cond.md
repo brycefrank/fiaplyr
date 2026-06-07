@@ -3,8 +3,6 @@ title: "Mutate Condition Table"
 description: "Mutate Condition Table"
 ---
 
-Auto-generated from `man/` Rd files. Do not edit this page by hand.
-
 ## Description
 
 Mutate Condition Table

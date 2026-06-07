@@ -3,8 +3,6 @@ title: "Class for Evaluation Pipeline"
 description: "Class for Evaluation Pipeline"
 ---
 
-Auto-generated from `man/` Rd files. Do not edit this page by hand.
-
 ## Description
 
 Class for Evaluation Pipeline
