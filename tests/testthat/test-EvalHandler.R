@@ -14,10 +14,10 @@ test_that("EvalHandler initializes correctly", {
 
   # Check content helper (simple check to see if join worked and valid data exists)
   plots <- handler@tables$plot %>% dplyr::collect()
-  expect_equal(nrow(plots), 4)
+  expect_equal(nrow(plots), 8)
 
   trees <- handler@tables$tree %>% dplyr::collect()
-  expect_equal(nrow(trees), 4) # 4 trees in setup
+  expect_equal(nrow(trees), 8) # 8 trees across both estimation units
 })
 
 test_that("EvalHandler filters correctly by evalid", {
