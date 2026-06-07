@@ -46,7 +46,7 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
   f_num <- args[[1]]
   f_den <- args[[2]]
 
-  # 1. Parse formulas and aggregate each side independently
+  # 1. Parse formulas and aggregate plot-level data for each side
   parsed_num <- parse_formula(f_num)
   parsed_den <- parse_formula(f_den)
 
@@ -57,89 +57,116 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
   vals_num <- .psr_val_cols(parsed_num)
   vals_den <- .psr_val_cols(parsed_den)
 
-  # 3. Run each through the independent strata/EU/pop pipeline
-  pop_num <- .psr_pop_estimate(agg_num, object@numerator, vals_num)
-  pop_den <- .psr_pop_estimate(agg_den, object@denominator, vals_den)
+  # 3. Join strata once for each side - reused by both the variance and covariance pipelines
+  strata_num <- .ps_join_strata(agg_num, object@numerator)
+  strata_den <- .ps_join_strata(agg_den, object@denominator)
 
-  # 4. Identify domain columns on each side
-  doms_num <- setdiff(colnames(pop_num), vals_num)
-  doms_den <- setdiff(colnames(pop_den), vals_den)
+  # 4. Stats pipeline for each side, producing [domain_vars, var, estimate, se]
+  stats_num <- strata_num %>%
+    .ps_strata_stats(vals_num) %>%
+    .ps_eu_stats(vals_num) %>%
+    .ps_pop_stats(object@numerator, vals_num)
 
-  # 5. Rename with suffixes to avoid collisions
-  suffix_num <- "_n"
-  suffix_den <- "_d"
+  stats_den <- strata_den %>%
+    .ps_strata_stats(vals_den) %>%
+    .ps_eu_stats(vals_den) %>%
+    .ps_pop_stats(object@denominator, vals_den)
 
-  rename_map <- function(vars, suffix) {
-    if (length(vars) == 0) {
-      return(character(0))
-    }
-    setNames(vars, paste0(vars, suffix))
+  # 5. Covariance pipeline.
+  # Build a lookup table mapping each cov column name to its (var_n, var_d) pair.
+  # Row-major order: i (numerator) is the outer loop, j (denominator) is the inner loop.
+  cov_pair_df <- data.frame(
+    var_n = rep(vals_num, each = length(vals_den)),
+    var_d = rep(vals_den, times = length(vals_num)),
+    stringsAsFactors = FALSE
+  )
+  cov_cols <- paste0(".cov_", seq_len(nrow(cov_pair_df)))
+  cov_pair_df$cov_col <- cov_cols
+
+  pop_cov <- strata_num %>%
+    .ps_strata_cov(strata_den, vals_num, vals_den, cov_cols) %>%
+    .ps_eu_cov(cov_cols) %>%
+    .ps_pop_cov(object@numerator, cov_cols)
+
+  # Pivot pop_cov to long format using the known lookup (avoids fragile name parsing)
+  pop_cov_long <- pop_cov %>%
+    tidyr::pivot_longer(
+      cols = dplyr::all_of(cov_cols),
+      names_to = "cov_col",
+      values_to = "cov_val"
+    ) %>%
+    dplyr::left_join(cov_pair_df, by = "cov_col") %>%
+    dplyr::select(-cov_col)
+  # Columns: [domain_vars_n, domain_vars_d, var_n, var_d, cov_val]
+
+  # 6. Identify domain columns for each side
+  doms_num <- setdiff(colnames(stats_num), c("var", "estimate", "se"))
+  doms_den <- setdiff(colnames(stats_den), c("var", "estimate", "se"))
+
+  # 7. Add _n/_d suffixes to domain cols and rename var/estimate/se, then cross-join
+  suffix_n <- "_n"
+  suffix_d <- "_d"
+
+  stats_num_suf <- stats_num
+  if (length(doms_num) > 0) {
+    stats_num_suf <- stats_num_suf %>%
+      dplyr::rename_with(~ paste0(.x, suffix_n), dplyr::all_of(doms_num))
+  }
+  stats_num_suf <- stats_num_suf %>%
+    dplyr::rename(var_n = var, estimate_n = estimate, se_n = se)
+
+  stats_den_suf <- stats_den
+  if (length(doms_den) > 0) {
+    stats_den_suf <- stats_den_suf %>%
+      dplyr::rename_with(~ paste0(.x, suffix_d), dplyr::all_of(doms_den))
+  }
+  stats_den_suf <- stats_den_suf %>%
+    dplyr::rename(var_d = var, estimate_d = estimate, se_d = se)
+
+  # Cross-join produces all (domain_n, var_n) x (domain_d, var_d) combinations
+  pop_joined <- dplyr::cross_join(stats_num_suf, stats_den_suf)
+
+  # 8. Add _n/_d suffixes to pop_cov_long domain cols to match pop_joined, then join
+  pop_cov_long_suf <- pop_cov_long
+  if (length(doms_num) > 0) {
+    pop_cov_long_suf <- pop_cov_long_suf %>%
+      dplyr::rename_with(~ paste0(.x, suffix_n), dplyr::all_of(doms_num))
+  }
+  if (length(doms_den) > 0) {
+    pop_cov_long_suf <- pop_cov_long_suf %>%
+      dplyr::rename_with(~ paste0(.x, suffix_d), dplyr::all_of(doms_den))
   }
 
-  pop_num <- pop_num %>%
-    dplyr::rename(!!!rename_map(doms_num, suffix_num), !!!rename_map(vals_num, suffix_num))
-  pop_den <- pop_den %>%
-    dplyr::rename(!!!rename_map(doms_den, suffix_den), !!!rename_map(vals_den, suffix_den))
+  doms_num_suf <- if (length(doms_num) > 0) paste0(doms_num, suffix_n) else character(0)
+  doms_den_suf <- if (length(doms_den) > 0) paste0(doms_den, suffix_d) else character(0)
 
-  add_suffix <- function(vars, suffix) {
-    if (length(vars) == 0) {
-      return(character(0))
-    }
-    paste0(vars, suffix)
-  }
+  cov_join_keys <- c(doms_num_suf, doms_den_suf, "var_n", "var_d")
+  pop_full <- dplyr::left_join(pop_joined, pop_cov_long_suf, by = cov_join_keys)
+  # Missing cov_val means numerator and denominator never co-occur on the same plot,
+  # so all cross-products y_n * y_d = 0 and the true covariance is 0.
+  pop_full <- pop_full %>%
+    dplyr::mutate(cov_val = dplyr::coalesce(cov_val, 0))
 
-  doms_num_suf <- add_suffix(doms_num, suffix_num)
-  doms_den_suf <- add_suffix(doms_den, suffix_den)
-  vals_num_suf <- add_suffix(vals_num, suffix_num)
-  vals_den_suf <- add_suffix(vals_den, suffix_den)
-
-  # 6. Cross-join and collect (results are small at pop level)
-  pop_joined <- pop_num %>%
-    dplyr::cross_join(pop_den) %>%
-    dplyr::collect()
-
-  # 7. Pivot to long for var_n x var_d cross product, compute ratios
+  # 9. Apply the ratio variance formula:
+  #    v(R) = (1/Y_d^2) * [v(Y_n) + R^2*v(Y_d) - 2*R*cov(Y_n, Y_d)]
   all_doms <- c(doms_num_suf, doms_den_suf)
-  n_suffix_len <- nchar(suffix_num)
-  d_suffix_len <- nchar(suffix_den)
 
-  long_n <- pop_joined %>%
-    dplyr::select(dplyr::all_of(c(all_doms, vals_num_suf))) %>%
-    tidyr::pivot_longer(
-      cols = dplyr::all_of(vals_num_suf),
-      names_to = "var_n_raw",
-      values_to = "val_n"
-    ) %>%
+  final_res <- pop_full %>%
     dplyr::mutate(
-      var_n = substr(var_n_raw, 1, nchar(var_n_raw) - n_suffix_len)
-    )
-
-  long_d <- pop_joined %>%
-    dplyr::select(dplyr::all_of(c(all_doms, vals_den_suf))) %>%
-    tidyr::pivot_longer(
-      cols = dplyr::all_of(vals_den_suf),
-      names_to = "var_d_raw",
-      values_to = "val_d"
-    ) %>%
-    dplyr::mutate(
-      var_d = substr(var_d_raw, 1, nchar(var_d_raw) - d_suffix_len)
-    )
-
-  if (length(all_doms) == 0) {
-    joined_long <- dplyr::cross_join(long_n, long_d)
-  } else {
-    joined_long <- dplyr::inner_join(long_n, long_d, by = all_doms)
-  }
-
-  final_res <- joined_long %>%
-    dplyr::mutate(
-      estimate = val_n / val_d
+      estimate = estimate_n / estimate_d,
+      var_ratio = (1 / estimate_d^2) * (
+        se_n^2 +
+          (estimate_n / estimate_d)^2 * se_d^2 -
+          2 * (estimate_n / estimate_d) * cov_val
+      ),
+      se = sqrt(pmax(var_ratio, 0))
     ) %>%
     dplyr::select(
       dplyr::all_of(all_doms),
       var_n,
       var_d,
-      estimate
+      estimate,
+      se
     )
 
   return(final_res)

@@ -1,8 +1,12 @@
 setup_test_db <- function() {
   con <- DBI::dbConnect(duckdb::duckdb(), ":memory:")
 
+  write_table <- function(name, data) {
+    DBI::dbWriteTable(con, name, data)
+  }
+
   # POP_EVAL
-  DBI::dbWriteTable(con, "POP_EVAL", data.frame(
+  write_table("POP_EVAL", data.frame(
     CN = 1,
     EVALID = 1001,
     EVAL_DESCR = "Test Evaluation",
@@ -10,20 +14,20 @@ setup_test_db <- function() {
   ))
 
   # POP_ESTN_UNIT
-  DBI::dbWriteTable(con, "POP_ESTN_UNIT", data.frame(
-    CN = 1,
-    EVAL_CN = 1,
-    P1PNTCNT_EU = 100,
-    AREA_USED = 1000,
+  write_table("POP_ESTN_UNIT", data.frame(
+    CN = c(1, 2),
+    EVAL_CN = c(1, 1),
+    P1PNTCNT_EU = c(100, 200),
+    AREA_USED = c(100, 200),
     stringsAsFactors = FALSE
   ))
 
   # POP_STRATUM
-  DBI::dbWriteTable(con, "POP_STRATUM", data.frame(
-    CN = c(1, 2),
-    ESTN_UNIT_CN = 1,
-    P1POINTCNT = c(50, 50),
-    P2POINTCNT = c(2, 2),
+  write_table("POP_STRATUM", data.frame(
+    CN = c(1, 2, 3, 4),
+    ESTN_UNIT_CN = c(1, 1, 2, 2),
+    P1POINTCNT = c(50, 50, 100, 100),
+    P2POINTCNT = c(2, 2, 2, 2),
     ADJ_FACTOR_MICR = 1.0,
     ADJ_FACTOR_SUBP = 1.0,
     ADJ_FACTOR_MACR = 1.0,
@@ -31,62 +35,62 @@ setup_test_db <- function() {
   ))
 
   # POP_PLOT_STRATUM_ASSGN
-  # Assign 2 plots to stratum 1 and 2 plots to stratum 2
-  DBI::dbWriteTable(con, "POP_PLOT_STRATUM_ASSGN", data.frame(
-    STRATUM_CN = c(1, 1, 2, 2),
-    PLT_CN = c(101, 102, 103, 104),
+  # Assign 2 plots to each stratum
+  write_table("POP_PLOT_STRATUM_ASSGN", data.frame(
+    STRATUM_CN = c(1, 1, 2, 2, 3, 3, 4, 4),
+    PLT_CN = c(101, 102, 103, 104, 201, 202, 203, 204),
     stringsAsFactors = FALSE
   ))
 
   # PLOT
-  DBI::dbWriteTable(con, "PLOT", data.frame(
-    CN = c(101, 102, 103, 104),
+  write_table("PLOT", data.frame(
+    CN = c(101, 102, 103, 104, 201, 202, 203, 204),
     INVYR = 2020,
     MEASYEAR = 2020,
     STATECD = 1,
     COUNTYCD = 1,
-    PLOT = c(1, 2, 3, 4),
+    PLOT = c(1, 2, 3, 4, 5, 6, 7, 8),
     stringsAsFactors = FALSE
   ))
 
   # COND
-  # Simple case: 1 condition per plot usually, maybe 2 on one plot
-  DBI::dbWriteTable(con, "COND", data.frame(
-    PLT_CN = c(101, 102, 103, 104, 104),
-    CONDID = c(1, 1, 1, 1, 2),
-    FORTYPCD = c(100, 100, 200, 200, 300),
-    OWNCD = c(1, 1, 2, 2, 2),
-    CONDPROP_UNADJ = c(1, 1, 1, 0.5, 0.5),
+  # Mirror the original unit with a second, larger estimation unit.
+  write_table("COND", data.frame(
+    PLT_CN = c(101, 102, 103, 104, 104, 201, 202, 203, 204, 204),
+    CONDID = c(1, 1, 1, 1, 2, 1, 1, 1, 1, 2),
+    FORTYPCD = c(100, 100, 200, 200, 300, 100, 100, 200, 200, 300),
+    OWNCD = c(1, 1, 2, 2, 2, 1, 1, 2, 2, 2),
+    CONDPROP_UNADJ = c(1, 1, 1, 0.5, 0.5, 1, 1, 1, 0.5, 0.5),
     PROP_BASIS = "SUBP",
-    COND_STATUS_CD = c(1, 1, 1, 2, 1),
+    COND_STATUS_CD = c(1, 1, 1, 2, 1, 1, 1, 1, 2, 1),
     stringsAsFactors = FALSE
   ))
 
   # TREE
-  # A few trees
-  DBI::dbWriteTable(con, "TREE", data.frame(
-    PLT_CN = c(101, 101, 103, 104),
-    CONDID = c(1, 1, 1, 1),
-    DIA = c(10, 12, 8, 14),
-    VOLCFNET = c(10, 15, 5, 20),
-    VOLCFGRS = c(11, 16, 6, 21),
-    SPCD = c(1, 2, 1, 2), # 1=Pine, 2=Oak
-    TPA_UNADJ = c(6.0, 6.0, 6.0, 6.0),
+  # A few trees in each estimation unit.
+  write_table("TREE", data.frame(
+    PLT_CN = c(101, 101, 103, 104, 201, 201, 203, 204),
+    CONDID = c(1, 1, 1, 1, 1, 1, 1, 1),
+    DIA = c(10, 12, 8, 14, 10, 12, 8, 14),
+    VOLCFNET = c(10, 15, 5, 20, 10, 15, 5, 20),
+    VOLCFGRS = c(11, 16, 6, 21, 11, 16, 6, 21),
+    SPCD = c(1, 2, 1, 2, 1, 2, 1, 2), # 1=Pine, 2=Oak
+    TPA_UNADJ = c(6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0),
     stringsAsFactors = FALSE
   ))
 
   # REF_SPECIES
-  DBI::dbWriteTable(con, "REF_SPECIES", data.frame(
+  write_table("REF_SPECIES", data.frame(
     SPCD = c(1, 2),
     WOODLAND = c("N", "Y"),
     stringsAsFactors = FALSE
   ))
 
   # SUBP_COND
-  # Minimal subp_cond table
-  DBI::dbWriteTable(con, "SUBP_COND", data.frame(
-    PLT_CN = c(101, 102, 103, 104, 104),
-    CONDID = c(1, 1, 1, 1, 2),
+  # Minimal subp_cond table.
+  write_table("SUBP_COND", data.frame(
+    PLT_CN = c(101, 102, 103, 104, 104, 201, 202, 203, 204, 204),
+    CONDID = c(1, 1, 1, 1, 2, 1, 1, 1, 1, 2),
     SUBP = 1,
     stringsAsFactors = FALSE
   ))
