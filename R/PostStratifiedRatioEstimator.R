@@ -35,11 +35,17 @@ PostStratifiedRatioEstimator <- function(numerator, denominator = numerator) {
 #'
 #' @param object A PostStratifiedRatioEstimator object.
 #' @param ... Ratio formulas.
+#' @param domain_pairing Domain pairing strategy, either `"all"` (default) for
+#'   all numerator/denominator domain combinations or `"matched"` to only retain
+#'   rows where both sides share the same domain columns and values.
 #' @export
-setGeneric("estimate_ratio", function(object, ...) standardGeneric("estimate_ratio"))
+setGeneric("estimate_ratio", function(object, ..., domain_pairing = "all") {
+  standardGeneric("estimate_ratio")
+})
 
 #' @describeIn estimate_ratio Estimate ratio for PostStratifiedRatioEstimator
-setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...) {
+setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ..., domain_pairing = c("all", "matched")) {
+  domain_pairing <- match.arg(domain_pairing)
   args <- list(...)
   if (length(args) != 2) stop("Must provide exactly two formulas (numerator, denominator).")
 
@@ -102,6 +108,10 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
   # 6. Identify domain columns for each side
   doms_num <- setdiff(colnames(stats_num), c("var", "estimate", "se"))
   doms_den <- setdiff(colnames(stats_den), c("var", "estimate", "se"))
+  .psr_validate_domain_pairing(domain_pairing, doms_num, doms_den)
+  shared_doms <- intersect(doms_num, doms_den)
+  doms_num_only <- setdiff(doms_num, shared_doms)
+  doms_den_only <- setdiff(doms_den, shared_doms)
 
   # 7. Add _n/_d suffixes to domain cols and rename var/estimate/se, then cross-join
   suffix_n <- "_n"
@@ -123,18 +133,34 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
   stats_den_suf <- stats_den_suf %>%
     dplyr::rename(var_d = var, estimate_d = estimate, se_d = se)
 
-  # Cross-join produces all (domain_n, var_n) x (domain_d, var_d) combinations
-  pop_joined <- dplyr::cross_join(stats_num_suf, stats_den_suf)
+  # Pair numerator and denominator stats according to the requested domain strategy
+  pop_joined <- .psr_join_stats(
+    stats_num_suf,
+    stats_den_suf,
+    doms_num,
+    doms_den,
+    domain_pairing,
+    suffix_n,
+    suffix_d
+  )
 
   # 8. Add _n/_d suffixes to pop_cov_long domain cols to match pop_joined, then join
   pop_cov_long_suf <- pop_cov_long
-  if (length(doms_num) > 0) {
+  if (length(doms_num_only) > 0) {
     pop_cov_long_suf <- pop_cov_long_suf %>%
-      dplyr::rename_with(~ paste0(.x, suffix_n), dplyr::all_of(doms_num))
+      dplyr::rename_with(~ paste0(.x, suffix_n), dplyr::all_of(doms_num_only))
   }
-  if (length(doms_den) > 0) {
+  if (length(doms_den_only) > 0) {
     pop_cov_long_suf <- pop_cov_long_suf %>%
-      dplyr::rename_with(~ paste0(.x, suffix_d), dplyr::all_of(doms_den))
+      dplyr::rename_with(~ paste0(.x, suffix_d), dplyr::all_of(doms_den_only))
+  }
+  if (length(shared_doms) > 0) {
+    shared_num <- rlang::set_names(rlang::syms(shared_doms), paste0(shared_doms, suffix_n))
+    shared_den <- rlang::set_names(rlang::syms(shared_doms), paste0(shared_doms, suffix_d))
+
+    pop_cov_long_suf <- pop_cov_long_suf %>%
+      dplyr::mutate(!!!shared_num, !!!shared_den) %>%
+      dplyr::select(-dplyr::all_of(shared_doms))
   }
 
   doms_num_suf <- if (length(doms_num) > 0) paste0(doms_num, suffix_n) else character(0)
@@ -200,6 +226,37 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
   } else {
     parsed$targets
   }
+}
+
+#' Validate ratio-domain pairing mode
+#' @noRd
+.psr_validate_domain_pairing <- function(domain_pairing, doms_num, doms_den) {
+  if (domain_pairing != "matched") {
+    return(invisible(NULL))
+  }
+
+  if (!setequal(doms_num, doms_den)) {
+    stop(
+      "`domain_pairing = \"matched\"` requires numerator and denominator to have the same domain columns."
+    )
+  }
+
+  invisible(NULL)
+}
+
+#' Pair numerator and denominator stats
+#' @noRd
+.psr_join_stats <- function(stats_num_suf, stats_den_suf, doms_num, doms_den, domain_pairing, suffix_n, suffix_d) {
+  if (domain_pairing != "matched" || length(doms_num) == 0) {
+    return(dplyr::cross_join(stats_num_suf, stats_den_suf))
+  }
+
+  join_keys <- stats::setNames(
+    paste0(doms_num, suffix_d),
+    paste0(doms_num, suffix_n)
+  )
+
+  dplyr::inner_join(stats_num_suf, stats_den_suf, by = join_keys, keep = TRUE)
 }
 
 #' Run one side through the full post-stratification pipeline

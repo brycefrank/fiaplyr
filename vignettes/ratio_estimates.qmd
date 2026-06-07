@@ -83,3 +83,34 @@ Here, we see the density of growing stock per acre on forested land, which is
 1,807 cubic feet per acre. The table defines the numerator variable `var_n`,
 and the denominator variable `var_d`. The point estimate and standard error are
 provided.
+
+## Diameter Height Ratio by Species
+
+A representation of the slenderness of trees is the diameter-height ratio, which
+has implications for taper, merchantability, and other characteristics of trees.
+We will estimate the diameter height ratio for growing stock trees within the 10
+to 15 inch diameter class for each species. By default, the ratio estimator
+generates estimates for all possible domain pairings, but for this question
+it is sufficient to only generate ratios when the species match between the
+numerator and denominator, this can be done by using
+`domain_pairing = 'matched'` argument.
+
+```{r}
+tree_handler <- handler |>
+  filter_tree(TREECLCD == 2, DIA >= 10, DIA <= 15, ACTUALHT == HT) |>
+  set_tree_domains(SPCD)
+
+psr <- PostStratifiedRatioEstimator(tree_handler, tree_handler)
+
+species_labels <- handler@tables$ref_species |>
+  select(SPCD, COMMON_NAME) |>
+  collect()
+
+dhr <- estimate_ratio(psr, tree ~ HT, tree ~ DIA, domain_pairing = "matched") |>
+  arrange(desc(estimate)) |>
+  filter(se != 0) |>
+  left_join(species_labels, by = c("SPCD_n" = "SPCD"))
+
+head(dhr)
+```
+

@@ -86,3 +86,44 @@ Here, we see the density of growing stock per acre on forested land,
 which is 1,807 cubic feet per acre. The table defines the numerator
 variable `var_n`, and the denominator variable `var_d`. The point
 estimate and standard error are provided.
+
+## Diameter Height Ratio by Species
+
+A representation of the slenderness of trees is the diameter-height
+ratio, which has implications for taper, merchantability, and other
+characteristics of trees. We will estimate the diameter height ratio for
+growing stock trees within the 10 to 15 inch diameter class for each
+species. By default, the ratio estimator generates estimates for all
+possible domain pairings, but for this question it is sufficient to only
+generate ratios when the species match between the numerator and
+denominator, this can be done by using `domain_pairing = 'matched'`
+argument.
+
+``` r
+tree_handler <- handler |>
+  filter_tree(TREECLCD == 2, DIA >= 10, DIA <= 15, ACTUALHT == HT) |>
+  set_tree_domains(SPCD)
+
+psr <- PostStratifiedRatioEstimator(tree_handler, tree_handler)
+
+species_labels <- handler@tables$ref_species |>
+  select(SPCD, COMMON_NAME) |>
+  collect()
+
+dhr <- estimate_ratio(psr, tree ~ HT, tree ~ DIA, domain_pairing = "matched") |>
+  arrange(desc(estimate)) |>
+  filter(se != 0) |>
+  left_join(species_labels, by = c("SPCD_n" = "SPCD"))
+
+head(dhr)
+```
+
+    # A tibble: 6 × 7
+      SPCD_n SPCD_d var_n var_d estimate          se COMMON_NAME      
+       <dbl>  <dbl> <chr> <chr>    <dbl>       <dbl> <chr>            
+    1     71     71 HT    DIA       6.93 0.000000139 tamarack         
+    2    125    125 HT    DIA       6.91 0.282       red pine         
+    3    901    901 HT    DIA       6.73 0.000000147 black locust     
+    4    402    402 HT    DIA       6.69 0.487       bitternut hickory
+    5    379    379 HT    DIA       6.24 0.779       gray birch       
+    6    743    743 HT    DIA       6.20 0.289       bigtooth aspen   
