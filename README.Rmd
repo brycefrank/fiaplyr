@@ -40,17 +40,16 @@ devtools::install_github("brycefrank/fiaplyr")
 
 A connection to a database is required, and the database must be structured
 like FIADB or similar. `duckdb` is used below, but other backends supported by
-`DBI` should work, including `SQLite` and Oracle.
+`DBI` should work, including `SQLite` and Oracle. We include a miniature version
+of the FIA database for Vermont, which can be used for testing and learning.
 
 ```{r}
 devtools::load_all() # Load fiaplyr package from local source
 library(dplyr)
 library(DBI)
-library(RSQLite)
+library(duckdb)
 
-# Establish a backend connection
-db_path <- "./db/SQLite_FIADB_OR.db"
-con <- dbConnect(RSQLite::SQLite(), db_path)
+con <- dbConnect(duckdb(), fiadb_vt_mini_path())
 ```
 
 ### Specifying a Handler
@@ -68,12 +67,14 @@ explore_evals(con) |>
   head()
 ```
 
-we will use  `411001`, which covers Oregon (`41`) for 2001-2010 (`10`), and can
-be used to estimate status variables (`01`). 
+Because we are using the mini Vermont database, we see just one record, but in a
+full FIA database there are many evaluations. For this tutorial, we will use 
+`500601`, which covers Vermont (`50`) for 2003-2006 (`06`), and can be used to
+estimate status variables (`01`). 
 
 ```{r}
-# Initialize handler for EVALID 411001
-handler <- eval_handler(con, 411001)
+# Initialize handler for EVALID 500601
+handler <- eval_handler(con, 500601)
 
 # Inspect the handler summary
 handler
@@ -99,10 +100,10 @@ plot_vol <- handler |>
 head(plot_vol)
 ```
 
-Plot-level values are often used in remote sensing models and other
-applications. However, some analyses do not explicitly an `aggregate` step,
-such as the estimation of state-wide means or totals, so it is not always
-necessary to call `aggregate`.
+Plot-level values are often used in statistical models and other applications.
+However, some analyses do not explicitly an `aggregate` step, such as the
+estimation of state-wide means or totals, so it is not always necessary to call
+`aggregate`.
 
 ### Mutations
 
@@ -144,15 +145,15 @@ Filters can be applied to the handler with `filter_tree` and `filter_cond`.
 While conceptually similar to domains, `filters` discard data, while domains
 merely create partitions, making computations more efficient when data can be
 effectively discarded. For example, if we merely need basal area aggregates for
-Douglas-fir we can use
+balsam we can use
 
 ```{r}
-plot_ba_douglas_fir <- ba_handler |>
-  filter_tree(SPCD == 202) |>
+plot_ba_balsam <- ba_handler |>
+  filter_tree(SPCD == 12) |>
   aggregate(tree ~ BA) |>
   arrange(desc(BA))
 
-head(plot_ba_douglas_fir)
+head(plot_ba_balsam)
 ```
 
 ## Estimation
@@ -247,3 +248,8 @@ mapping between `EVALIDator` variables and information needed to construct the
 proper filters. Still, we believe the explicitness is a strength, and creates
 code with clear intent.
 
+```{r}
+#| include = FALSE
+# close the database connection
+dbDisconnect(con)
+```

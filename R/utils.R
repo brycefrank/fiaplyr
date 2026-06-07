@@ -44,3 +44,21 @@ set_fiaplyr_verbosity <- function(verbose = TRUE) {
 is_verbose <- function() {
   getOption("fiaplyr.verbose", default = TRUE)
 }
+
+#' Path to packaged Vermont mini FIADB DuckDB
+#'
+#' Returns the installed path to the DuckDB file distributed with `fiaplyr`.
+#'
+#' @param mustWork Logical. If TRUE (default), throws an error when the file
+#'   is not found.
+#' @return A length-1 character vector containing the file path.
+#' @export
+fiadb_vt_mini_path <- function(mustWork = TRUE) {
+  path <- system.file("fiadb_vt_mini.duckdb", package = "fiaplyr")
+
+  if (mustWork && identical(path, "")) {
+    stop("Could not find packaged file 'fiadb_vt_mini.duckdb' in fiaplyr.", call. = FALSE)
+  }
+
+  path
+}

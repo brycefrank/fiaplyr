@@ -7,36 +7,41 @@ knitr:
     message: false
 ---
 
-```{r include=FALSE}
-db_path <- "../db/SQLite_FIADB_OR.db"
-```
-
 One of the most frequent needs of FIA data are estimates of status variables.
 Status variables capture the state of a forest over a given window of time,
 typically specified by the temporal range of an evaluation. In this vignette,
-we will estimate various status variables for the state of Oregon using an
-evaluation that covers the first cycle of the inventory, 2001 to 2010. We will
-produce estimates for three use cases:
+we will estimate various status variables for the state of Vermont using an
+evaluation that covers the first cycle of the inventory, 2003 to 2006. This
+inventory is included in a miniature database, and readers should be able to
+follow along with their own installation
+
+We will produce estimates for three use cases:
 
 1. The proportion of forested land in the state.
 2. Growing stock by species group.
+3. Average diameter by species.
+
+The first two cases are examples of post-stratified estimation, while the third
+is involves the more complex ratio estimator. The ratio estimator is covered
+more thouroughly in a separate vignette.
 
 ## Establishing the Handler
 
 As always, we need to specify a handler, which manages the connection to the
-database for a specific evaluation. We will use the 2001 to 2010 evaluation for
-Oregon status variables, which has evaluation code `411001`.
+database for a specific evaluation. We will use the 2003 to 2006 evaluation for
+Vermont status variables, which has evaluation code `500601`.
 
 ```{r}
 library(fiaplyr)
 library(DBI)
+library(duckdb)
 library(dplyr)
 
-# Connect to the database
-con <- dbConnect(RSQLite::SQLite(), db_path)
+# Connect to the Vermont mini database
+con <- dbConnect(duckdb(), fiadb_vt_mini_path())
 
-# Create a handler for the 2001 to 2010 evaluation for Oregon status variables
-handler <- eval_handler(con, 411001)
+# Create a handler for the 2003 to 2006 evaluation for Vermont status variables
+handler <- eval_handler(con, 500601)
 
 # Print the handler summary
 handler
@@ -82,7 +87,7 @@ sd_vec <- for_prop_est |>
   pull(se)
 ```
 
-The proportion of forested land in Oregon between 2001 and 2010 was
+The proportion of forested land in Vermont between 2003 and 2006 was
 `r est_vec[1]` $\pm$ `r sd_vec[1]`.
 
 ## Growing Stock by Species Group
@@ -103,14 +108,3 @@ growing_stock_est <- ps_estimator |>
 
 growing_stock_est
 ```
-
-```{r include=FALSE}
-est_vec <- growing_stock_est |>
-  pull(VOLCFGRS)
-
-sd_vec <- growing_stock_est |>
-  pull(VOLCFGRS_se)
-```
-
-The total volume of growing stock in Oregon between 2001 and 2010 was
-`r est_vec[1]` $\pm$ `r sd_vec[1]` cubic feet per acre.
