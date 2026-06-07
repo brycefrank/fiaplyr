@@ -4,9 +4,10 @@
   "version": "0.0.1",
   "scripts": {
     "build:guides": "Rscript ../scripts/build_guides.R",
+    "build:reference": "Rscript ../scripts/build_reference.R",
     "dev": "astro dev",
     "start": "astro dev",
-    "build": "npm run build:guides && astro build",
+    "build": "npm run build:guides && npm run build:reference && astro build",
     "preview": "astro preview",
     "astro": "astro"
   },
