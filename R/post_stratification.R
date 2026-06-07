@@ -244,3 +244,125 @@
 
   final_res
 }
+
+
+# --- Ratio estimator covariance pipeline ---
+
+#' Compute stratum-level sample covariance between numerator and denominator variables
+#'
+#' Uses the computational formula for sample covariance within each stratum.
+#' The inner join on PLT_CN is correct: plots absent from one side have zero
+#' values that contribute 0 to the cross-product sum.
+#'
+#' Domain variables shared between both sides are joined on (avoiding duplication).
+#' Domain variables unique to one side produce covariances for all combinations
+#' of (numerator domain, denominator domain) within each stratum.
+#'
+#' @param strata_data_num Strata-joined numerator data (output of .ps_join_strata).
+#' @param strata_data_den Strata-joined denominator data (output of .ps_join_strata).
+#' @param targets_num Character vector of numerator target column names.
+#' @param targets_den Character vector of denominator target column names.
+#' @param cov_cols Character vector of output column names, one per
+#'   (targets_num[i], targets_den[j]) pair in row-major (i outer, j inner) order.
+#' @return A lazy query with stratum-level covariance columns.
+#' @noRd
+.ps_strata_cov <- function(strata_data_num, strata_data_den, targets_num, targets_den, cov_cols) {
+  all_cols_n <- colnames(strata_data_num)
+  all_cols_d <- colnames(strata_data_den)
+  domain_vars_n <- setdiff(all_cols_n, c(.plot_keys, .strat_keys, targets_num))
+  domain_vars_d <- setdiff(all_cols_d, c(.plot_keys, .strat_keys, targets_den))
+  shared_domain <- intersect(domain_vars_n, domain_vars_d)
+  all_domain_vars <- union(domain_vars_n, domain_vars_d)
+
+  # Suffix denominator targets to avoid column-name collision after joining
+  targets_den_suf <- paste0(targets_den, ".__den")
+  strata_d_slim <- strata_data_den %>%
+    dplyr::select(dplyr::all_of(c("PLT_CN", domain_vars_d, targets_den))) %>%
+    dplyr::rename_with(~ paste0(.x, ".__den"), dplyr::all_of(targets_den))
+
+  # Inner join: PLT_CN plus any domain variables shared between both sides
+  join_keys <- c("PLT_CN", shared_domain)
+  joined <- strata_data_num %>%
+    dplyr::inner_join(strata_d_slim, by = join_keys)
+
+  group_cols <- c("ESTN_UNIT_CN", "STRATUM_CN", "w_h", "n_h", "n", all_domain_vars)
+
+  # Build one summarise expression per (targets_num[i], targets_den[j]) pair.
+  # cov_h = (sum(y_n * y_d) - sum(y_n)*sum(y_d)/n_h) / (n_h*(n_h-1))
+  cov_exprs <- list()
+  k <- 1L
+  for (i in seq_along(targets_num)) {
+    for (j in seq_along(targets_den)) {
+      tn <- rlang::sym(targets_num[i])
+      td <- rlang::sym(targets_den_suf[j])
+      cov_exprs[[cov_cols[k]]] <- rlang::expr(
+        dplyr::case_when(
+          n_h <= 1 ~ 0,
+          TRUE ~ (sum(!!tn * !!td, na.rm = TRUE) -
+                    sum(!!tn, na.rm = TRUE) * sum(!!td, na.rm = TRUE) / n_h) /
+            (n_h * (n_h - 1))
+        )
+      )
+      k <- k + 1L
+    }
+  }
+
+  joined %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(group_cols))) %>%
+    dplyr::summarise(!!!cov_exprs) %>%
+    dplyr::ungroup()
+}
+
+#' Roll up stratum covariances to estimation unit level
+#'
+#' Uses the same BNP 2005 Eq 4.6/4.14 weighting as .ps_eu_stats.
+#'
+#' @param strata_cov Stratum-level covariances (output of .ps_strata_cov).
+#' @param cov_cols Character vector of covariance column names.
+#' @return A lazy query with estimation-unit-level covariances.
+#' @noRd
+.ps_eu_cov <- function(strata_cov, cov_cols) {
+  all_cols <- colnames(strata_cov)
+  domain_vars <- setdiff(all_cols, c(.strat_keys, cov_cols))
+
+  strata_cov %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(c("ESTN_UNIT_CN", domain_vars)))) %>%
+    dplyr::summarise(
+      dplyr::across(
+        dplyr::all_of(cov_cols),
+        ~ sum((1 / n) * (w_h * n_h + (1 - w_h) * n_h / n) * .x, na.rm = TRUE)
+      )
+    ) %>%
+    dplyr::ungroup()
+}
+
+#' Roll up estimation unit covariances to population level
+#'
+#' Uses w_eu^2 coefficients (mean scale), consistent with .ps_pop_stats(output="mean").
+#' EUs are independent, so population covariance is a weighted sum of EU covariances.
+#'
+#' @param eu_cov EU-level covariances (output of .ps_eu_cov).
+#' @param handler A EvalHandler object (used to fetch EU weights).
+#' @param cov_cols Character vector of covariance column names.
+#' @return A collected tibble with population-level covariances.
+#' @noRd
+.ps_pop_cov <- function(eu_cov, handler, cov_cols) {
+  eu_weights <- handler@tables$pop_estn_unit %>%
+    dplyr::mutate(w_eu = as.numeric(P1PNTCNT_EU) / sum(P1PNTCNT_EU, na.rm = TRUE)) %>%
+    dplyr::select(CN, w_eu)
+
+  all_cols <- colnames(eu_cov)
+  domain_vars <- setdiff(all_cols, c("ESTN_UNIT_CN", cov_cols))
+
+  eu_cov %>%
+    dplyr::left_join(eu_weights, by = c("ESTN_UNIT_CN" = "CN")) %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(domain_vars))) %>%
+    dplyr::summarise(
+      dplyr::across(
+        dplyr::all_of(cov_cols),
+        ~ sum(.x * w_eu^2, na.rm = TRUE)
+      )
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::collect()
+}

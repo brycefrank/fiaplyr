@@ -20,8 +20,10 @@ test_that("PostStratifiedRatioEstimator estimates correct ratios", {
   res <- estimate_ratio(ratio_est, tree ~ VOLCFNET, cond ~ 1)
 
   # Verify structure
-  expected_cols <- c("SPCD_n", "FORTYPCD_d", "var_n", "var_d", "estimate")
+  expected_cols <- c("SPCD_n", "FORTYPCD_d", "var_n", "var_d", "estimate", "se")
   expect_true(all(expected_cols %in% colnames(res)))
+  expect_true(all(is.finite(res$se)))
+  expect_true(all(res$se >= 0))
 
   # Sp1 / F100 = 22.5 / 0.5 = 45
   r_sp1_f100 <- res |>
@@ -40,4 +42,23 @@ test_that("PostStratifiedRatioEstimator estimates correct ratios", {
     dplyr::filter(SPCD_n == 1, FORTYPCD_d == 300) |>
     dplyr::pull(estimate)
   expect_equal(r_sp1_f300, 180, tolerance = 0.01)
+})
+
+test_that("PostStratifiedRatioEstimator supports ratios without explicit domains", {
+  con <- setup_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001)
+  ratio_est <- PostStratifiedRatioEstimator(handler, handler)
+
+  res <- estimate_ratio(ratio_est, tree ~ VOLCFNET, cond ~ 1) |>
+    dplyr::collect()
+
+  expect_identical(colnames(res), c("var_n", "var_d", "estimate", "se"))
+  expect_equal(nrow(res), 1)
+  expect_equal(res$var_n, "VOLCFNET")
+  expect_equal(res$var_d, "prop")
+  expect_true(is.finite(res$estimate))
+  expect_true(is.finite(res$se))
+  expect_true(res$se >= 0)
 })

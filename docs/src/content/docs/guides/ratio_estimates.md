@@ -16,18 +16,73 @@ dependent on pairs of variables. In `fiaplyr`, we accomplish this by
 passing two handler objects to the estimator, one that specifies all
 estimates in the numerator, and another that specifies all estimates in
 the denominator. Then, estimates for all possible pairings are made.
+This can create an extremely expansive set of estimates for the user to
+interact with, and can be overwhelming at times. To reduce the
+complexity of the output, we suggest using filtering functions
+(`filter_tree`, `filter_cond`, etc.), rather than relying on granular
+domains.
 
-Recall that the post-stratified estimator used in the status vignette
-produces $d \cdot v$ estimates, where $d$ is the total number of
-distinct domains, and $v$ is the number of variables. If we take this as
-the numerator handler, and relabel the notation with the subscript $n$,
-we have $d_n \cdot v_n$ estimates. Likewise, the denominator handler
-produces $d_d \cdot v_d$ estimates. The ratio estimator then produces
-$d_n \cdot v_n \cdot d_d \cdot v_d$ estimates, as all possible pairings
-of numerator and denominator estimates are made. This creates an
-extremely expansive set of estimates for the user to interact with, and
-can be overwhelming at times. To reduce the complexity of the output, we
-suggest using filtering functions (`filter_tree`, `filter_cond`, etc.),
-rather than relying on granular domains.
+To illustrate the power of the ratio estimator, we will estimate three
+ratios for the state of Vermont between 2003 and 2006.
 
-To illustrate the power of the ratio estimator, we will estimate
+## Growing Stock divided by Forested Area
+
+Normalizing estimates by forested area is a common practice in FIA
+analyses. For example, in states with sparse forest cover, per-acre
+densities that can be made with `PostStratifiedEstimator` may seem small
+to the lay user because the density is expressed over the entire state,
+rather than only for forests lands within it. The ratio estimator
+resolves this by dividing the per-acre density by the proportion of
+forested land, inflating the estimate to represent the density
+exclusively within forests. This is straightforward using the
+`PostStratifiedRatioEstimator`. First, establish a handler
+
+``` r
+library(fiaplyr)
+library(DBI)
+library(duckdb)
+library(dplyr)
+
+# Connect to the Vermont mini database
+con <- dbConnect(duckdb(), fiadb_vt_mini_path())
+
+# Create a handler for the 2003 to 2006 evaluation for Vermont status variables
+handler <- eval_handler(con, 500601)
+```
+
+Then, create two sub-handlers, one that constructs the numerator
+(growing stock) and one that constructs the denominator (forested area).
+
+``` r
+# Define the numerator handler for growing stock (TREECLCD == 2)
+gs_handler <- handler |>
+  filter_tree(TREECLCD == 2)
+
+# Define the denominator handler for forested area (COND_STATUS_CD == 1)
+fa_handler <- handler |>
+  filter_cond(COND_STATUS_CD == 1)
+```
+
+Establish the `PostStratifiedRatioEstimator` using the two handlers, and
+then use the `estimate_ratio` method defining the slots and attributes
+of interest. In this case, we estimate the `VOLCFNET` for the tree slot
+and `1` for the condition slot, which represents the proportion.
+
+``` r
+# Establish the psr estimator
+psr <- PostStratifiedRatioEstimator(gs_handler, fa_handler)
+
+gstk_ests <- estimate_ratio(psr, tree ~ VOLCFNET, cond ~ 1)
+
+gstk_ests
+```
+
+    # A tibble: 1 × 4
+      var_n    var_d estimate    se
+      <chr>    <chr>    <dbl> <dbl>
+    1 VOLCFNET prop     1807.  41.8
+
+Here, we see the density of growing stock per acre on forested land,
+which is 1,807 cubic feet per acre. The table defines the numerator
+variable `var_n`, and the denominator variable `var_d`. The point
+estimate and standard error are provided.
