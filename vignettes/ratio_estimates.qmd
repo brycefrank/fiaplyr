@@ -106,7 +106,7 @@ species_labels <- handler@tables$ref_species |>
   select(SPCD, COMMON_NAME) |>
   collect()
 
-dhr <- estimate_ratio(psr, tree ~ HT, tree ~ DIA, domain_pairing = "matched") |>
+dhr <- estimate_ratio(psr, tree ~ HT, tree ~ DIA, include_components = TRUE, domain_pairing = "matched") |>
   arrange(desc(estimate)) |>
   filter(se != 0) |>
   left_join(species_labels, by = c("SPCD_n" = "SPCD"))

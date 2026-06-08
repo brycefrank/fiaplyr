@@ -103,5 +103,5 @@ ps_estimator <- PostStratifiedEstimator(growing_stock_handler)
 growing_stock_est <- ps_estimator |>
   estimate(tree ~ VOLCFGRS | VOLCFNET)
 
-growing_stock_est
+View(growing_stock_est)
 ```

@@ -132,3 +132,30 @@ test_that("PostStratifiedRatioEstimator rejects matched domains with incompatibl
     "requires numerator and denominator to have the same domain columns"
   )
 })
+
+test_that("PostStratifiedRatioEstimator can append numerator and denominator component stats", {
+  con <- setup_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001)
+  ratio_est <- PostStratifiedRatioEstimator(handler, handler)
+
+  res_default <- estimate_ratio(ratio_est, tree ~ VOLCFNET, cond ~ 1) |>
+    dplyr::collect()
+  expect_false(any(c("estimate_n", "se_n", "estimate_d", "se_d") %in% colnames(res_default)))
+
+  res_components <- estimate_ratio(
+    ratio_est,
+    tree ~ VOLCFNET,
+    cond ~ 1,
+    include_components = TRUE
+  ) |>
+    dplyr::collect()
+
+  expect_true(all(c("estimate_n", "se_n", "estimate_d", "se_d") %in% colnames(res_components)))
+  expect_true(all(is.finite(res_components$estimate_n)))
+  expect_true(all(is.finite(res_components$se_n)))
+  expect_true(all(is.finite(res_components$estimate_d)))
+  expect_true(all(is.finite(res_components$se_d)))
+  expect_equal(res_components$estimate, res_components$estimate_n / res_components$estimate_d)
+})

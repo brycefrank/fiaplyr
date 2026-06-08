@@ -50,7 +50,13 @@ setGeneric("get_strata_weights", function(object) standardGeneric("get_strata_we
 #' @param object An estimator object.
 #' @param ... One or more formulas specifying estimation targets.
 #' @param output Output scale, either "mean" (default) or "total".
+#' @param margins Logical. If `TRUE`, returns all marginal estimates in addition
+#'   to the full cross-domain estimates. Marginals are produced by re-running
+#'   the estimation pipeline for every strict subset of the active domain
+#'   variables, including the grand total (no domains). Dropped domain columns
+#'   appear as `NA` in the output, indicating aggregation over all values of
+#'   that variable. Defaults to `FALSE`.
 #' @export
-setGeneric("estimate", function(object, ..., output = "mean") {
+setGeneric("estimate", function(object, ..., output = "mean", margins = FALSE) {
 	standardGeneric("estimate")
 })

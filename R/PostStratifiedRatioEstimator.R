@@ -38,14 +38,20 @@ PostStratifiedRatioEstimator <- function(numerator, denominator = numerator) {
 #' @param domain_pairing Domain pairing strategy, either `"all"` (default) for
 #'   all numerator/denominator domain combinations or `"matched"` to only retain
 #'   rows where both sides share the same domain columns and values.
+#' @param include_components Logical; if `TRUE`, append numerator and denominator
+#'   component estimates and standard errors (`estimate_n`, `se_n`, `estimate_d`,
+#'   `se_d`) to the output.
 #' @export
-setGeneric("estimate_ratio", function(object, ..., domain_pairing = "all") {
+setGeneric("estimate_ratio", function(object, ..., domain_pairing = "all", include_components = FALSE) {
   standardGeneric("estimate_ratio")
 })
 
 #' @describeIn estimate_ratio Estimate ratio for PostStratifiedRatioEstimator
-setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ..., domain_pairing = c("all", "matched")) {
+setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ..., domain_pairing = c("all", "matched"), include_components = FALSE) {
   domain_pairing <- match.arg(domain_pairing)
+  if (!is.logical(include_components) || length(include_components) != 1 || is.na(include_components)) {
+    stop("`include_components` must be TRUE or FALSE.")
+  }
   args <- list(...)
   if (length(args) != 2) stop("Must provide exactly two formulas (numerator, denominator).")
 
@@ -176,6 +182,13 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
   # 9. Apply the ratio variance formula:
   #    v(R) = (1/Y_d^2) * [v(Y_n) + R^2*v(Y_d) - 2*R*cov(Y_n, Y_d)]
   all_doms <- c(doms_num_suf, doms_den_suf)
+  base_cols <- c(all_doms, "var_n", "var_d", "estimate", "se")
+  component_cols <- c("estimate_n", "se_n", "estimate_d", "se_d")
+  out_cols <- if (isTRUE(include_components)) {
+    c(base_cols, component_cols)
+  } else {
+    base_cols
+  }
 
   final_res <- pop_full %>%
     dplyr::mutate(
@@ -187,13 +200,7 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
       ),
       se = sqrt(pmax(var_ratio, 0))
     ) %>%
-    dplyr::select(
-      dplyr::all_of(all_doms),
-      var_n,
-      var_d,
-      estimate,
-      se
-    )
+    dplyr::select(dplyr::all_of(out_cols))
 
   return(final_res)
 })

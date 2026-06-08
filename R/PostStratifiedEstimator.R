@@ -67,9 +67,14 @@ setMethod("show", "PostStratifiedEstimator", function(object) {
 #' @param ... One or more formulas specifying estimation targets
 #'   (e.g., tree ~ VOLCFGRS).
 #' @param output Output scale, either "mean" (default) or "total".
+#' @param margins Logical. If `TRUE`, returns the full cross-domain estimates
+#'   plus all marginal estimates produced by re-running the pipeline for every
+#'   strict subset of the active domain variables (including the grand total
+#'   with no domains). Dropped domain columns appear as `NA`. Defaults to
+#'   `FALSE`.
 #' @return A dataframe with estimates.
 #' @export
-setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = "mean") {
+setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = "mean", margins = FALSE) {
   formulas <- list(...)
   if (length(formulas) == 0) stop("Must provide at least one formula.")
   if (!all(vapply(formulas, inherits, logical(1), "formula"))) {
@@ -86,9 +91,9 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = 
       if (!all(targets == "1")) {
         stop("Only 'cond ~ 1' is currently supported for condition estimates.")
       }
-      return(.estimate_cond_internal(object, output = output))
+      return(.estimate_cond_internal(object, output = output, margins = margins))
     } else if (slot_name == "tree") {
-      return(.estimate_tree_internal(object, targets, output = output))
+      return(.estimate_tree_internal(object, targets, output = output, margins = margins))
     } else {
       stop("Unsupported slot: ", slot_name)
     }
@@ -101,24 +106,78 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = 
   dplyr::bind_rows(results)
 })
 
-# Internal helper for condition estimation
-.estimate_cond_internal <- function(object, output = "mean") {
-  plot_data <- .make_cond_aggregates(object@handler, adjusted = TRUE, sparse = TRUE)
-  targets <- "prop"
+# Internal helper: return all subsets of a list (including the empty set).
+# Used to generate every combination of domain variable subsets for marginals.
+.all_subsets <- function(lst) {
+  n <- length(lst)
+  lapply(0:(2^n - 1), function(mask) {
+    keep <- as.logical(intToBits(mask)[seq_len(n)])
+    lst[keep]
+  })
+}
 
-  strata_data <- .ps_join_strata(plot_data, object@handler)
+# Run the full post-stratification pipeline for the given handler.
+# The handler's tree_domains and cond_domains determine grouping.
+.run_tree_estimation <- function(handler, targets, output = "mean") {
+  syms <- rlang::syms(targets)
+  plot_data <- .make_tree_aggregates(handler, !!!syms, adjusted = TRUE, sparse = TRUE)
+  strata_data <- .ps_join_strata(plot_data, handler)
   strata_stats <- .ps_strata_stats(strata_data, targets)
   eu_stats <- .ps_eu_stats(strata_stats, targets)
-  .ps_pop_stats(eu_stats, object@handler, targets, output = output)
+  .ps_pop_stats(eu_stats, handler, targets, output = output)
+}
+
+.run_cond_estimation <- function(handler, output = "mean") {
+  plot_data <- .make_cond_aggregates(handler, adjusted = TRUE, sparse = TRUE)
+  strata_data <- .ps_join_strata(plot_data, handler)
+  strata_stats <- .ps_strata_stats(strata_data, "prop")
+  eu_stats <- .ps_eu_stats(strata_stats, "prop")
+  .ps_pop_stats(eu_stats, handler, "prop", output = output)
+}
+
+# Internal helper for condition estimation
+.estimate_cond_internal <- function(object, output = "mean", margins = FALSE) {
+  if (!margins) {
+    return(.run_cond_estimation(object@handler, output = output))
+  }
+
+  n_full <- length(object@handler@cond_domains)
+  # Iterate over every subset of the active cond domains (includes grand total).
+  cond_subsets <- .all_subsets(object@handler@cond_domains)
+  results <- lapply(cond_subsets, function(dom) {
+    h <- object@handler
+    h@cond_domains <- dom
+    res <- .run_cond_estimation(h, output = output)
+    res$is_marginal <- length(dom) < n_full
+    res
+  })
+  dplyr::bind_rows(results)
 }
 
 # Internal helper for tree estimation
-.estimate_tree_internal <- function(object, targets, output = "mean") {
-  syms <- rlang::syms(targets)
-  plot_data <- .make_tree_aggregates(object@handler, !!!syms, adjusted = TRUE, sparse = TRUE)
+.estimate_tree_internal <- function(object, targets, output = "mean", margins = FALSE) {
+  if (!margins) {
+    return(.run_tree_estimation(object@handler, targets, output = output))
+  }
 
-  strata_data <- .ps_join_strata(plot_data, object@handler)
-  strata_stats <- .ps_strata_stats(strata_data, targets)
-  eu_stats <- .ps_eu_stats(strata_stats, targets)
-  .ps_pop_stats(eu_stats, object@handler, targets, output = output)
+  n_full_tree <- length(object@handler@tree_domains)
+  n_full_cond <- length(object@handler@cond_domains)
+
+  # Iterate over every (tree_domain_subset, cond_domain_subset) combination.
+  # bind_rows fills dropped domain columns with NA, which signals "all values".
+  tree_subsets <- .all_subsets(object@handler@tree_domains)
+  cond_subsets <- .all_subsets(object@handler@cond_domains)
+
+  results <- list()
+  for (t in tree_subsets) {
+    for (c in cond_subsets) {
+      h <- object@handler
+      h@tree_domains <- t
+      h@cond_domains <- c
+      res <- .run_tree_estimation(h, targets, output = output)
+      res$is_marginal <- !(length(t) == n_full_tree && length(c) == n_full_cond)
+      results[[length(results) + 1]] <- res
+    }
+  }
+  dplyr::bind_rows(results)
 }

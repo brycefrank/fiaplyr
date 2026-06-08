@@ -5,9 +5,14 @@
 \alias{estimate_ratio,PostStratifiedRatioEstimator-method}
 \title{Estimate Ratio}
 \usage{
-estimate_ratio(object, ..., domain_pairing = "all")
+estimate_ratio(object, ..., domain_pairing = "all", include_components = FALSE)
 
-\S4method{estimate_ratio}{PostStratifiedRatioEstimator}(object, ..., domain_pairing = c("all", "matched"))
+\S4method{estimate_ratio}{PostStratifiedRatioEstimator}(
+  object,
+  ...,
+  domain_pairing = c("all", "matched"),
+  include_components = FALSE
+)
 }
 \arguments{
 \item{object}{A PostStratifiedRatioEstimator object.}
@@ -17,6 +22,10 @@ estimate_ratio(object, ..., domain_pairing = "all")
 \item{domain_pairing}{Domain pairing strategy, either \code{"all"} (default) for
 all numerator/denominator domain combinations or \code{"matched"} to only retain
 rows where both sides share the same domain columns and values.}
+
+\item{include_components}{Logical; if \code{TRUE}, append numerator and denominator
+component estimates and standard errors (\code{estimate_n}, \code{se_n}, \code{estimate_d},
+\code{se_d}) to the output.}
 }
 \description{
 Estimate Ratio
