@@ -2,12 +2,12 @@
 % Please edit documentation in R/EvalHandler.R
 \name{aggregate,EvalHandler-method}
 \alias{aggregate,EvalHandler-method}
-\title{Aggregate Data to Plot Level}
+\title{Aggregate Data to the Plot Level}
 \usage{
-\S4method{aggregate}{EvalHandler}(x, ...)
+\S4method{aggregate}{EvalHandler}(handler, ...)
 }
 \arguments{
-\item{x}{A EvalHandler object.}
+\item{handler}{A EvalHandler object.}
 
 \item{...}{A formula specifying the aggregation target (e.g., tree ~ VOLCFGRS), and optional arguments like \code{sparse}.}
 }
@@ -15,5 +15,5 @@
 A lazy query with plot-level summaries.
 }
 \description{
-Aggregate Data to Plot Level
+Aggregate Data to the Plot Level
 }

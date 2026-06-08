@@ -9,7 +9,6 @@ Virtual Parent Class for fiaplyr
 
 ## Additional Details
 
-Slots:
+Slots
 
-‘db’
-     A DBIConnection object.
+`db`A DBIConnection object.

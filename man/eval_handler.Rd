@@ -2,7 +2,7 @@
 % Please edit documentation in R/EvalHandler.R
 \name{eval_handler}
 \alias{eval_handler}
-\title{Constructor for EvalHandler}
+\title{Connect to an Evaluation}
 \usage{
 eval_handler(db, evalid, schema = new("StatusAnalysis"), backend = NULL)
 }
@@ -11,10 +11,22 @@ eval_handler(db, evalid, schema = new("StatusAnalysis"), backend = NULL)
 
 \item{evalid}{A numeric identifier for the evaluation.}
 
-\item{schema}{An AnalysisSchema object. Defaults to StatusAnalysis.}
+\item{schema}{An \link[=AnalysisSchema-class]{AnalysisSchema} object. Defaults to \link[=StatusAnalysis-class]{StatusAnalysis}.}
 
 \item{backend}{Optional DatabaseBackend for custom schema/table names.}
 }
+\value{
+An object of class \link[=EvalHandler-class]{EvalHandler} connected to the specified evaluation.
+}
 \description{
-Constructor for EvalHandler
+In FIA parlance, an evaluation specifies an area (usually a state), a time
+window, a set of plots, and an associated post-stratification. The
+\code{eval_handler()} function connects to an evaluation and allows users to
+manipulate the underlying data to produce estimates and aggregates of need.
+Refer to \href{/guides/status_estimates/}{Status Estimates} for an introduction.
+}
+\examples{
+# Connect to an evaluation with evalid 500601
+con <- DBI::dbConnect(duckdb::duckdb(), fiadb_vt_mini_path())
+handler <- eval_handler(con, evalid = 500601)
 }

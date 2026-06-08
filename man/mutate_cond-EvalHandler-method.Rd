@@ -4,10 +4,10 @@
 \alias{mutate_cond,EvalHandler-method}
 \title{Mutate Condition Table}
 \usage{
-\S4method{mutate_cond}{EvalHandler}(.data, ...)
+\S4method{mutate_cond}{EvalHandler}(handler, ...)
 }
 \arguments{
-\item{.data}{A EvalHandler object.}
+\item{handler}{A EvalHandler object.}
 
 \item{...}{Name-value pairs of expressions.}
 }

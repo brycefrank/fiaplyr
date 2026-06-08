@@ -4,10 +4,10 @@
 \alias{aggregate}
 \title{Aggregate Data to Plot Level}
 \usage{
-aggregate(x, ...)
+aggregate(handler, ...)
 }
 \arguments{
-\item{x}{A handler object.}
+\item{handler}{A handler object.}
 
 \item{...}{Additional arguments.}
 }

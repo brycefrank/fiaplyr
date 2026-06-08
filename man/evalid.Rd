@@ -6,14 +6,14 @@
 \alias{evalid<-,EvalHandler-method}
 \title{Get Evaluation ID}
 \usage{
-evalid(object)
+evalid(handler)
 
-\S4method{evalid}{EvalHandler}(object)
+\S4method{evalid}{EvalHandler}(handler)
 
-\S4method{evalid}{EvalHandler}(object) <- value
+\S4method{evalid}{EvalHandler}(handler) <- value
 }
 \arguments{
-\item{object}{A EvalHandler object.}
+\item{handler}{A EvalHandler object.}
 }
 \value{
 The evaluation ID.

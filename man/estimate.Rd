@@ -4,7 +4,7 @@
 \alias{estimate}
 \title{Estimate Population Parameters}
 \usage{
-estimate(object, ..., output = "mean")
+estimate(object, ..., output = "mean", margins = FALSE)
 }
 \arguments{
 \item{object}{An estimator object.}
@@ -12,6 +12,13 @@ estimate(object, ..., output = "mean")
 \item{...}{One or more formulas specifying estimation targets.}
 
 \item{output}{Output scale, either "mean" (default) or "total".}
+
+\item{margins}{Logical. If \code{TRUE}, returns all marginal estimates in addition
+to the full cross-domain estimates. Marginals are produced by re-running
+the estimation pipeline for every strict subset of the active domain
+variables, including the grand total (no domains). Dropped domain columns
+appear as \code{NA} in the output, indicating aggregation over all values of
+that variable. Defaults to \code{FALSE}.}
 }
 \description{
 Estimate Population Parameters

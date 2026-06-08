@@ -5,10 +5,9 @@ description: "Sets the domain variables used for grouping condition-level aggreg
 
 ## Description
 
-Sets the domain variables used for grouping condition-level
-aggregations. A domain variable is a column (e.g., FORTYPCD,
-OWNGRPCD) whose unique values or combinations define estimation
-domains.
+Sets the domain variables used for grouping condition-level aggregations.
+A domain variable is a column (e.g., FORTYPCD, OWNGRPCD) whose unique
+values or combinations define estimation domains.
 
 ## Usage
 

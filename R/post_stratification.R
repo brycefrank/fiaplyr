@@ -132,8 +132,8 @@
 #' Roll up stratum stats to estimation unit level
 #'
 #' Computes weighted mean and variance at the estimation unit level.
-#' Variance formula: v_eu = (1/n) * sum_h [w_h*n_h + (1-w_h)*n_h/n] * v_h
-#' (Eq 4.6/4.14 from BNP 2005, without A_T^2 since we estimate means not totals)
+#' Variance formula: \eqn{v_eu = (1/n) * sum_h [w_h*n_h + (1-w_h)*n_h/n] * v_h}
+#' (Eq 4.6/4.14 from BNP 2005, without \eqn{A_T^2} since we estimate means not totals)
 #'
 #' @param strata_stats Stratum-level stats (output of .ps_strata_stats).
 #' @param targets Character vector of original target column names.
@@ -262,8 +262,7 @@
 #' @param strata_data_den Strata-joined denominator data (output of .ps_join_strata).
 #' @param targets_num Character vector of numerator target column names.
 #' @param targets_den Character vector of denominator target column names.
-#' @param cov_cols Character vector of output column names, one per
-#'   (targets_num[i], targets_den[j]) pair in row-major (i outer, j inner) order.
+#' @param cov_cols Character vector of output column names
 #' @return A lazy query with stratum-level covariance columns.
 #' @noRd
 .ps_strata_cov <- function(strata_data_num, strata_data_den, targets_num, targets_den, cov_cols) {

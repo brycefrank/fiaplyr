@@ -4,10 +4,10 @@
 \alias{evalid<-}
 \title{Set Evaluation ID}
 \usage{
-evalid(object) <- value
+evalid(handler) <- value
 }
 \arguments{
-\item{object}{A EvalHandler object.}
+\item{handler}{A EvalHandler object.}
 
 \item{value}{The new evaluation ID.}
 }

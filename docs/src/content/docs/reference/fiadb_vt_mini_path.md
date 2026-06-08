@@ -1,12 +1,11 @@
 ---
 title: "Path to packaged Vermont mini FIADB DuckDB"
-description: "Returns the installed path to the DuckDB file distributed with ‘fiaplyr’."
+description: "Returns the installed path to the DuckDB file distributed with `fiaplyr`."
 ---
 
 ## Description
 
-Returns the installed path to the DuckDB file distributed with
-‘fiaplyr’.
+Returns the installed path to the DuckDB file distributed with `fiaplyr`.
 
 ## Usage
 

@@ -9,11 +9,8 @@ Handles database-specific schema and table naming conventions.
 
 ## Additional Details
 
-Slots:
+Slots
 
-‘schema_name’
-     Optional schema/catalog name prefix
+`schema_name`Optional schema/catalog name prefix
 
-‘table_map’
-     Named list mapping standard table names to database-specific
-     names
+`table_map`Named list mapping standard table names to database-specific names
