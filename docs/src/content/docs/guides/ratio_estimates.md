@@ -110,7 +110,7 @@ species_labels <- handler@tables$ref_species |>
   select(SPCD, COMMON_NAME) |>
   collect()
 
-dhr <- estimate_ratio(psr, tree ~ HT, tree ~ DIA, domain_pairing = "matched") |>
+dhr <- estimate_ratio(psr, tree ~ HT, tree ~ DIA, include_components = TRUE, domain_pairing = "matched") |>
   arrange(desc(estimate)) |>
   filter(se != 0) |>
   left_join(species_labels, by = c("SPCD_n" = "SPCD"))
@@ -118,12 +118,13 @@ dhr <- estimate_ratio(psr, tree ~ HT, tree ~ DIA, domain_pairing = "matched") |>
 head(dhr)
 ```
 
-    # A tibble: 6 × 7
-      SPCD_n SPCD_d var_n var_d estimate          se COMMON_NAME      
-       <dbl>  <dbl> <chr> <chr>    <dbl>       <dbl> <chr>            
-    1     71     71 HT    DIA       6.93 0.000000139 tamarack         
-    2    125    125 HT    DIA       6.91 0.282       red pine         
-    3    901    901 HT    DIA       6.73 0.000000147 black locust     
-    4    402    402 HT    DIA       6.69 0.487       bitternut hickory
-    5    379    379 HT    DIA       6.24 0.779       gray birch       
-    6    743    743 HT    DIA       6.20 0.289       bigtooth aspen   
+    # A tibble: 6 × 11
+      SPCD_n SPCD_d var_n var_d estimate       se estimate_n  se_n estimate_d   se_d
+       <dbl>  <dbl> <chr> <chr>    <dbl>    <dbl>      <dbl> <dbl>      <dbl>  <dbl>
+    1     71     71 HT    DIA       6.93  1.39e-7      0.524 0.555     0.0756 0.0801
+    2    125    125 HT    DIA       6.91  2.82e-1      2.44  1.72      0.352  0.252 
+    3    901    901 HT    DIA       6.73  1.47e-7      3.86  4.07      0.573  0.604 
+    4    402    402 HT    DIA       6.69  4.87e-1      8.13  3.30      1.22   0.450 
+    5    379    379 HT    DIA       6.24  7.79e-1      1.11  0.836     0.178  0.134 
+    6    743    743 HT    DIA       6.20  2.89e-1     10.8   3.51      1.74   0.548 
+    # ℹ 1 more variable: COMMON_NAME <chr>

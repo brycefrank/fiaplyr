@@ -13,6 +13,9 @@ enforce any guardrails like EVALIDator or other tools. Hence, some
 degree of exposure to FIA data and methods is recommended before using
 `fiaplyr` for analysis.
 
+`fiaplyr` is currently in early development, and all outputs should be
+treated as experimental.
+
 ## Installation
 
 You can install the development version of fiaplyr from GitHub:
@@ -105,12 +108,12 @@ head(plot_vol)
 #> # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-29-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
 #>   PLT_CN         STATECD COUNTYCD INVYR  PLOT VOLCFNET VOLCFGRS
 #>   <chr>            <int>    <int> <int> <int>    <dbl>    <dbl>
-#> 1 73608030010538      50        1  2006   627    1086.    1322.
-#> 2 62272249010538      50        1  2005    11     329.     398.
-#> 3 62282244010538      50       23  2005    48    2362.    2620.
-#> 4 62273992010538      50        3  2005   329    3637.    4280.
-#> 5 55969182010538      50       21  2004    73    1468.    1743.
-#> 6 62278970010538      50       17  2005  1206    3213.    3525.
+#> 1 73597381010538      50       21  2006  1491    4027.    4573.
+#> 2 73599875010538      50       21  2006  1032    1192.    1626.
+#> 3 55967629010538      50       19  2004   347     367.     401.
+#> 4 73599444010538      50       21  2006  1212    3154.    3574.
+#> 5 62286064010538      50       27  2005   598    3867.    4388.
+#> 6 73597861010538      50       21  2006  1324    3306.    3665.
 ```
 
 Plot-level values are often used in statistical models and other
@@ -140,12 +143,12 @@ head(plot_ba)
 #> # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-29-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
 #>   PLT_CN         STATECD COUNTYCD INVYR  PLOT    BA
 #>   <chr>            <int>    <int> <int> <int> <dbl>
-#> 1 73608030010538      50        1  2006   627  74.6
-#> 2 73604172010538      50       25  2006   780 140. 
-#> 3 55960319010538      50        1  2004   134  48.7
-#> 4 55949653010538      50        5  2003   122 150. 
-#> 5 55969182010538      50       21  2004    73 114. 
-#> 6 55963468010538      50        7  2004   123  91.6
+#> 1 73606629010538      50       27  2006  1406  31.6
+#> 2 73611154010538      50        3  2006  1210 162. 
+#> 3 73616847010538      50        7  2006  1269 123. 
+#> 4 73607738010538      50       27  2006  1226 153. 
+#> 5 73600507010538      50       23  2006  1103 136. 
+#> 6 73596558010538      50       19  2006   871  84.3
 ```
 
 ### Specifying Domains
@@ -262,14 +265,14 @@ ba_by_sp_est <- estimate(estimator_by_sp, tree ~ BA)
 
 head(ba_by_sp_est)
 #> # A tibble: 6 × 4
-#>    SPCD var   estimate      se
-#>   <dbl> <chr>    <dbl>   <dbl>
-#> 1    91 BA      0.397  0.177  
-#> 2    94 BA      0.477  0.126  
-#> 3    68 BA      0.146  0.106  
-#> 4   901 BA      0.0457 0.0482 
-#> 5   763 BA      0.0103 0.00610
-#> 6   935 BA      0.0793 0.0285
+#>    SPCD var   estimate     se
+#>   <dbl> <chr>    <dbl>  <dbl>
+#> 1    68 BA      0.146  0.106 
+#> 2    91 BA      0.397  0.177 
+#> 3   901 BA      0.0457 0.0482
+#> 4    94 BA      0.477  0.126 
+#> 5   972 BA      0.474  0.0930
+#> 6   261 BA      9.03   0.868
 ```
 
 ## Cautionary Results when Comparing to EVALIDator

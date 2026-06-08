@@ -106,20 +106,5 @@ ps_estimator <- PostStratifiedEstimator(growing_stock_handler)
 growing_stock_est <- ps_estimator |>
   estimate(tree ~ VOLCFGRS | VOLCFNET)
 
-growing_stock_est
+View(growing_stock_est)
 ```
-
-    # A tibble: 38 × 4
-       SPGRPCD var      estimate     se
-         <int> <chr>       <dbl>  <dbl>
-     1       3 VOLCFGRS    0.993  0.808
-     2       3 VOLCFNET    0.946  0.769
-     3       4 VOLCFGRS  181.    23.0  
-     4       4 VOLCFNET  166.    21.0  
-     5       6 VOLCFGRS  156.    12.2  
-     6       6 VOLCFNET  152.    11.9  
-     7       7 VOLCFGRS  133.    15.1  
-     8       7 VOLCFNET  126.    14.3  
-     9       9 VOLCFGRS   21.9    5.17 
-    10       9 VOLCFNET   20.6    4.87 
-    # ℹ 28 more rows

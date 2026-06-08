@@ -25,6 +25,9 @@ broad range of analyses, but does not enforce any guardrails like EVALIDator or
 other tools. Hence, some degree of exposure to FIA data and methods is
 recommended before using `fiaplyr` for analysis.
 
+`fiaplyr` is currently in early development, and all outputs should be treated
+as experimental.
+
 ## Installation
 
 You can install the development version of fiaplyr from GitHub:
