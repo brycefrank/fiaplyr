@@ -213,4 +213,65 @@ build_one <- function(input) {
   message("Built ", output_path)
 }
 
+normalize_readme_for_guide <- function(lines) {
+  # Drop the README title/logo header and badge comments for docs rendering.
+  title_line <- grep("^#\\s+", lines)[1]
+  if (!is.na(title_line)) {
+    lines <- lines[-seq_len(title_line)]
+  }
+
+  lines <- trim_leading_blank_lines(lines)
+  lines <- lines[!grepl("^<!-- badges:", lines)]
+  lines <- trim_leading_blank_lines(lines)
+  rewrite_links(lines)
+}
+
+build_readme_if_possible <- function() {
+  readme_rmd_path <- file.path(project_root, "README.Rmd")
+
+  if (!file.exists(readme_rmd_path)) {
+    warning("README.Rmd not found at ", readme_rmd_path, "; skipping README rebuild")
+    return(invisible(NULL))
+  }
+
+  if (!requireNamespace("devtools", quietly = TRUE)) {
+    warning("Package 'devtools' not installed; skipping README rebuild from README.Rmd")
+    return(invisible(NULL))
+  }
+
+  old_wd <- getwd()
+  on.exit(setwd(old_wd), add = TRUE)
+  setwd(project_root)
+
+  devtools::build_readme()
+}
+
+build_getting_started_from_readme <- function() {
+  readme_path <- file.path(project_root, "README.md")
+  output_path <- file.path(guide_dir, "getting_started.md")
+
+  if (!file.exists(readme_path)) {
+    warning("README.md not found at ", readme_path, "; skipping getting_started sync")
+    return(invisible(NULL))
+  }
+
+  body <- readLines(readme_path, warn = FALSE)
+  body <- normalize_readme_for_guide(body)
+
+  final <- c(
+    "---",
+    'title: "Getting Started"',
+    "---",
+    "",
+    "<!-- Generated from README.Rmd via README.md by scripts/build_guides.R. Edit README.Rmd only. -->",
+    "",
+    body
+  )
+
+  writeLines(final, output_path)
+  message("Built ", output_path, " from README.md")
+}
+
 invisible(lapply(qmd_files, build_one))
+build_readme_if_possible()
+build_getting_started_from_readme()

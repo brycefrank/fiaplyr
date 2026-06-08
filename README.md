@@ -63,11 +63,11 @@ explore_evals(con) |>
 
 Because we are using the mini Vermont database, we see just one record,
 but in a full FIA database there are many evaluations. For this
-tutorial, we will use `500601`, which covers Oregon (`50`) for 2003-2006
-(`06`), and can be used to estimate status variables (`01`).
+tutorial, we will use `500601`, which covers Vermont (`50`) for
+2003-2006 (`06`), and can be used to estimate status variables (`01`).
 
 ``` r
-# Initialize handler for EVALID 411001
+# Initialize handler for EVALID 500601
 handler <- eval_handler(con, 500601)
 
 # Inspect the handler summary
@@ -105,12 +105,12 @@ head(plot_vol)
 #> # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-29-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
 #>   PLT_CN         STATECD COUNTYCD INVYR  PLOT VOLCFNET VOLCFGRS
 #>   <chr>            <int>    <int> <int> <int>    <dbl>    <dbl>
-#> 1 55962306010538      50        3  2004  1061    1913.    2205.
-#> 2 62274980010538      50        5  2005  1079    2044.    2362.
-#> 3 62284101010538      50       25  2005  1277    4850.    5250.
-#> 4 73597514010538      50       21  2006  1369    1425.    3492.
-#> 5 55951984010538      50       11  2003   497    1173.    1353.
-#> 6 55954280010538      50       17  2003  1196     687.     771.
+#> 1 73608030010538      50        1  2006   627    1086.    1322.
+#> 2 62272249010538      50        1  2005    11     329.     398.
+#> 3 62282244010538      50       23  2005    48    2362.    2620.
+#> 4 62273992010538      50        3  2005   329    3637.    4280.
+#> 5 55969182010538      50       21  2004    73    1468.    1743.
+#> 6 62278970010538      50       17  2005  1206    3213.    3525.
 ```
 
 Plot-level values are often used in statistical models and other
@@ -140,12 +140,12 @@ head(plot_ba)
 #> # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-29-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
 #>   PLT_CN         STATECD COUNTYCD INVYR  PLOT    BA
 #>   <chr>            <int>    <int> <int> <int> <dbl>
-#> 1 73606629010538      50       27  2006  1406  31.6
-#> 2 73590132010538      50       11  2006   782 105. 
-#> 3 73596558010538      50       19  2006   871  84.3
-#> 4 73591536010538      50       11  2006   554  88.6
-#> 5 73607738010538      50       27  2006  1226 153. 
-#> 6 62284007010538      50       25  2005   887  73.4
+#> 1 73608030010538      50        1  2006   627  74.6
+#> 2 73604172010538      50       25  2006   780 140. 
+#> 3 55960319010538      50        1  2004   134  48.7
+#> 4 55949653010538      50        5  2003   122 150. 
+#> 5 55969182010538      50       21  2004    73 114. 
+#> 6 55963468010538      50        7  2004   123  91.6
 ```
 
 ### Specifying Domains
@@ -262,14 +262,14 @@ ba_by_sp_est <- estimate(estimator_by_sp, tree ~ BA)
 
 head(ba_by_sp_est)
 #> # A tibble: 6 × 4
-#>    SPCD var   estimate     se
-#>   <dbl> <chr>    <dbl>  <dbl>
-#> 1   832 BA      0.0687 0.0492
-#> 2   951 BA      0.271  0.0794
-#> 3   660 BA      0.182  0.0431
-#> 4   318 BA     18.6    0.957 
-#> 5   125 BA      0.132  0.0998
-#> 6    71 BA      0.130  0.0599
+#>    SPCD var   estimate      se
+#>   <dbl> <chr>    <dbl>   <dbl>
+#> 1    91 BA      0.397  0.177  
+#> 2    94 BA      0.477  0.126  
+#> 3    68 BA      0.146  0.106  
+#> 4   901 BA      0.0457 0.0482 
+#> 5   763 BA      0.0103 0.00610
+#> 6   935 BA      0.0793 0.0285
 ```
 
 ## Cautionary Results when Comparing to EVALIDator

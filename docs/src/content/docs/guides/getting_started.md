@@ -1,6 +1,8 @@
 ---
-title: Getting Started
+title: "Getting Started"
 ---
+
+<!-- Generated from README.Rmd via README.md by scripts/build_guides.R. Edit README.Rmd only. -->
 
 `fiaplyr` provides a modern, `dplyr`-style interface for working with
 Forest Inventory and Analysis (FIA) databases. With `fiaplyr`, you can
@@ -27,16 +29,16 @@ devtools::install_github("brycefrank/fiaplyr")
 A connection to a database is required, and the database must be
 structured like FIADB or similar. `duckdb` is used below, but other
 backends supported by `DBI` should work, including `SQLite` and Oracle.
+We include a miniature version of the FIA database for Vermont, which
+can be used for testing and learning.
 
 ``` r
 devtools::load_all() # Load fiaplyr package from local source
 library(dplyr)
 library(DBI)
-library(RSQLite)
+library(duckdb)
 
-# Establish a backend connection
-db_path <- "./db/SQLite_FIADB_OR.db"
-con <- dbConnect(RSQLite::SQLite(), db_path)
+con <- dbConnect(duckdb(), fiadb_vt_mini_path())
 ```
 
 ### Specifying a Handler
@@ -53,34 +55,31 @@ available evaluations in the database by
 ``` r
 explore_evals(con) |>
   head()
-#> # A tibble: 6 × 2
-#>   EVALID EVAL_DESCR                                                             
-#>    <int> <chr>                                                                  
-#> 1 411000 OREGON 2010: 2001-2010: ALL AREA                                       
-#> 2 411001 OREGON 2010: 2001-2010: CURRENT AREA, CURRENT VOLUME                   
-#> 3 411007 OREGON 2010: 2001-2010: DWM                                            
-#> 4 411700 OREGON 2017: 2008-2017: ALL AREA                                       
-#> 5 411701 OREGON 2017: 2008-2017: CURRENT AREA, CURRENT VOLUME                   
-#> 6 411703 OREGON 2017: 2001-2007 to 2011-2017: AREA CHANGE, GROWTH, REMOVALS, MO…
+#> # A tibble: 1 × 2
+#>   EVALID EVAL_DESCR                                           
+#>    <int> <chr>                                                
+#> 1 500601 VERMONT 2006: 2003-2006: CURRENT AREA, CURRENT VOLUME
 ```
 
-we will use `411001`, which covers Oregon (`41`) for 2001-2010 (`10`),
-and can be used to estimate status variables (`01`).
+Because we are using the mini Vermont database, we see just one record,
+but in a full FIA database there are many evaluations. For this
+tutorial, we will use `500601`, which covers Vermont (`50`) for
+2003-2006 (`06`), and can be used to estimate status variables (`01`).
 
 ``` r
-# Initialize handler for EVALID 411001
-handler <- eval_handler(con, 411001)
+# Initialize handler for EVALID 500601
+handler <- eval_handler(con, 500601)
 
 # Inspect the handler summary
 handler
 #> EvalHandler
 #> ----------
-#> EVALID:          411001 
-#> Description:     OREGON 2010: 2001-2010: CURRENT AREA, CURRENT VOLUME
+#> EVALID:          500601 
+#> Description:     VERMONT 2006: 2003-2006: CURRENT AREA, CURRENT VOLUME
 #> 
-#> Plots:           14816 
-#> Inventory Years: 2001 - 2010 
-#> Measure Years:   1999 - 2010
+#> Plots:           757 
+#> Inventory Years: 2003 - 2006 
+#> Measure Years:   2003 - 2007
 ```
 
 Here, we see the evaluation number, a description, and a summary of the
@@ -103,18 +102,18 @@ plot_vol <- handler |>
 
 head(plot_vol)
 #> # Source:   SQL [?? x 7]
-#> # Database: sqlite 3.53.1 [/home/bryce/Programming/fiaplyr/db/SQLite_FIADB_OR.db]
+#> # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-29-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
 #>   PLT_CN         STATECD COUNTYCD INVYR  PLOT VOLCFNET VOLCFGRS
 #>   <chr>            <int>    <int> <int> <int>    <dbl>    <dbl>
-#> 1 23904592010900      41        5  2001 54961    5027.    5134.
-#> 2 23904900010900      41        5  2001 55427       0        0 
-#> 3 23904948010900      41        5  2001 55784   12483.   14352.
-#> 4 23905637010900      41        5  2001 57362       0        0 
-#> 5 23903017010900      41        5  2001 59819   13402.   14228.
-#> 6 41118129010497      41        5  2001 61868    3282.    3384.
+#> 1 73608030010538      50        1  2006   627    1086.    1322.
+#> 2 62272249010538      50        1  2005    11     329.     398.
+#> 3 62282244010538      50       23  2005    48    2362.    2620.
+#> 4 62273992010538      50        3  2005   329    3637.    4280.
+#> 5 55969182010538      50       21  2004    73    1468.    1743.
+#> 6 62278970010538      50       17  2005  1206    3213.    3525.
 ```
 
-Plot-level values are often used in remote sensing models and other
+Plot-level values are often used in statistical models and other
 applications. However, some analyses do not explicitly an `aggregate`
 step, such as the estimation of state-wide means or totals, so it is not
 always necessary to call `aggregate`.
@@ -138,15 +137,15 @@ plot_ba <- ba_handler |>
 # Verify the output
 head(plot_ba)
 #> # Source:   SQL [?? x 6]
-#> # Database: sqlite 3.53.1 [/home/bryce/Programming/fiaplyr/db/SQLite_FIADB_OR.db]
+#> # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-29-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
 #>   PLT_CN         STATECD COUNTYCD INVYR  PLOT    BA
 #>   <chr>            <int>    <int> <int> <int> <dbl>
-#> 1 23904592010900      41        5  2001 54961  199.
-#> 2 23904900010900      41        5  2001 55427    0 
-#> 3 23904948010900      41        5  2001 55784  400.
-#> 4 23905637010900      41        5  2001 57362    0 
-#> 5 23903017010900      41        5  2001 59819  422.
-#> 6 41118129010497      41        5  2001 61868  165.
+#> 1 73608030010538      50        1  2006   627  74.6
+#> 2 73604172010538      50       25  2006   780 140. 
+#> 3 55960319010538      50        1  2004   134  48.7
+#> 4 55949653010538      50        5  2003   122 150. 
+#> 5 55969182010538      50       21  2004    73 114. 
+#> 6 55963468010538      50        7  2004   123  91.6
 ```
 
 ### Specifying Domains
@@ -164,16 +163,16 @@ plot_ba_by_sp <- ba_handler |>
 
 head(plot_ba_by_sp)
 #> # Source:     SQL [?? x 7]
-#> # Database:   sqlite 3.53.1 [/home/bryce/Programming/fiaplyr/db/SQLite_FIADB_OR.db]
+#> # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-29-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
 #> # Ordered by: desc(BA)
-#>   PLT_CN          STATECD COUNTYCD INVYR  PLOT  SPCD    BA
-#>   <chr>             <int>    <int> <int> <int> <dbl> <dbl>
-#> 1 29882679010497       41       39  2009 57304   202  706.
-#> 2 29395271010497       41       39  2008 88646   202  677.
-#> 3 29395087010497       41       39  2008 67285   202  632.
-#> 4 41120103010497       41       39  2005 74184   202  596.
-#> 5 193209035020004      41       39  2006 74101   202  581.
-#> 6 29881767010497       41       19  2009 57209   202  570.
+#>   PLT_CN         STATECD COUNTYCD INVYR  PLOT  SPCD    BA
+#>   <chr>            <int>    <int> <int> <int> <dbl> <dbl>
+#> 1 73603051010538      50       25  2006  1140   129  242.
+#> 2 55973029010538      50       25  2004   310   261  172.
+#> 3 73607294010538      50       27  2006  1190   261  164.
+#> 4 73599700010538      50       21  2006   761   241  164.
+#> 5 62273322010538      50        3  2005   258    12  163.
+#> 6 55952370010538      50       11  2003   278   371  155.
 ```
 
 ### Filters
@@ -182,26 +181,26 @@ Filters can be applied to the handler with `filter_tree` and
 `filter_cond`. While conceptually similar to domains, `filters` discard
 data, while domains merely create partitions, making computations more
 efficient when data can be effectively discarded. For example, if we
-merely need basal area aggregates for Douglas-fir we can use
+merely need basal area aggregates for balsam we can use
 
 ``` r
-plot_ba_douglas_fir <- ba_handler |>
-  filter_tree(SPCD == 202) |>
+plot_ba_balsam <- ba_handler |>
+  filter_tree(SPCD == 12) |>
   aggregate(tree ~ BA) |>
   arrange(desc(BA))
 
-head(plot_ba_douglas_fir)
+head(plot_ba_balsam)
 #> # Source:     SQL [?? x 6]
-#> # Database:   sqlite 3.53.1 [/home/bryce/Programming/fiaplyr/db/SQLite_FIADB_OR.db]
+#> # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-29-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
 #> # Ordered by: desc(BA)
-#>   PLT_CN          STATECD COUNTYCD INVYR  PLOT    BA
-#>   <chr>             <int>    <int> <int> <int> <dbl>
-#> 1 29882679010497       41       39  2009 57304  706.
-#> 2 29395271010497       41       39  2008 88646  677.
-#> 3 29395087010497       41       39  2008 67285  632.
-#> 4 41120103010497       41       39  2005 74184  596.
-#> 5 193209035020004      41       39  2006 74101  581.
-#> 6 29881767010497       41       19  2009 57209  570.
+#>   PLT_CN         STATECD COUNTYCD INVYR  PLOT    BA
+#>   <chr>            <int>    <int> <int> <int> <dbl>
+#> 1 62273322010538      50        3  2005   258  163.
+#> 2 73610053010538      50        1  2006   325  124.
+#> 3 55951098010538      50        9  2003   718  115.
+#> 4 62277496010538      50       11  2005   250  107.
+#> 5 73612664010538      50        3  2006  1019  107.
+#> 6 73608536010538      50        1  2006   269  104.
 ```
 
 ## Estimation
@@ -231,7 +230,7 @@ ba_est
 #> # A tibble: 1 × 3
 #>   var   estimate    se
 #>   <chr>    <dbl> <dbl>
-#> 1 BA        65.7 0.457
+#> 1 BA        97.5  1.71
 ```
 
 By default, outputs are means, typically representing areal densities.
@@ -242,9 +241,9 @@ ba_total_est <- estimate(estimator, tree ~ BA, output = "total")
 
 ba_total_est
 #> # A tibble: 1 × 3
-#>   var      estimate        se
-#>   <chr>       <dbl>     <dbl>
-#> 1 BA    4142806434. 28768504.
+#>   var     estimate        se
+#>   <chr>      <dbl>     <dbl>
+#> 1 BA    577059350. 10139412.
 ```
 
 ### Domain Estimation
@@ -263,14 +262,14 @@ ba_by_sp_est <- estimate(estimator_by_sp, tree ~ BA)
 
 head(ba_by_sp_est)
 #> # A tibble: 6 × 4
-#>    SPCD var   estimate     se
-#>   <dbl> <chr>    <dbl>  <dbl>
-#> 1    11 BA      1.16   0.0870
-#> 2    15 BA      2.51   0.117 
-#> 3    17 BA      2.81   0.103 
-#> 4    19 BA      0.650  0.0580
-#> 5    20 BA      0.0631 0.0199
-#> 6    21 BA      0.777  0.0912
+#>    SPCD var   estimate      se
+#>   <dbl> <chr>    <dbl>   <dbl>
+#> 1    91 BA      0.397  0.177  
+#> 2    94 BA      0.477  0.126  
+#> 3    68 BA      0.146  0.106  
+#> 4   901 BA      0.0457 0.0482 
+#> 5   763 BA      0.0103 0.00610
+#> 6   935 BA      0.0793 0.0285
 ```
 
 ## Cautionary Results when Comparing to EVALIDator
@@ -310,7 +309,7 @@ est_gross_bark
 #> # A tibble: 1 × 3
 #>   var      estimate    se
 #>   <chr>       <dbl> <dbl>
-#> 1 VOLCFNET    1575.  16.0
+#> 1 VOLCFNET    1547.  35.5
 ```
 
 Hence, some background knowledge is needed to understand the nuance of
