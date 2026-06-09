@@ -11,12 +11,12 @@ Mutate Condition Table
 
 ```r
 ## S4 method for signature 'EvalHandler'
-mutate_cond(.data, ...)
+mutate_cond(handler, ...)
 ```
 
 ## Arguments
 
-- `.data`: A EvalHandler object.
+- `handler`: A EvalHandler object.
 - `...`: Name-value pairs of expressions.
 
 ## Value

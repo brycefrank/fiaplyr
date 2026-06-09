@@ -5,9 +5,9 @@ description: "Sets the domain variables used for grouping tree-level aggregation
 
 ## Description
 
-Sets the domain variables used for grouping tree-level
-aggregations. A domain variable is a column (e.g., STATUSCD, SPCD)
-whose unique values or combinations define estimation domains.
+Sets the domain variables used for grouping tree-level aggregations.
+A domain variable is a column (e.g., STATUSCD, SPCD) whose unique
+values or combinations define estimation domains.
 
 ## Usage
 

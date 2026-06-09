@@ -5,12 +5,12 @@
 \alias{get_strata_weights,EvalHandler-method}
 \title{Get Strata Weights}
 \usage{
-get_strata_weights(object)
+get_strata_weights(handler)
 
-\S4method{get_strata_weights}{EvalHandler}(object)
+\S4method{get_strata_weights}{EvalHandler}(handler)
 }
 \arguments{
-\item{object}{A handler object.}
+\item{handler}{A handler object.}
 }
 \value{
 A lazy query with strata weights.

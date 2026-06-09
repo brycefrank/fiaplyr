@@ -9,7 +9,6 @@ Base Estimator Class
 
 ## Additional Details
 
-Slots:
+Slots
 
-‘handler’
-     A EvalHandler object.
+`handler`A EvalHandler object.

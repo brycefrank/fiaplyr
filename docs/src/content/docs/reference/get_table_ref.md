@@ -27,7 +27,6 @@ A table reference (string or in_schema object)
 
 ## Additional Details
 
-Methods (by class):
+Methods (by class)
 
-   • ‘get_table_ref(DatabaseBackend)’: Get table reference for
-     DatabaseBackend
+`get_table_ref(DatabaseBackend)`: Get table reference for DatabaseBackend

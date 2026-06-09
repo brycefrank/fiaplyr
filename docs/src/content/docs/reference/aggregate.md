@@ -10,10 +10,10 @@ Aggregate Data to Plot Level
 ## Usage
 
 ```r
-aggregate(x, ...)
+aggregate(handler, ...)
 ```
 
 ## Arguments
 
-- `x`: A handler object.
+- `handler`: A handler object.
 - `...`: Additional arguments.

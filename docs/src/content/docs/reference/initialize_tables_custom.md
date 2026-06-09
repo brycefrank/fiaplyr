@@ -42,7 +42,6 @@ A list of lazy queries.
 
 ## Additional Details
 
-Functions:
+Functions
 
-   • ‘initialize_tables_custom(StatusAnalysis)’: Initialize tables
-     for Status Analysis with custom schema
+`initialize_tables_custom(StatusAnalysis)`: Initialize tables for Status Analysis with custom schema

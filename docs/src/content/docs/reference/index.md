@@ -8,8 +8,8 @@ These pages are generated from `man/*.Rd` during the docs build.
 ## Functions
 
 - [`evalid<-`](./evalid-set)
-- [`PostStratifiedEstimator`](./PostStratifiedEstimator)
-- [`PostStratifiedRatioEstimator`](./PostStratifiedRatioEstimator)
+- [`PostStratifiedEstimator`](./poststratifiedestimator)
+- [`PostStratifiedRatioEstimator`](./poststratifiedratioestimator)
 - [`aggregate`](./aggregate)
 - [`aggregate_cond`](./aggregate_cond)
 - [`aggregate_data`](./aggregate_data)
@@ -38,12 +38,12 @@ These pages are generated from `man/*.Rd` during the docs build.
 
 ## Classes
 
-- [`AnalysisSchema`](./AnalysisSchema-class)
-- [`BaseHandler`](./BaseHandler-class)
-- [`ChangeAnalysis`](./ChangeAnalysis-class)
-- [`DatabaseBackend`](./DatabaseBackend-class)
-- [`Estimator`](./Estimator-class)
-- [`EvalHandler`](./EvalHandler-class)
-- [`PostStratifiedRatioEstimator`](./PostStratifiedRatioEstimator-class)
-- [`StatusAnalysis`](./StatusAnalysis-class)
+- [`AnalysisSchema`](./analysisschema-class)
+- [`BaseHandler`](./basehandler-class)
+- [`ChangeAnalysis`](./changeanalysis-class)
+- [`DatabaseBackend`](./databasebackend-class)
+- [`Estimator`](./estimator-class)
+- [`EvalHandler`](./evalhandler-class)
+- [`PostStratifiedRatioEstimator`](./poststratifiedratioestimator-class)
+- [`StatusAnalysis`](./statusanalysis-class)
 

@@ -4,7 +4,7 @@
 \alias{estimate,PostStratifiedEstimator-method}
 \title{Estimate Population Parameters}
 \usage{
-\S4method{estimate}{PostStratifiedEstimator}(object, ..., output = "mean")
+\S4method{estimate}{PostStratifiedEstimator}(object, ..., output = "mean", margins = FALSE)
 }
 \arguments{
 \item{object}{A PostStratifiedEstimator object.}
@@ -13,6 +13,12 @@
 (e.g., tree ~ VOLCFGRS).}
 
 \item{output}{Output scale, either "mean" (default) or "total".}
+
+\item{margins}{Logical. If \code{TRUE}, returns the full cross-domain estimates
+plus all marginal estimates produced by re-running the pipeline for every
+strict subset of the active domain variables (including the grand total
+with no domains). Dropped domain columns appear as \code{NA}. Defaults to
+\code{FALSE}.}
 }
 \value{
 A dataframe with estimates.

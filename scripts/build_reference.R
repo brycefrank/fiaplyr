@@ -9,6 +9,7 @@ script_path <- normalizePath(sub("^--file=", "", script_arg[1]), winslash = "/",
 project_root <- normalizePath(file.path(dirname(script_path), ".."), winslash = "/", mustWork = TRUE)
 man_dir <- file.path(project_root, "man")
 reference_dir <- file.path(project_root, "docs", "src", "content", "docs", "reference")
+guides_dir <- file.path(project_root, "docs", "src", "content", "docs", "guides")
 
 dir.create(reference_dir, recursive = TRUE, showWarnings = FALSE)
 
@@ -19,6 +20,34 @@ if (!dir.exists(man_dir)) {
 rd_files <- list.files(man_dir, pattern = "\\.Rd$", full.names = TRUE)
 if (!length(rd_files)) {
   stop("No .Rd files found in ", man_dir)
+}
+
+topic_slug_lookup <- new.env(parent = emptyenv())
+guide_slug_lookup <- new.env(parent = emptyenv())
+
+reference_href <- function(route_slug, from_index = FALSE) {
+  prefix <- if (from_index) "./" else "../"
+  paste0(prefix, route_slug)
+}
+
+guide_href <- function(guide_slug) {
+  paste0("../guides/", guide_slug, "/")
+}
+
+normalize_docs_href <- function(target) {
+  if (!nzchar(target)) {
+    return(target)
+  }
+
+  if (grepl("^(https?:|mailto:|#)", target)) {
+    return(target)
+  }
+
+  if (startsWith(target, "/guides/") || startsWith(target, "/reference/")) {
+    return(paste0("../..", target))
+  }
+
+  target
 }
 
 trim <- function(x) {
@@ -96,6 +125,16 @@ parse_namespace_exports <- function(path) {
   list(functions = functions, classes = classes, methods = methods)
 }
 
+guide_topics <- if (dir.exists(guides_dir)) {
+  tools::file_path_sans_ext(basename(list.files(guides_dir, pattern = "\\.md$", full.names = TRUE)))
+} else {
+  character()
+}
+
+for (guide_slug in guide_topics) {
+  assign(guide_slug, guide_slug, envir = guide_slug_lookup)
+}
+
 collect_aliases <- function(rd_path) {
   rd <- tools::parse_Rd(rd_path)
   alias_nodes <- rd[vapply(rd, function(node) identical(attr(node, "Rd_tag"), "\\alias"), logical(1))]
@@ -127,6 +166,157 @@ rd_section_lines <- function(rd, rd_tag, heading) {
   lines <- gsub("^\\s{5}", "", lines)
   lines <- gsub("^\\s+$", "", lines)
   compact_blank_lines(lines)
+}
+
+resolve_link_slug <- function(target) {
+  if (!nzchar(target)) {
+    return(NULL)
+  }
+
+  if (exists(target, envir = topic_slug_lookup, inherits = FALSE)) {
+    return(get(target, envir = topic_slug_lookup, inherits = FALSE))
+  }
+
+  slug <- slug_from_symbol(target)
+  if (exists(slug, envir = topic_slug_lookup, inherits = FALSE)) {
+    return(get(slug, envir = topic_slug_lookup, inherits = FALSE))
+  }
+
+  NULL
+}
+
+route_slug_from_topic_slug <- function(topic_slug) {
+  tolower(topic_slug)
+}
+
+render_rd_text <- function(node) {
+  if (is.character(node)) {
+    return(paste(node, collapse = ""))
+  }
+
+  tag <- attr(node, "Rd_tag")
+
+  if (is.null(tag)) {
+    return(paste(vapply(as.list(node), render_rd_text, character(1)), collapse = ""))
+  }
+
+  if (identical(tag, "TEXT")) {
+    return(paste(as.character(node), collapse = ""))
+  }
+
+  children <- vapply(as.list(node), render_rd_text, character(1))
+  content <- paste(children, collapse = "")
+
+  guide_link <- maybe_render_vignette_link(content)
+  if (!is.null(guide_link)) {
+    return(guide_link)
+  }
+
+  if (identical(tag, "\\href")) {
+    if (length(node) >= 2) {
+      target <- normalize_docs_href(trim(render_rd_text(node[[1]])))
+      label <- trim(render_rd_text(node[[2]]))
+      if (!nzchar(label)) {
+        label <- target
+      }
+      return(paste0("[", label, "](", target, ")"))
+    }
+
+    return(content)
+  }
+
+  if (identical(tag, "\\url")) {
+    target <- normalize_docs_href(trim(content))
+    return(paste0("[", target, "](", target, ")"))
+  }
+
+  if (identical(tag, "\\link")) {
+    option <- attr(node, "Rd_option")
+    target <- if (!is.null(option) && nzchar(option)) {
+      sub("^=", "", option)
+    } else {
+      content
+    }
+
+    slug <- resolve_link_slug(target)
+    label <- trim(content)
+    if (!nzchar(label)) {
+      label <- target
+    }
+
+    if (!is.null(slug)) {
+      return(paste0("[`", label, "`](", reference_href(route_slug_from_topic_slug(slug)), ")"))
+    }
+
+    return(paste0("`", label, "`"))
+  }
+
+  if (tag %in% c("\\code", "\\pkg", "\\samp", "\\verb", "\\env")) {
+    return(paste0("`", trim(content), "`"))
+  }
+
+  if (identical(tag, "\\emph")) {
+    return(paste0("*", content, "*"))
+  }
+
+  if (identical(tag, "\\strong")) {
+    return(paste0("**", content, "**"))
+  }
+
+  content
+}
+
+maybe_render_vignette_link <- function(text) {
+  match <- regexec('^vignette\\((["\'])([^"\']+)\\1\\)$', trim(text))
+  captures <- regmatches(trim(text), match)[[1]]
+
+  if (length(captures) != 3) {
+    return(NULL)
+  }
+
+  guide_slug <- captures[3]
+  if (!exists(guide_slug, envir = guide_slug_lookup, inherits = FALSE)) {
+    return(NULL)
+  }
+
+  paste0("[`", trim(text), "`](", guide_href(guide_slug), ")")
+}
+
+render_rd_block <- function(rd, rd_tag) {
+  idx <- which(vapply(rd, function(node) identical(attr(node, "Rd_tag"), rd_tag), logical(1)))[1]
+  if (is.na(idx)) {
+    return(character())
+  }
+
+  text <- render_rd_text(rd[[idx]])
+  text <- gsub("\\r", "", text)
+  text <- gsub(" +\\n", "\n", text)
+  text <- gsub("\\n +", "\n", text)
+  text <- gsub("\\n{3,}", "\n\n", text)
+
+  lines <- strsplit(text, "\n", fixed = TRUE)[[1]]
+  lines <- trimws(lines, which = "right")
+  compact_blank_lines(lines)
+}
+
+format_arguments_rd <- function(rd) {
+  idx <- which(vapply(rd, function(node) identical(attr(node, "Rd_tag"), "\\arguments"), logical(1)))[1]
+  if (is.na(idx)) {
+    return(character())
+  }
+
+  args_node <- rd[[idx]]
+  items <- args_node[vapply(args_node, function(node) identical(attr(node, "Rd_tag"), "\\item"), logical(1))]
+  if (!length(items)) {
+    return(character())
+  }
+
+  vapply(items, function(item) {
+    arg_name <- trim(render_rd_text(item[[1]]))
+    arg_desc <- trim(render_rd_text(item[[2]]))
+    arg_desc <- gsub("\\s+", " ", arg_desc)
+    paste0("- `", arg_name, "`: ", arg_desc)
+  }, character(1))
 }
 
 rd_title <- function(rd, fallback) {
@@ -193,11 +383,11 @@ markdown_for_rd <- function(rd_path) {
   title <- rd_title(rd, fallback_title)
 
   sections <- list(
-    Description = rd_section_lines(rd, "\\description", "Description"),
+    Description = render_rd_block(rd, "\\description"),
     Usage = rd_section_lines(rd, "\\usage", "Usage"),
-    Arguments = rd_section_lines(rd, "\\arguments", "Arguments"),
-    Value = rd_section_lines(rd, "\\value", "Value"),
-    Slots = rd_section_lines(rd, "\\section", "Section"),
+    Arguments = format_arguments_rd(rd),
+    Value = render_rd_block(rd, "\\value"),
+    Slots = render_rd_block(rd, "\\section"),
     Examples = rd_section_lines(rd, "\\examples", "Examples")
   )
 
@@ -226,10 +416,7 @@ markdown_for_rd <- function(rd_path) {
   }
 
   if (length(sections$Arguments)) {
-    args_md <- format_arguments(sections$Arguments)
-    if (length(args_md)) {
-      lines <- c(lines, "## Arguments", "", args_md, "")
-    }
+    lines <- c(lines, "## Arguments", "", sections$Arguments, "")
   }
 
   if (length(sections$Value)) {
@@ -336,6 +523,16 @@ for (class_name in unique(exports$classes)) {
   )
 }
 
+for (topic in function_topics) {
+  assign(topic$symbol, topic$slug, envir = topic_slug_lookup)
+  assign(topic$slug, topic$slug, envir = topic_slug_lookup)
+}
+
+for (topic in class_topics) {
+  assign(topic$symbol, topic$slug, envir = topic_slug_lookup)
+  assign(topic$slug, topic$slug, envir = topic_slug_lookup)
+}
+
 if (!length(function_topics) && !length(class_topics)) {
   stop("No exported Rd topics were selected for reference generation.")
 }
@@ -365,7 +562,7 @@ index_lines <- c(
 if (length(function_topics)) {
   index_lines <- c(index_lines, "## Functions", "")
   function_links <- vapply(function_topics, function(topic) {
-    paste0("- [`", topic$symbol, "`](./", topic$slug, ")")
+    paste0("- [`", topic$symbol, "`](", reference_href(route_slug_from_topic_slug(topic$slug), from_index = TRUE), ")")
   }, character(1))
   index_lines <- c(index_lines, function_links, "")
 }
@@ -373,7 +570,7 @@ if (length(function_topics)) {
 if (length(class_topics)) {
   index_lines <- c(index_lines, "## Classes", "")
   class_links <- vapply(class_topics, function(topic) {
-    paste0("- [`", topic$symbol, "`](./", topic$slug, ")")
+    paste0("- [`", topic$symbol, "`](", reference_href(route_slug_from_topic_slug(topic$slug), from_index = TRUE), ")")
   }, character(1))
   index_lines <- c(index_lines, class_links, "")
 }

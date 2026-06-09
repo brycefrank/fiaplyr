@@ -1,10 +1,10 @@
 #' Aggregate Data to Plot Level
 #'
-#' @param x A handler object.
+#' @param handler A handler object.
 #' @param ... Additional arguments.
 #' @importFrom stats aggregate
 #' @export
-setGeneric("aggregate")
+setGeneric("aggregate", function(handler, ...) standardGeneric("aggregate"))
 
 #' Aggregate Trees to Plot Level
 #'
@@ -21,16 +21,16 @@ setGeneric("aggregate_tree", function(object, ...) standardGeneric("aggregate_tr
 setGeneric("aggregate_cond", function(object, ...) standardGeneric("aggregate_cond"))
 
 #' @export
-setGeneric("mutate_tree", function(.data, ...) standardGeneric("mutate_tree"))
+setGeneric("mutate_tree", function(handler, ...) standardGeneric("mutate_tree"))
 
 #' @export
-setGeneric("mutate_cond", function(.data, ...) standardGeneric("mutate_cond"))
+setGeneric("mutate_cond", function(handler, ...) standardGeneric("mutate_cond"))
 
 #' @export
-setGeneric("filter_tree", function(.data, ...) standardGeneric("filter_tree"))
+setGeneric("filter_tree", function(handler, ...) standardGeneric("filter_tree"))
 
 #' @export
-setGeneric("filter_cond", function(.data, ...) standardGeneric("filter_cond"))
+setGeneric("filter_cond", function(handler, ...) standardGeneric("filter_cond"))
 
 #' @export
 setGeneric("set_tree_domains", function(.data, ...) standardGeneric("set_tree_domains"))
@@ -40,10 +40,10 @@ setGeneric("set_cond_domains", function(.data, ...) standardGeneric("set_cond_do
 
 #' Get Strata Weights
 #'
-#' @param object A handler object.
+#' @param handler A handler object.
 #' @return A lazy query with strata weights.
 #' @export
-setGeneric("get_strata_weights", function(object) standardGeneric("get_strata_weights"))
+setGeneric("get_strata_weights", function(handler) standardGeneric("get_strata_weights"))
 
 #' Estimate Population Parameters
 #'

@@ -5,8 +5,7 @@ description: "Lists all available evaluations in the database with their descrip
 
 ## Description
 
-Lists all available evaluations in the database with their
-descriptions.
+Lists all available evaluations in the database with their descriptions.
 
 ## Usage
 
@@ -21,4 +20,4 @@ explore_evals(db, backend = NULL)
 
 ## Value
 
-A tibble containing ‘EVALID’ and ‘EVAL_DESCR’.
+A tibble containing `EVALID` and `EVAL_DESCR`.

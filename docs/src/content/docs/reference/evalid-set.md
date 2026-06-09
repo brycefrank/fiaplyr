@@ -10,12 +10,12 @@ Set Evaluation ID
 ## Usage
 
 ```r
-evalid(object) <- value
+evalid(handler) <- value
 ```
 
 ## Arguments
 
-- `object`: A EvalHandler object.
+- `handler`: A EvalHandler object.
 - `value`: The new evaluation ID.
 
 ## Value

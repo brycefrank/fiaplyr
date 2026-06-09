@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-`fiaplyr` provides a modern, `dplyr`-style interface for working with Forest
+`fiaplyr` provides a modern, `dplyr`-inspired interface for working with Forest
 Inventory and Analysis (FIA) databases. With `fiaplyr`, you can chain together
 operations to compute plot-level values, modify variables, specify domains,
 and produce estimates. In sum, the package is a flexible tool allowing for a

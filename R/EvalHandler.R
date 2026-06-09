@@ -21,13 +21,26 @@ setClass("EvalHandler",
   )
 )
 
-#' Constructor for EvalHandler
+#' Connect to an Evaluation
 #'
+#' In FIA parlance, an evaluation specifies an area (usually a state), a time
+#' window, a set of plots, and an associated post-stratification. The
+#' `eval_handler()` function connects to an evaluation and allows users to
+#' manipulate the underlying data to produce estimates and aggregates of need.
+#' Refer to [Status Estimates](/guides/status_estimates/) for an introduction.
+#' 
 #' @param db A DBIConnection object.
 #' @param evalid A numeric identifier for the evaluation.
-#' @param schema An AnalysisSchema object. Defaults to StatusAnalysis.
+#' @param schema An [AnalysisSchema][AnalysisSchema-class] object. Defaults to [StatusAnalysis][StatusAnalysis-class].
 #' @param backend Optional DatabaseBackend for custom schema/table names.
+#'
+#' @return An object of class [EvalHandler][EvalHandler-class] connected to the specified evaluation.
 #' @export
+#'
+#' @examples
+#' # Connect to an evaluation with evalid 500601
+#' con <- DBI::dbConnect(duckdb::duckdb(), fiadb_vt_mini_path())
+#' handler <- eval_handler(con, evalid = 500601)
 eval_handler <- function(db, evalid, schema = new("StatusAnalysis"), backend = NULL) {
   tables <- initialize_tables(schema, db, evalid, backend)
 
@@ -143,36 +156,34 @@ setMethod("show", "EvalHandler", function(object) {
 
 #' Mutate Tree Table
 #'
-#' @param .data A EvalHandler object.
+#' @param handler A EvalHandler object.
 #' @param ... Name-value pairs of expressions.
 #' @return A EvalHandler object with pending mutations.
-#' @importFrom dplyr mutate
 #' @export
-setMethod("mutate_tree", "EvalHandler", function(.data, ...) {
+setMethod("mutate_tree", "EvalHandler", function(handler, ...) {
   # Capture expressions as quosures
   new_mutations <- dplyr::quos(...)
 
   # Append to existing mutations
-  .data@tree_mutations <- c(.data@tree_mutations, new_mutations)
+  handler@tree_mutations <- c(handler@tree_mutations, new_mutations)
 
-  return(.data)
+  return(handler)
 })
 
 #' Mutate Condition Table
 #'
-#' @param .data A EvalHandler object.
+#' @param handler A EvalHandler object.
 #' @param ... Name-value pairs of expressions.
 #' @return A EvalHandler object with pending mutations.
-#' @importFrom dplyr mutate
 #' @export
-setMethod("mutate_cond", "EvalHandler", function(.data, ...) {
+setMethod("mutate_cond", "EvalHandler", function(handler, ...) {
   # Capture expressions as quosures
   new_mutations <- dplyr::quos(...)
 
   # Append to existing mutations
-  .data@cond_mutations <- c(.data@cond_mutations, new_mutations)
+  handler@cond_mutations <- c(handler@cond_mutations, new_mutations)
 
-  return(.data)
+  return(handler)
 })
 
 #' Set Tree Domain Variables
@@ -184,7 +195,6 @@ setMethod("mutate_cond", "EvalHandler", function(.data, ...) {
 #' @param .data A EvalHandler object.
 #' @param ... Domain variable names (unquoted column names).
 #' @return A EvalHandler object with the tree domain variables set.
-#' @importFrom dplyr group_by
 #' @export
 setMethod("set_tree_domains", "EvalHandler", function(.data, ...) {
   # Capture expressions as quosures
@@ -205,7 +215,6 @@ setMethod("set_tree_domains", "EvalHandler", function(.data, ...) {
 #' @param .data A EvalHandler object.
 #' @param ... Domain variable names (unquoted column names).
 #' @return A EvalHandler object with the condition domain variables set.
-#' @importFrom dplyr group_by
 #' @export
 setMethod("set_cond_domains", "EvalHandler", function(.data, ...) {
   # Capture expressions as quosures
@@ -217,48 +226,63 @@ setMethod("set_cond_domains", "EvalHandler", function(.data, ...) {
   return(.data)
 })
 
-#' Filter Tree Table
+#' Filter the Tree Table
 #'
-#' @param .data A EvalHandler object.
-#' @param ... Logical predicates defined in terms of the variables in the tree table.
-#' @return A EvalHandler object with pending filters.
-#' @importFrom dplyr filter
+#' This function applies filters to the tree table. This is more complex than
+#' a standard `dplyr::filter()` because filters are applied lazily in tandem
+#' with other pre-joined tables (e.g., `REF_SPECIES`). However, the usage and
+#' interpretation is much the same, conditional statements are provided and
+#' tree records that do not satisfy the conditions will be excluded from all
+#' subsequent operations, including aggregations and estimates.
+#'
+#' @param handler An [EvalHandler][EvalHandler-class] object.
+#' @param ... Logical predicates defined in terms of the variables in the tree
+#'  table.
+#' @return An [EvalHandler][EvalHandler-class] object with pending filters.
 #' @export
-setMethod("filter_tree", "EvalHandler", function(.data, ...) {
-  # Capture expressions as quosures
+#'
+#' @examples
+#' handler <- eval_handler(con, evalid = 500601) |>
+#'  filter_tree(STATUSCD == 1) # Only include live trees
+setMethod("filter_tree", "EvalHandler", function(handler, ...) {
   new_filters <- dplyr::quos(...)
+  handler@tree_filters <- c(handler@tree_filters, new_filters)
 
-  # Append to existing filters
-  .data@tree_filters <- c(.data@tree_filters, new_filters)
-
-  return(.data)
+  return(handler)
 })
 
-#' Filter Condition Table
+#' Filter the Condition Table
 #'
-#' @param .data A EvalHandler object.
-#' @param ... Logical predicates defined in terms of the variables in the condition table.
-#' @return A EvalHandler object with pending filters.
-#' @importFrom dplyr filter
+#' This function applies filters to the condition table. This is more complex
+#' than a standard `dplyr::filter()` because filters are applied lazily in
+#' tandem with other pre-joined tables. For example, filtering to a specific
+#' `OWNGRPCD` will exclude all conditions *and* all trees that do not satisfy
+#' that condition, which will impact all subsequent operations.
+#'
+#' @param handler An [EvalHandler][EvalHandler-class] object.
+#' @param ... Logical predicates defined in terms of the variables in the
+#'  condition table.
+#' @return An [EvalHandler][EvalHandler-class] object with pending filters.
 #' @export
-setMethod("filter_cond", "EvalHandler", function(.data, ...) {
-  # Capture expressions as quosures
+#'
+#' @examples
+#' handler <- eval_handler(con, evalid = 500601) |>
+#'  filter_cond(OWNGRPCD == 10)
+setMethod("filter_cond", "EvalHandler", function(handler, ...) {
   new_filters <- dplyr::quos(...)
+  handler@cond_filters <- c(handler@cond_filters, new_filters)
 
-  # Append to existing filters
-  .data@cond_filters <- c(.data@cond_filters, new_filters)
-
-  return(.data)
+  return(handler)
 })
 
-#' Aggregate Data to Plot Level
+#' Aggregate Data to the Plot Level
 #'
-#' @param x A EvalHandler object.
+#' @param handler A EvalHandler object.
 #' @param ... A formula specifying the aggregation target (e.g., tree ~ VOLCFGRS), and optional arguments like `sparse`.
 #' @return A lazy query with plot-level summaries.
 #' @export
-setMethod("aggregate", "EvalHandler", function(x, ...) {
-  aggregate_data(x@schema, x, ...)
+setMethod("aggregate", "EvalHandler", function(handler, ...) {
+  aggregate_data(handler@schema, handler, ...)
 })
 
 #' Aggregate Trees to Plot Level
@@ -284,10 +308,10 @@ setMethod("aggregate_cond", "EvalHandler", function(object, sparse = FALSE) {
   .make_cond_aggregates(object, sparse = sparse)
 })
 #' @describeIn get_strata_weights Get strata weights for EvalHandler
-setMethod("get_strata_weights", "EvalHandler", function(object) {
-  object@tables$pop_stratum %>%
+setMethod("get_strata_weights", "EvalHandler", function(handler) {
+  handler@tables$pop_stratum %>%
     dplyr::inner_join(
-      object@tables$pop_estn_unit,
+      handler@tables$pop_estn_unit,
       by = c("ESTN_UNIT_CN" = "CN"),
       suffix = c("", ".eu")
     ) %>%
@@ -301,26 +325,26 @@ setMethod("get_strata_weights", "EvalHandler", function(object) {
 
 #' Get Evaluation ID
 #'
-#' @param object A EvalHandler object.
+#' @param handler A EvalHandler object.
 #' @return The evaluation ID.
 #' @export
-setGeneric("evalid", function(object) standardGeneric("evalid"))
+setGeneric("evalid", function(handler) standardGeneric("evalid"))
 
 #' @describeIn evalid Get evaluation ID for EvalHandler
-setMethod("evalid", "EvalHandler", function(object) {
-  object@evalid
+setMethod("evalid", "EvalHandler", function(handler) {
+  handler@evalid
 })
 
 #' Set Evaluation ID
 #'
-#' @param object A EvalHandler object.
+##' @param handler A EvalHandler object.
 #' @param value The new evaluation ID.
 #' @return The modified object.
 #' @export
-setGeneric("evalid<-", function(object, value) standardGeneric("evalid<-"))
+setGeneric("evalid<-", function(handler, value) standardGeneric("evalid<-"))
 
-#' @describeIn evalid Set evaluation ID for EvalHandler
-setMethod("evalid<-", "EvalHandler", function(object, value) {
-  object@evalid <- value
-  object
+##' @describeIn evalid Set evaluation ID for EvalHandler
+setMethod("evalid<-", "EvalHandler", function(handler, value) {
+  handler@evalid <- value
+  handler
 })

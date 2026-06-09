@@ -1,12 +1,12 @@
 ---
 title: "Parse Estimation Formula"
-description: "Parses a formula of the form ‘slot ~ variable | variable2’ into its components."
+description: "Parses a formula of the form `slot ~ variable | variable2` into its components."
 ---
 
 ## Description
 
-Parses a formula of the form ‘slot ~ variable | variable2’ into
-its components.
+Parses a formula of the form `slot ~ variable | variable2` into its
+components.
 
 ## Usage
 

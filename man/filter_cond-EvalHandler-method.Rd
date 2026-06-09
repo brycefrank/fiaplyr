@@ -2,18 +2,27 @@
 % Please edit documentation in R/EvalHandler.R
 \name{filter_cond,EvalHandler-method}
 \alias{filter_cond,EvalHandler-method}
-\title{Filter Condition Table}
+\title{Filter the Condition Table}
 \usage{
-\S4method{filter_cond}{EvalHandler}(.data, ...)
+\S4method{filter_cond}{EvalHandler}(handler, ...)
 }
 \arguments{
-\item{.data}{A EvalHandler object.}
+\item{handler}{An \link[=EvalHandler-class]{EvalHandler} object.}
 
-\item{...}{Logical predicates defined in terms of the variables in the condition table.}
+\item{...}{Logical predicates defined in terms of the variables in the
+condition table.}
 }
 \value{
-A EvalHandler object with pending filters.
+An \link[=EvalHandler-class]{EvalHandler} object with pending filters.
 }
 \description{
-Filter Condition Table
+This function applies filters to the condition table. This is more complex
+than a standard \code{dplyr::filter()} because filters are applied lazily in
+tandem with other pre-joined tables. For example, filtering to a specific
+\code{OWNGRPCD} will exclude all conditions \emph{and} all trees that do not satisfy
+that condition, which will impact all subsequent operations.
+}
+\examples{
+handler <- eval_handler(con, evalid = 500601) |>
+ filter_cond(OWNGRPCD == 10)
 }

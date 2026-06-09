@@ -10,15 +10,15 @@ Get Strata Weights
 ## Usage
 
 ```r
-get_strata_weights(object)
+get_strata_weights(handler)
 
 ## S4 method for signature 'EvalHandler'
-get_strata_weights(object)
+get_strata_weights(handler)
 ```
 
 ## Arguments
 
-- `object`: A handler object.
+- `handler`: A handler object.
 
 ## Value
 
@@ -26,7 +26,6 @@ A lazy query with strata weights.
 
 ## Additional Details
 
-Methods (by class):
+Methods (by class)
 
-   • ‘get_strata_weights(EvalHandler)’: Get strata weights for
-     EvalHandler
+`get_strata_weights(EvalHandler)`: Get strata weights for EvalHandler

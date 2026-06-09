@@ -4,10 +4,10 @@
 \alias{mutate_tree,EvalHandler-method}
 \title{Mutate Tree Table}
 \usage{
-\S4method{mutate_tree}{EvalHandler}(.data, ...)
+\S4method{mutate_tree}{EvalHandler}(handler, ...)
 }
 \arguments{
-\item{.data}{A EvalHandler object.}
+\item{handler}{A EvalHandler object.}
 
 \item{...}{Name-value pairs of expressions.}
 }

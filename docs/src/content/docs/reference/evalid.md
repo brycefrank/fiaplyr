@@ -10,18 +10,18 @@ Get Evaluation ID
 ## Usage
 
 ```r
-evalid(object)
+evalid(handler)
 
 ## S4 method for signature 'EvalHandler'
-evalid(object)
+evalid(handler)
 
 ## S4 replacement method for signature 'EvalHandler'
-evalid(object) <- value
+evalid(handler) <- value
 ```
 
 ## Arguments
 
-- `object`: A EvalHandler object.
+- `handler`: A EvalHandler object.
 
 ## Value
 
@@ -29,9 +29,8 @@ The evaluation ID.
 
 ## Additional Details
 
-Methods (by class):
+Methods (by class)
 
-   • ‘evalid(EvalHandler)’: Get evaluation ID for EvalHandler
+`evalid(EvalHandler)`: Get evaluation ID for EvalHandler
 
-   • ‘evalid(EvalHandler) <- value’: Set evaluation ID for
-     EvalHandler
+`evalid(EvalHandler) <- value`: Set evaluation ID for EvalHandler

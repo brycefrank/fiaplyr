@@ -31,10 +31,8 @@ A lazy query with aggregates.
 
 ## Additional Details
 
-Methods (by class):
+Methods (by class)
 
-   • ‘aggregate_data(StatusAnalysis)’: Aggregate data for Status
-     Analysis
+`aggregate_data(StatusAnalysis)`: Aggregate data for Status Analysis
 
-   • ‘aggregate_data(ChangeAnalysis)’: Aggregate data for Change
-     Analysis
+`aggregate_data(ChangeAnalysis)`: Aggregate data for Change Analysis

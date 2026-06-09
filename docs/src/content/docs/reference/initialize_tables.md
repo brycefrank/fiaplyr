@@ -32,10 +32,8 @@ A list of lazy queries.
 
 ## Additional Details
 
-Methods (by class):
+Methods (by class)
 
-   • ‘initialize_tables(StatusAnalysis)’: Initialize tables for
-     Status Analysis
+`initialize_tables(StatusAnalysis)`: Initialize tables for Status Analysis
 
-   • ‘initialize_tables(ChangeAnalysis)’: Initialize tables for
-     Change Analysis (Skeleton)
+`initialize_tables(ChangeAnalysis)`: Initialize tables for Change Analysis (Skeleton)

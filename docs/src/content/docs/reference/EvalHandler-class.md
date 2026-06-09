@@ -9,16 +9,12 @@ Class for Evaluation Pipeline
 
 ## Additional Details
 
-Slots:
+Slots
 
-‘evalid’
-     The evaluation ID (numeric).
+`evalid`The evaluation ID (numeric).
 
-‘tables’
-     A list of lazy queries for the tables.
+`tables`A list of lazy queries for the tables.
 
-‘schema’
-     The AnalysisSchema used.
+`schema`The AnalysisSchema used.
 
-‘internal_cache’
-     Environment for caching intermediate results.
+`internal_cache`Environment for caching intermediate results.
