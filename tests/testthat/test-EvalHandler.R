@@ -45,12 +45,12 @@ test_that("filter_tree can use WOODLAND after REF_SPECIES join", {
   handler <- eval_handler(con, evalid = 1001)
 
   base <- handler %>%
-    aggregate(tree ~ VOLCFGRS) %>%
+    aggregate(tree(VOLCFGRS)) %>%
     dplyr::collect()
 
   woodland_filtered <- handler %>%
     filter_tree(WOODLAND != "N") %>%
-    aggregate(tree ~ VOLCFGRS) %>%
+    aggregate(tree(VOLCFGRS)) %>%
     dplyr::collect()
 
   expect_true(sum(woodland_filtered$VOLCFGRS) < sum(base$VOLCFGRS))
@@ -67,13 +67,21 @@ test_that("missing REF_SPECIES warns and continues", {
   expect_warning(
     {
       res <- handler %>%
-        aggregate(tree ~ VOLCFGRS) %>%
+        aggregate(tree(VOLCFGRS)) %>%
         dplyr::collect()
       expect_true(nrow(res) > 0)
     },
     "REF_SPECIES table not available"
   )
 })
+
+add_shared_countycd_columns <- function(con) {
+  DBI::dbExecute(con, "ALTER TABLE COND ADD COLUMN COUNTYCD DOUBLE")
+  DBI::dbExecute(con, "UPDATE COND SET COUNTYCD = CASE WHEN CONDID = 1 THEN 10 ELSE 20 END")
+
+  DBI::dbExecute(con, "ALTER TABLE TREE ADD COLUMN COUNTYCD DOUBLE")
+  DBI::dbExecute(con, "UPDATE TREE SET COUNTYCD = CASE WHEN SPCD = 1 THEN 100 ELSE 200 END")
+}
 
 # Tests for new scoped API
 test_that("transform() with tree() helper adds mutations", {
@@ -85,13 +93,13 @@ test_that("transform() with tree() helper adds mutations", {
   # New API: transform(tree(...))
   result <- handler %>%
     transform(tree(BA = 0.005454 * DIA^2)) %>%
-    aggregate(tree ~ BA) %>%
+    aggregate(tree(BA)) %>%
     dplyr::collect()
 
   # Old API (for comparison): mutate_tree(...)
   result_old <- eval_handler(con, evalid = 1001) %>%
     mutate_tree(BA = 0.005454 * DIA^2) %>%
-    aggregate(tree ~ BA) %>%
+    aggregate(tree(BA)) %>%
     dplyr::collect()
 
   # Should produce identical results
@@ -108,13 +116,13 @@ test_that("subset() with tree() helper adds filters", {
   # New API: subset(tree(...)) - use SPCD which exists in TREE table
   result_new <- handler %>%
     subset(tree(SPCD == 1)) %>%
-    aggregate(tree ~ VOLCFGRS) %>%
+    aggregate(tree(VOLCFGRS)) %>%
     dplyr::collect()
 
   # Old API (for comparison): filter_tree(...)
   result_old <- eval_handler(con, evalid = 1001) %>%
     filter_tree(SPCD == 1) %>%
-    aggregate(tree ~ VOLCFGRS) %>%
+    aggregate(tree(VOLCFGRS)) %>%
     dplyr::collect()
 
   # Should produce identical results
@@ -131,7 +139,7 @@ test_that("partition() with tree() helper sets domains", {
   # New API: partition(tree(...))
   result_new <- handler %>%
     partition(tree(SPCD)) %>%
-    aggregate(tree ~ VOLCFGRS) %>%
+    aggregate(tree(VOLCFGRS)) %>%
     dplyr::collect() %>%
     dplyr::distinct(SPCD) %>%
     nrow()
@@ -139,7 +147,7 @@ test_that("partition() with tree() helper sets domains", {
   # Old API (for comparison): set_tree_domains(...)
   result_old <- eval_handler(con, evalid = 1001) %>%
     set_tree_domains(SPCD) %>%
-    aggregate(tree ~ VOLCFGRS) %>%
+    aggregate(tree(VOLCFGRS)) %>%
     dplyr::collect() %>%
     dplyr::distinct(SPCD) %>%
     nrow()
@@ -148,24 +156,84 @@ test_that("partition() with tree() helper sets domains", {
   expect_equal(result_new, result_old)
 })
 
+test_that("aggregate() accepts cond() helper targets", {
+  con <- setup_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  result_new <- eval_handler(con, evalid = 1001) %>%
+    partition(cond(COND_STATUS_CD)) %>%
+    aggregate(cond()) %>%
+    dplyr::collect() %>%
+    dplyr::arrange(COND_STATUS_CD, PLT_CN, PLOT)
+
+  result_with_placeholder <- eval_handler(con, evalid = 1001) %>%
+    partition(cond(COND_STATUS_CD)) %>%
+    aggregate(cond(1)) %>%
+    dplyr::collect() %>%
+    dplyr::arrange(COND_STATUS_CD, PLT_CN, PLOT)
+
+  expect_equal(result_new, result_with_placeholder)
+})
+
 test_that("partition() accepts multiple scoped helpers in one call", {
   con <- setup_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   result_new <- eval_handler(con, evalid = 1001) %>%
     partition(tree(SPCD), cond(COND_STATUS_CD)) %>%
-    aggregate(tree ~ VOLCFGRS) %>%
+    aggregate(tree(VOLCFGRS)) %>%
     dplyr::collect() %>%
-    dplyr::arrange(COND_STATUS_CD, SPCD)
+    dplyr::arrange(COND_STATUS_CD, SPCD, PLT_CN, PLOT)
 
   result_old <- eval_handler(con, evalid = 1001) %>%
     set_tree_domains(SPCD) %>%
     set_cond_domains(COND_STATUS_CD) %>%
-    aggregate(tree ~ VOLCFGRS) %>%
+    aggregate(tree(VOLCFGRS)) %>%
     dplyr::collect() %>%
-    dplyr::arrange(COND_STATUS_CD, SPCD)
+    dplyr::arrange(COND_STATUS_CD, SPCD, PLT_CN, PLOT)
 
   expect_equal(result_new, result_old)
+})
+
+test_that("partition(plot(COUNTYCD)) works for tree and cond aggregation", {
+  con <- setup_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  tree_result <- eval_handler(con, evalid = 1001) %>%
+    partition(plot(COUNTYCD)) %>%
+    aggregate(tree(VOLCFGRS)) %>%
+    dplyr::collect()
+
+  cond_result <- eval_handler(con, evalid = 1001) %>%
+    partition(plot(COUNTYCD)) %>%
+    aggregate(cond()) %>%
+    dplyr::collect()
+
+  expect_true("COUNTYCD" %in% colnames(tree_result))
+  expect_true("COUNTYCD" %in% colnames(cond_result))
+  expect_equal(sort(unique(tree_result$COUNTYCD)), 1)
+  expect_equal(sort(unique(cond_result$COUNTYCD)), 1)
+})
+
+test_that("partition() respects helper scope for shared column names", {
+  con <- setup_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+  add_shared_countycd_columns(con)
+
+  cond_result <- eval_handler(con, evalid = 1001) %>%
+    partition(cond(COUNTYCD)) %>%
+    aggregate(cond()) %>%
+    dplyr::collect()
+
+  tree_result <- eval_handler(con, evalid = 1001) %>%
+    partition(tree(COUNTYCD)) %>%
+    aggregate(tree(VOLCFGRS)) %>%
+    dplyr::collect()
+
+  expect_true("COUNTYCD.cond" %in% colnames(cond_result))
+  expect_true("COUNTYCD.tree" %in% colnames(tree_result))
+  expect_equal(sort(unique(cond_result[["COUNTYCD.cond"]])), c(10, 20))
+  expect_equal(sort(unique(tree_result[["COUNTYCD.tree"]])), c(100, 200))
 })
 
 test_that("scoped helpers tag expressions correctly", {

@@ -21,7 +21,7 @@ status_handler <- eval_handler(db, evalid = 411001)
 # Perform standard aggregation
 # This delegates to StatusAnalysis::aggregate_data -> .make_tree_aggregates
 status_agg <- status_handler %>%
-  aggregate(tree ~ VOLCFGRS | 1 | VOLCFNET)
+  aggregate(tree(VOLCFGRS, 1, VOLCFNET))
 
 # -----------------------------------------------------------------------------
 # Case 2: Change Analysis (Future Implementation)
@@ -36,7 +36,7 @@ change_handler <- eval_handler(db, evalid = 411703, schema = new("ChangeAnalysis
 # Note: This is currently a skeleton and will raise a "Not yet implemented" error.
 tryCatch({
   change_agg <- change_handler %>%
-    aggregate(tree ~ b(VOLCFGRS))
+    aggregate(tree(b(VOLCFGRS)))
 }, error = function(e) {
   message("Expected error (Change analysis not fully implemented): ", e$message)
 })

@@ -34,7 +34,8 @@ PostStratifiedRatioEstimator <- function(numerator, denominator = numerator) {
 #' Estimate Ratio
 #'
 #' @param object A PostStratifiedRatioEstimator object.
-#' @param ... Ratio formulas.
+#' @param ... Exactly two scoped target helpers specifying the numerator and
+#'   denominator targets, such as `tree(VOLCFNET)` and `cond()`.
 #' @param domain_pairing Domain pairing strategy, either `"all"` (default) for
 #'   all numerator/denominator domain combinations or `"matched"` to only retain
 #'   rows where both sides share the same domain columns and values.
@@ -53,14 +54,14 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
     stop("`include_components` must be TRUE or FALSE.")
   }
   args <- list(...)
-  if (length(args) != 2) stop("Must provide exactly two formulas (numerator, denominator).")
+  if (length(args) != 2) stop("Must provide exactly two scoped target helpers (numerator, denominator).")
 
-  f_num <- args[[1]]
-  f_den <- args[[2]]
+  spec_num <- args[[1]]
+  spec_den <- args[[2]]
 
-  # 1. Parse formulas and aggregate plot-level data for each side
-  parsed_num <- parse_formula(f_num)
-  parsed_den <- parse_formula(f_den)
+  # 1. Parse targets and aggregate plot-level data for each side
+  parsed_num <- .parse_target_spec(spec_num, "estimate_ratio")
+  parsed_den <- .parse_target_spec(spec_den, "estimate_ratio")
 
   agg_num <- .psr_aggregate(object@numerator, parsed_num)
   agg_den <- .psr_aggregate(object@denominator, parsed_den)
@@ -212,7 +213,7 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
 #' @noRd
 .psr_aggregate <- function(handler, parsed) {
   if (parsed$slot == "tree") {
-    if (length(parsed$targets) == 1 && parsed$targets == "1") {
+    if (length(parsed$targets) == 0 || (length(parsed$targets) == 1 && parsed$targets == "1")) {
       .make_tree_aggregates(handler, adjusted = TRUE, sparse = TRUE)
     } else {
       syms <- rlang::syms(parsed$targets)
@@ -228,7 +229,7 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
 #' Resolve value column names from parsed formula
 #' @noRd
 .psr_val_cols <- function(parsed) {
-  if (length(parsed$targets) == 1 && parsed$targets == "1") {
+  if (length(parsed$targets) == 0 || (length(parsed$targets) == 1 && parsed$targets == "1")) {
     if (parsed$slot == "cond") "prop" else "tree_count"
   } else {
     parsed$targets

@@ -5,19 +5,19 @@ test_that("PostStratifiedRatioEstimator estimates correct ratios", {
   # Create Handlers
   # For Numerator: Group by SPCD
   handler_num <- eval_handler(con, evalid = 1001) |>
-    set_tree_domains(SPCD)
+    partition(tree(SPCD))
 
   # For Denominator: Group by FORTYPCD
   handler_den <- eval_handler(con, evalid = 1001) |>
-    set_cond_domains(FORTYPCD)
+    partition(cond(FORTYPCD))
 
   # Create Ratio Estimator
   ratio_est <- PostStratifiedRatioEstimator(handler_num, handler_den)
 
   # Calculate Ratio: Volume per Area (by Species and Forest Type)
-  # Num: tree ~ VOLCFNET
-  # Den: cond ~ 1 (Implicit Area)
-  res <- estimate_ratio(ratio_est, tree ~ VOLCFNET, cond ~ 1)
+  # Num: tree(VOLCFNET)
+  # Den: cond() (Implicit Area)
+  res <- estimate_ratio(ratio_est, tree(VOLCFNET), cond())
 
   # Verify structure
   expected_cols <- c("SPCD_n", "FORTYPCD_d", "var_n", "var_d", "estimate", "se")
@@ -51,7 +51,7 @@ test_that("PostStratifiedRatioEstimator supports ratios without explicit domains
   handler <- eval_handler(con, evalid = 1001)
   ratio_est <- PostStratifiedRatioEstimator(handler, handler)
 
-  res <- estimate_ratio(ratio_est, tree ~ VOLCFNET, cond ~ 1) |>
+  res <- estimate_ratio(ratio_est, tree(VOLCFNET), cond()) |>
     dplyr::collect()
 
   expect_identical(colnames(res), c("var_n", "var_d", "estimate", "se"))
@@ -68,11 +68,11 @@ test_that("PostStratifiedRatioEstimator supports shared domains on both sides", 
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001) |>
-    set_tree_domains(SPCD)
+    partition(tree(SPCD))
 
   ratio_est <- PostStratifiedRatioEstimator(handler, handler)
 
-  res <- estimate_ratio(ratio_est, tree ~ VOLCFNET, tree ~ DIA) |>
+  res <- estimate_ratio(ratio_est, tree(VOLCFNET), tree(DIA)) |>
     dplyr::collect()
 
   expect_identical(colnames(res), c("SPCD_n", "SPCD_d", "var_n", "var_d", "estimate", "se"))
@@ -89,14 +89,14 @@ test_that("PostStratifiedRatioEstimator can restrict ratios to matched domains",
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001) |>
-    set_tree_domains(SPCD)
+    partition(tree(SPCD))
 
   ratio_est <- PostStratifiedRatioEstimator(handler, handler)
 
   res <- estimate_ratio(
     ratio_est,
-    tree ~ VOLCFNET,
-    tree ~ DIA,
+    tree(VOLCFNET),
+    tree(DIA),
     domain_pairing = "matched"
   ) |>
     dplyr::collect()
@@ -115,18 +115,18 @@ test_that("PostStratifiedRatioEstimator rejects matched domains with incompatibl
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler_num <- eval_handler(con, evalid = 1001) |>
-    set_tree_domains(SPCD)
+    partition(tree(SPCD))
 
   handler_den <- eval_handler(con, evalid = 1001) |>
-    set_cond_domains(FORTYPCD)
+    partition(cond(FORTYPCD))
 
   ratio_est <- PostStratifiedRatioEstimator(handler_num, handler_den)
 
   expect_error(
     estimate_ratio(
       ratio_est,
-      tree ~ VOLCFNET,
-      cond ~ 1,
+      tree(VOLCFNET),
+      cond(),
       domain_pairing = "matched"
     ),
     "requires numerator and denominator to have the same domain columns"
@@ -140,14 +140,14 @@ test_that("PostStratifiedRatioEstimator can append numerator and denominator com
   handler <- eval_handler(con, evalid = 1001)
   ratio_est <- PostStratifiedRatioEstimator(handler, handler)
 
-  res_default <- estimate_ratio(ratio_est, tree ~ VOLCFNET, cond ~ 1) |>
+  res_default <- estimate_ratio(ratio_est, tree(VOLCFNET), cond()) |>
     dplyr::collect()
   expect_false(any(c("estimate_n", "se_n", "estimate_d", "se_d") %in% colnames(res_default)))
 
   res_components <- estimate_ratio(
     ratio_est,
-    tree ~ VOLCFNET,
-    cond ~ 1,
+    tree(VOLCFNET),
+    cond(),
     include_components = TRUE
   ) |>
     dplyr::collect()

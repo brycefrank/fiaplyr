@@ -5,13 +5,13 @@ test_that("PostStratifiedEstimator estimates correct forested area", {
   # Create Handlers
   # For cond: Group by COND_STATUS_CD
   handler <- eval_handler(con, evalid = 1001) |>
-    set_cond_domains(COND_STATUS_CD)
+    partition(cond(COND_STATUS_CD))
 
   # Create Estimator
   pe <- PostStratifiedEstimator(handler)
 
   # Estimate area for COND_STATUS_CD
-  res <- estimate(pe, cond ~ 1) |>
+  res <- estimate(pe, cond()) |>
     dplyr::collect()
 
   # Verify structure
@@ -36,14 +36,14 @@ test_that("PostStratifiedEstimator supports mean and total outputs", {
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001) |>
-    set_cond_domains(COND_STATUS_CD)
+    partition(cond(COND_STATUS_CD))
 
   pe <- PostStratifiedEstimator(handler)
 
-  res_mean <- estimate(pe, cond ~ 1, output = "mean") |>
+  res_mean <- estimate(pe, cond(), output = "mean") |>
     dplyr::collect()
 
-  res_total <- estimate(pe, cond ~ 1, output = "total") |>
+  res_total <- estimate(pe, cond(), output = "total") |>
     dplyr::collect()
 
   total_area <- handler@tables$pop_estn_unit %>%
@@ -67,11 +67,11 @@ test_that("margins=TRUE for cond adds grand total row and full rows", {
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001) |>
-    set_cond_domains(COND_STATUS_CD)
+    partition(cond(COND_STATUS_CD))
   pe <- PostStratifiedEstimator(handler)
 
-  res_margins <- estimate(pe, cond ~ 1, margins = TRUE)
-  res_full    <- estimate(pe, cond ~ 1, margins = FALSE)
+  res_margins <- estimate(pe, cond(), margins = TRUE)
+  res_full    <- estimate(pe, cond(), margins = FALSE)
 
   # Grand total rows have NA for COND_STATUS_CD
   grand_total <- res_margins[is.na(res_margins$COND_STATUS_CD), ]
@@ -95,11 +95,10 @@ test_that("margins=TRUE for tree produces correct domain subsets", {
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001) |>
-    set_tree_domains(SPCD) |>
-    set_cond_domains(COND_STATUS_CD)
+    partition(tree(SPCD), cond(COND_STATUS_CD))
   pe <- PostStratifiedEstimator(handler)
 
-  res_margins <- estimate(pe, tree ~ VOLCFGRS, margins = TRUE)
+  res_margins <- estimate(pe, tree(VOLCFGRS), margins = TRUE)
 
   # With 1 tree domain and 1 cond domain there are 2^2 = 4 subsets.
   # Each produces one row per unique domain-value combo for that subset.
@@ -125,11 +124,10 @@ test_that("marginal estimates match direct re-estimation with reduced domains", 
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler_both <- eval_handler(con, evalid = 1001) |>
-    set_tree_domains(SPCD) |>
-    set_cond_domains(COND_STATUS_CD)
+    partition(tree(SPCD), cond(COND_STATUS_CD))
   pe_both <- PostStratifiedEstimator(handler_both)
 
-  res_margins <- estimate(pe_both, tree ~ VOLCFGRS, margins = TRUE)
+  res_margins <- estimate(pe_both, tree(VOLCFGRS), margins = TRUE)
 
   # SPCD-only marginal from margins=TRUE
   spcd_margin <- res_margins[!is.na(res_margins$SPCD) & is.na(res_margins$COND_STATUS_CD), ]
@@ -137,9 +135,9 @@ test_that("marginal estimates match direct re-estimation with reduced domains", 
 
   # Direct estimate with only SPCD domain
   handler_spcd <- eval_handler(con, evalid = 1001) |>
-    set_tree_domains(SPCD)
+    partition(tree(SPCD))
   pe_spcd <- PostStratifiedEstimator(handler_spcd)
-  res_spcd <- estimate(pe_spcd, tree ~ VOLCFGRS)
+  res_spcd <- estimate(pe_spcd, tree(VOLCFGRS))
   res_spcd <- res_spcd[order(res_spcd$SPCD), ]
 
   expect_equal(spcd_margin$estimate, res_spcd$estimate, tolerance = 1e-10)
@@ -149,7 +147,7 @@ test_that("marginal estimates match direct re-estimation with reduced domains", 
   grand_total <- res_margins[is.na(res_margins$SPCD) & is.na(res_margins$COND_STATUS_CD), ]
   handler_none <- eval_handler(con, evalid = 1001)
   pe_none <- PostStratifiedEstimator(handler_none)
-  res_none <- estimate(pe_none, tree ~ VOLCFGRS)
+  res_none <- estimate(pe_none, tree(VOLCFGRS))
 
   expect_equal(grand_total$estimate, res_none$estimate, tolerance = 1e-10)
   expect_equal(grand_total$se,       res_none$se,       tolerance = 1e-10)
@@ -162,8 +160,8 @@ test_that("margins=TRUE with no domains returns a single grand total row", {
   handler <- eval_handler(con, evalid = 1001)
   pe <- PostStratifiedEstimator(handler)
 
-  res_margins <- estimate(pe, tree ~ VOLCFGRS, margins = TRUE)
-  res_plain   <- estimate(pe, tree ~ VOLCFGRS, margins = FALSE)
+  res_margins <- estimate(pe, tree(VOLCFGRS), margins = TRUE)
+  res_plain   <- estimate(pe, tree(VOLCFGRS), margins = FALSE)
 
   expect_equal(nrow(res_margins), nrow(res_plain))
   expect_equal(res_margins$estimate, res_plain$estimate, tolerance = 1e-10)
@@ -175,14 +173,13 @@ test_that("is_marginal column is absent when margins=FALSE", {
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001) |>
-    set_tree_domains(SPCD) |>
-    set_cond_domains(COND_STATUS_CD)
+    partition(tree(SPCD), cond(COND_STATUS_CD))
   pe <- PostStratifiedEstimator(handler)
 
-  res_tree <- estimate(pe, tree ~ VOLCFGRS, margins = FALSE)
+  res_tree <- estimate(pe, tree(VOLCFGRS), margins = FALSE)
   expect_false("is_marginal" %in% colnames(res_tree))
 
-  res_cond <- estimate(pe, cond ~ 1, margins = FALSE)
+  res_cond <- estimate(pe, cond(), margins = FALSE)
   expect_false("is_marginal" %in% colnames(res_cond))
 })
 
@@ -191,11 +188,10 @@ test_that("is_marginal correctly flags marginal vs full-domain rows", {
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001) |>
-    set_tree_domains(SPCD) |>
-    set_cond_domains(COND_STATUS_CD)
+    partition(tree(SPCD), cond(COND_STATUS_CD))
   pe <- PostStratifiedEstimator(handler)
 
-  res <- estimate(pe, tree ~ VOLCFGRS, margins = TRUE)
+  res <- estimate(pe, tree(VOLCFGRS), margins = TRUE)
 
   expect_true("is_marginal" %in% colnames(res))
 
@@ -213,10 +209,10 @@ test_that("is_marginal correctly flags cond marginal rows", {
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001) |>
-    set_cond_domains(COND_STATUS_CD)
+    partition(cond(COND_STATUS_CD))
   pe <- PostStratifiedEstimator(handler)
 
-  res <- estimate(pe, cond ~ 1, margins = TRUE)
+  res <- estimate(pe, cond(), margins = TRUE)
 
   expect_true("is_marginal" %in% colnames(res))
 

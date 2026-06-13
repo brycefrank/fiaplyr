@@ -5,7 +5,7 @@
 #' or `partition()` to explicitly scope mutations, filters, or domain
 #' variables.
 #'
-#' @param ... One or more named or unnamed expressions.
+#' @param ... Zero or more named or unnamed expressions.
 #' @return A list of quosures tagged with `target_table = "tree"`.
 #' @export
 #' @examples
@@ -28,7 +28,7 @@ tree <- function(...) {
 #' or `partition()` to explicitly scope mutations, filters, or domain
 #' variables.
 #'
-#' @param ... One or more named or unnamed expressions.
+#' @param ... Zero or more named or unnamed expressions.
 #' @return A list of quosures tagged with `target_table = "cond"`.
 #' @export
 #' @examples
@@ -36,6 +36,9 @@ tree <- function(...) {
 #'   handler |>
 #'     subset(cond(COND_STATUS_CD == 1)) |>
 #'     partition(cond(FORTYPCD))
+#'
+#'   estimator |>
+#'     estimate(cond())
 #' }
 cond <- function(...) {
   qs <- rlang::enquos(...)
@@ -50,7 +53,7 @@ cond <- function(...) {
 #' or `partition()` to explicitly scope mutations, filters, or domain
 #' variables.
 #'
-#' @param ... One or more named or unnamed expressions.
+#' @param ... Zero or more named or unnamed expressions.
 #' @return A list of quosures tagged with `target_table = "plot"`.
 #' @export
 #' @examples

@@ -1,7 +1,8 @@
 #' Aggregate Data to Plot Level
 #'
 #' @param handler A handler object.
-#' @param ... Additional arguments.
+#' @param ... A scoped target helper such as `tree(VOLCFGRS)` or `cond()`, plus
+#'   any method-specific options such as `sparse = TRUE`.
 #' @importFrom stats aggregate
 #' @export
 setGeneric("aggregate", function(handler, ...) standardGeneric("aggregate"))
@@ -50,9 +51,9 @@ setGeneric("set_cond_domains", function(.data, ...) standardGeneric("set_cond_do
 #' @export
 setGeneric("transform", function(.data, ...) standardGeneric("transform"))
 
-#' Subset a Handler
+#' Subset a Inventory Components on a Handler
 #'
-#' Subsetting discards data from the handler based on logical conditions. This
+#' Subsetting discards inventory components from the handler based on logical conditions. This
 #' is done in a hierarchical manner while preserving the integrity of the
 #' inventory structure. Subsetting is encouraged, as it increases the
 #' computation speed of the analysis.
@@ -101,7 +102,7 @@ setGeneric("get_strata_weights", function(handler) standardGeneric("get_strata_w
 #' Estimate Population Parameters
 #'
 #' @param object An estimator object.
-#' @param ... One or more formulas specifying estimation targets.
+#' @param ... Exactly one scoped target helper specifying the estimation target.
 #' @param output Output scale, either "mean" (default) or "total".
 #' @param margins Logical. If `TRUE`, returns all marginal estimates in addition
 #'   to the full cross-domain estimates. Marginals are produced by re-running

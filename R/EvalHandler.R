@@ -499,7 +499,8 @@ setMethod("filter_cond", "EvalHandler", function(handler, ...) {
 #' components
 #'
 #' @param handler A EvalHandler object.
-#' @param ... A formula specifying the aggregation target (e.g., tree ~ VOLCFGRS), and optional arguments like `sparse`.
+#' @param ... A scoped target helper such as `tree(VOLCFGRS)` or `cond()`, and
+#'   optional arguments like `sparse`.
 #' @return A lazy query with plot-level summaries.
 #' @export
 setMethod("aggregate", "EvalHandler", function(handler, ...) {

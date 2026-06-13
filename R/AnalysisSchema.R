@@ -168,7 +168,7 @@ setMethod("initialize_tables_custom", "StatusAnalysis", function(schema, db, eva
 #'
 #' @param schema An AnalysisSchema object.
 #' @param handler The EvalHandler object.
-#' @param ... Arguments for aggregation (formula, sparse, etc.)
+#' @param ... Arguments for aggregation (scoped target helper, sparse, etc.)
 #' @return A lazy query with aggregates.
 #' @export
 setGeneric("aggregate_data", function(schema, handler, ...) standardGeneric("aggregate_data"))
@@ -176,26 +176,33 @@ setGeneric("aggregate_data", function(schema, handler, ...) standardGeneric("agg
 #' @describeIn aggregate_data Aggregate data for Status Analysis
 setMethod("aggregate_data", "StatusAnalysis", function(schema, handler, ...) {
   args <- list(...)
-  if (length(args) == 0 || !inherits(args[[1]], "formula")) {
-    stop("Must provide a formula as the first argument (e.g., tree ~ VOLCFGRS).")
+  arg_names <- names(args)
+  unnamed <- if (is.null(arg_names)) rep(TRUE, length(args)) else arg_names == ""
+
+  if (!any(unnamed)) {
+    stop("Must provide exactly one scoped target helper such as `tree(VOLCFGRS)` or `cond()`.")
   }
 
-  formula <- args[[1]]
+  if (sum(unnamed) != 1) {
+    stop("`aggregate()` accepts exactly one scoped target helper per call.")
+  }
+
+  spec <- args[[which(unnamed)]]
   sparse <- if ("sparse" %in% names(args)) args[["sparse"]] else FALSE
 
-  parsed <- parse_formula(formula)
+  parsed <- .parse_target_spec(spec, "aggregate")
   slot_name <- parsed$slot
   targets <- parsed$targets
 
   if (slot_name == "tree") {
-    if (length(targets) == 1 && targets == "1") {
+    if (length(targets) == 0 || (length(targets) == 1 && targets == "1")) {
       return(.make_tree_aggregates(handler, sparse = sparse))
     }
     syms <- rlang::syms(targets)
     return(.make_tree_aggregates(handler, !!!syms, sparse = sparse))
   } else if (slot_name == "cond") {
-    if (!all(targets == "1")) {
-      stop("Only 'cond ~ 1' is currently supported for condition aggregation.")
+    if (length(targets) > 0 && !all(targets == "1")) {
+      stop("Only `aggregate(cond())` or `aggregate(cond(1))` is currently supported for condition aggregation.")
     }
     return(.make_cond_aggregates(handler, sparse = sparse))
   } else {

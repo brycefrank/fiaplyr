@@ -16,7 +16,7 @@ evalid <- 411001
 # 1. Baseline Count
 handler <- eval_handler(con, evalid)
 base_est <- PostStratifiedEstimator(handler) %>%
-  estimate(tree ~ VOLCFGRS) %>%
+  estimate(tree(VOLCFGRS)) %>%
   collect()
 
 # 2. Filter Tree (STATUSCD == 1)
@@ -25,7 +25,7 @@ handler_filtered <- eval_handler(con, evalid) %>%
   set_cond_domains(FORTYPCD)
 
 filt_est <- PostStratifiedEstimator(handler_filtered) %>%
-  estimate(tree ~ VOLCFGRS) %>%
+  estimate(tree(VOLCFGRS)) %>%
   collect()
 filt_tpa <- filt_est %>% dplyr::pull(VOLCFGRS)
 print(paste("Filtered TPA (STATUSCD=1):", filt_tpa))
@@ -40,7 +40,7 @@ handler_mut_filt <- eval_handler(con, evalid) %>%
   filter_tree(is_live == 1)
 
 mut_filt_est <- PostStratifiedEstimator(handler_mut_filt) %>%
-  estimate(tree ~ TPA_UNADJ) %>%
+  estimate(tree(TPA_UNADJ)) %>%
   collect()
 mut_filt_tpa <- mut_filt_est %>% dplyr::pull(TPA_UNADJ)
 print(paste("Mutated & Filtered TPA (is_live=1):", mut_filt_tpa))
@@ -55,5 +55,5 @@ handler_cond <- eval_handler(con, evalid) %>%
   set_cond_domains(FORTYPCD)
 
 cond_est <- PostStratifiedEstimator(handler_cond) %>%
-  estimate(cond ~ 1) %>%
+  estimate(cond()) %>%
   collect()

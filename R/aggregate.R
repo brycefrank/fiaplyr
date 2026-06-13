@@ -65,6 +65,49 @@
   return(final_res)
 }
 
+.resolve_partition_domains <- function(domains, scope, data_cols) {
+  if (length(domains) == 0) {
+    return(domains)
+  }
+
+  suffix <- switch(
+    scope,
+    plot = "",
+    cond = ".cond",
+    tree = ".tree",
+    rlang::abort(sprintf("Unknown partition scope: '%s'.", scope))
+  )
+
+  resolved <- lapply(domains, function(domain) {
+    expr <- rlang::get_expr(domain)
+
+    if (!rlang::is_symbol(expr) || identical(suffix, "")) {
+      return(domain)
+    }
+
+    scoped_name <- paste0(rlang::as_string(expr), suffix)
+    if (!scoped_name %in% data_cols) {
+      return(domain)
+    }
+
+    rlang::new_quosure(rlang::sym(scoped_name), env = rlang::get_env(domain))
+  })
+
+  names(resolved) <- names(domains)
+  resolved
+}
+
+.group_by_missing_vars <- function(.data, vars) {
+  missing_vars <- setdiff(vars, dplyr::group_vars(.data))
+
+  if (length(missing_vars) == 0) {
+    return(.data)
+  }
+
+  .data %>%
+    dplyr::group_by(!!!rlang::syms(missing_vars), .add = TRUE)
+}
+
 
 #' Aggregate condition data to plot or subplot levels
 #'
@@ -74,20 +117,21 @@
   res <- .build_cond_data(object)
 
   plot_keys <- .plot_keys_raw
+  plot_domains <- .resolve_partition_domains(object@plot_domains, "plot", colnames(res))
+  cond_domains <- .resolve_partition_domains(object@cond_domains, "cond", colnames(res))
 
   # Aggregate matching records
   # We group by PLOT keys + any user defined groups (in hierarchical order)
-  if (length(object@plot_domains) > 0) {
-    res <- res %>% dplyr::group_by(!!!object@plot_domains)
+  if (length(plot_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!plot_domains)
   }
 
-  if (length(object@cond_domains) > 0) {
-    res <- res %>% dplyr::group_by(!!!object@cond_domains, .add = TRUE)
+  if (length(cond_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!cond_domains, .add = TRUE)
   }
 
   # We also need to group by plot keys to ensure plot-level summary
-  res <- res %>%
-    dplyr::group_by(dplyr::across(dplyr::all_of(plot_keys)), .add = TRUE)
+  res <- .group_by_missing_vars(res, plot_keys)
 
   if (adjusted) {
     subptype_adj_factors <- .get_subptype_adjustment_factors(object)
@@ -182,6 +226,9 @@
   res <- .build_tree_data(object)
 
   plot_keys <- .plot_keys_raw
+  plot_domains <- .resolve_partition_domains(object@plot_domains, "plot", colnames(res))
+  cond_domains <- .resolve_partition_domains(object@cond_domains, "cond", colnames(res))
+  tree_domains <- .resolve_partition_domains(object@tree_domains, "tree", colnames(res))
 
   # Determine target variables for aggregation
   target_vars <- dplyr::quos(...)
@@ -194,21 +241,20 @@
 
   # Group by PLOT keys and user defined domains
   # Order: plot domains, cond domains, tree domains (hierarchical)
-  if (length(object@plot_domains) > 0) {
-    res <- res %>% dplyr::group_by(!!!object@plot_domains)
+  if (length(plot_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!plot_domains)
   }
 
-  if (length(object@cond_domains) > 0) {
-    res <- res %>% dplyr::group_by(!!!object@cond_domains, .add = TRUE)
+  if (length(cond_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!cond_domains, .add = TRUE)
   }
 
-  if (length(object@tree_domains) > 0) {
-    res <- res %>% dplyr::group_by(!!!object@tree_domains, .add = TRUE)
+  if (length(tree_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!tree_domains, .add = TRUE)
   }
 
   # We also need to group by plot keys to ensure plot-level summary
-  res <- res %>%
-    dplyr::group_by(dplyr::across(dplyr::all_of(plot_keys)), .add = TRUE)
+  res <- .group_by_missing_vars(res, plot_keys)
 
   # Perform the aggregation (summing)
   if (length(target_vars) == 0) {

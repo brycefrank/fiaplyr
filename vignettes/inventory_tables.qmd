@@ -40,5 +40,5 @@ gs_handler <- handler |>
 
 ps <- PostStratifiedEstimator(gs_handler)
 
-gs_ests <- estimate(ps, tree ~ VOLCFNET, margins = TRUE)
+gs_ests <- estimate(ps, tree(VOLCFNET), margins = TRUE)
 ```

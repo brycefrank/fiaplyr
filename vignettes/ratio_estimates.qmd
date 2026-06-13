@@ -66,15 +66,16 @@ fa_handler <- handler |>
 ```
 
 Establish the `PostStratifiedRatioEstimator` using the two handlers, and then
-use the `estimate_ratio` method defining the slots and attributes of interest.
-In this case, we estimate the `VOLCFNET` for the tree slot and `1` for the
-condition slot, which represents the proportion.
+use the `estimate_ratio` method with scoped helpers to define the numerator and
+denominator targets of interest. In this case, we estimate `VOLCFNET` for the
+tree numerator and use `cond()` for the denominator, which represents the
+condition proportion.
 
 ```{r}
 # Establish the psr estimator
 psr <- PostStratifiedRatioEstimator(gs_handler, fa_handler)
 
-gstk_ests <- estimate_ratio(psr, tree ~ VOLCFNET, cond ~ 1)
+gstk_ests <- estimate_ratio(psr, tree(VOLCFNET), cond())
 
 gstk_ests
 ```
@@ -106,11 +107,10 @@ species_labels <- handler@tables$ref_species |>
   select(SPCD, COMMON_NAME) |>
   collect()
 
-dhr <- estimate_ratio(psr, tree ~ HT, tree ~ DIA, include_components = TRUE, domain_pairing = "matched") |>
+dhr <- estimate_ratio(psr, tree(HT), tree(DIA), include_components = TRUE, domain_pairing = "matched") |>
   arrange(desc(estimate)) |>
   filter(se != 0) |>
   left_join(species_labels, by = c("SPCD_n" = "SPCD"))
 
 head(dhr)
 ```
-
