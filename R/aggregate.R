@@ -76,9 +76,13 @@
   plot_keys <- .plot_keys_raw
 
   # Aggregate matching records
-  # We group by PLOT keys + any user defined groups
+  # We group by PLOT keys + any user defined groups (in hierarchical order)
+  if (length(object@plot_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!object@plot_domains)
+  }
+
   if (length(object@cond_domains) > 0) {
-    res <- res %>% dplyr::group_by(!!!object@cond_domains)
+    res <- res %>% dplyr::group_by(!!!object@cond_domains, .add = TRUE)
   }
 
   # We also need to group by plot keys to ensure plot-level summary
@@ -129,16 +133,39 @@
 
 
 .build_cond_data <- function(object) {
-  res <- object@tables$plot %>%
+  # Start from prepared plot data
+  res <- .build_plot_data(object)
+
+  # Join to condition table
+  res <- res %>%
     dplyr::inner_join(object@tables$cond, by = c("CN" = "PLT_CN"), suffix = c("", ".cond"))
 
-  # Apply pending mutations from the handler object
+  # Apply pending condition-level mutations
   if (length(object@cond_mutations) > 0) {
     res <- res %>% dplyr::mutate(!!!object@cond_mutations)
   }
 
+  # Apply pending condition-level filters
   if (length(object@cond_filters) > 0) {
     res <- res %>% dplyr::filter(!!!object@cond_filters)
+  }
+
+  return(res)
+}
+
+#' @keywords internal
+#' Prepare plot-level data with mutations and filters applied
+.build_plot_data <- function(object) {
+  res <- object@tables$plot
+
+  # Apply plot-level mutations
+  if (length(object@plot_mutations) > 0) {
+    res <- res %>% dplyr::mutate(!!!object@plot_mutations)
+  }
+
+  # Apply plot-level filters
+  if (length(object@plot_filters) > 0) {
+    res <- res %>% dplyr::filter(!!!object@plot_filters)
   }
 
   return(res)
@@ -166,8 +193,13 @@
   }
 
   # Group by PLOT keys and user defined domains
+  # Order: plot domains, cond domains, tree domains (hierarchical)
+  if (length(object@plot_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!object@plot_domains)
+  }
+
   if (length(object@cond_domains) > 0) {
-    res <- res %>% dplyr::group_by(!!!object@cond_domains)
+    res <- res %>% dplyr::group_by(!!!object@cond_domains, .add = TRUE)
   }
 
   if (length(object@tree_domains) > 0) {
@@ -214,10 +246,15 @@
 
 #' @keywords internal
 .build_tree_data <- function(object) {
-  res <- object@tables$plot %>%
+  # Start from prepared plot data (includes plot mutations/filters)
+  res <- .build_plot_data(object)
+
+  # Join to condition table, then tree table
+  res <- res %>%
     dplyr::inner_join(object@tables$cond, by = c("CN" = "PLT_CN"), suffix = c("", ".cond")) %>%
     dplyr::inner_join(object@tables$tree, by = c("CN" = "PLT_CN", "CONDID" = "CONDID"), suffix = c("", ".tree"))
 
+  # Join to reference species table if available
   if (!is.null(object@tables$ref_species)) {
     res <- res %>%
       dplyr::left_join(object@tables$ref_species, by = "SPCD", suffix = c("", ".ref"))
@@ -225,22 +262,26 @@
     warning("REF_SPECIES table not available; continuing without species reference columns.", call. = FALSE)
   }
 
-  # Apply standard filtering
+  # Apply standard default filter for tree data
   res <- res %>%
-    dplyr::filter(
-      !is.na(TPA_UNADJ)
-    )
+    dplyr::filter(!is.na(TPA_UNADJ))
 
-  # Apply pending mutations from the handler object
+  # Apply condition-level mutations (these affect all trees in those conditions)
   if (length(object@cond_mutations) > 0) {
     res <- res %>% dplyr::mutate(!!!object@cond_mutations)
   }
 
-  # These are user-defined expressions queued via mutate_tree()
+  # Apply tree-level mutations (these affect individual tree records)
   if (length(object@tree_mutations) > 0) {
     res <- res %>% dplyr::mutate(!!!object@tree_mutations)
   }
 
+  # Apply condition-level filters (these remove entire conditions and their trees)
+  if (length(object@cond_filters) > 0) {
+    res <- res %>% dplyr::filter(!!!object@cond_filters)
+  }
+
+  # Apply tree-level filters (these remove individual tree records)
   if (length(object@tree_filters) > 0) {
     res <- res %>% dplyr::filter(!!!object@tree_filters)
   }

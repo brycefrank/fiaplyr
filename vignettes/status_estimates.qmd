@@ -58,7 +58,7 @@ include conditions that are forested, which is obtained by filtering on
 
 ```{r}
 forested_handler <- handler |>
-  filter_cond(COND_STATUS_CD == 1)
+  subset(cond(COND_STATUS_CD == 1))
 ```
 
 Post-stratified estimates are made using the `PostStratifiedEstimator()` class.
@@ -95,8 +95,8 @@ tree table with `TREECLCD == 2`.
 
 ```{r}
 growing_stock_handler <- handler |>
-  filter_tree(TREECLCD == 2) |>
-  set_tree_domains(SPGRPCD)
+  subset(tree(TREECLCD == 2)) |>
+  partition(tree(SPGRPCD))
 
 ps_estimator <- PostStratifiedEstimator(growing_stock_handler)
 

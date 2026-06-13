@@ -2,7 +2,7 @@
 % Please edit documentation in R/EvalHandler.R
 \name{set_tree_domains,EvalHandler-method}
 \alias{set_tree_domains,EvalHandler-method}
-\title{Set Tree Domain Variables}
+\title{Set Tree Domain Variables (Deprecated)}
 \usage{
 \S4method{set_tree_domains}{EvalHandler}(.data, ...)
 }
@@ -15,7 +15,5 @@
 A EvalHandler object with the tree domain variables set.
 }
 \description{
-Sets the domain variables used for grouping tree-level aggregations.
-A domain variable is a column (e.g., STATUSCD, SPCD) whose unique
-values or combinations define estimation domains.
+\strong{Deprecated.} Use \code{partition(tree(...))} instead.
 }
