@@ -7,7 +7,7 @@
 set_fiaplyr_verbosity(verbose = TRUE)
 }
 \arguments{
-\item{verbose}{Logical. If TRUE (default), shows progress messages via cli.}
+\item{verbose}{Logical. If TRUE (default), shows progress messages.}
 }
 \description{
 Controls whether long-running operations show progress messages.

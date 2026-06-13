@@ -17,7 +17,7 @@ aggregate_data(schema, handler, ...)
 
 \item{handler}{The EvalHandler object.}
 
-\item{...}{Arguments for aggregation (formula, sparse, etc.)}
+\item{...}{Arguments for aggregation (scoped target helper, sparse, etc.)}
 }
 \value{
 A lazy query with aggregates.

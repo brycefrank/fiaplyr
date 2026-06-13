@@ -18,7 +18,7 @@ cond(...)
 
 ## Arguments
 
-- `...`: One or more named or unnamed expressions.
+- `...`: Zero or more named or unnamed expressions.
 
 ## Value
 
@@ -32,5 +32,8 @@ A list of quosures tagged with `target_table = "cond"`.
   handler |>
     subset(cond(COND_STATUS_CD == 1)) |>
     partition(cond(FORTYPCD))
+
+  estimator |>
+    estimate(cond())
 ## End(Not run)
 ```

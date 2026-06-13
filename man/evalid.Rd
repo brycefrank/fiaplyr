@@ -14,6 +14,8 @@ evalid(handler)
 }
 \arguments{
 \item{handler}{A EvalHandler object.}
+
+\item{value}{The new evaluation ID.}
 }
 \value{
 The evaluation ID.

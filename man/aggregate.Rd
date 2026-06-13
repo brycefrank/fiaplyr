@@ -9,7 +9,8 @@ aggregate(handler, ...)
 \arguments{
 \item{handler}{A handler object.}
 
-\item{...}{Additional arguments.}
+\item{...}{A scoped target helper such as \code{tree(VOLCFGRS)} or \code{cond()}, plus
+any method-specific options such as \code{sparse = TRUE}.}
 }
 \description{
 Aggregate Data to Plot Level

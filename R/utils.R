@@ -1,9 +1,17 @@
+#' @import methods
+#' @importClassesFrom DBI DBIConnection
 #' @importFrom dplyr %>%
 NULL
 
-utils::globalVariables(c("EVALID", "STATECD", "INVYR", "DIA", "MACRO_BREAKPOINT_DIA",
-                         "ADJ_FACTOR_MICR", "ADJ_FACTOR_SUBP", "ADJ_FACTOR_MACR",
-                         "TPA_UNADJ", "VOLCFNET", "EXPNS"))
+utils::globalVariables(c(
+  "ADJ_FACTOR", "ADJ_FACTOR_MACR", "ADJ_FACTOR_MICR", "ADJ_FACTOR_SUBP",
+  "AREA_USED", "CN", "CONDPROP_UNADJ", "DIA", "ESTN_UNIT_CN", "EVALID",
+  "EVAL_DESCR", "EXPNS", "INVYR", "MACRO_BREAKPOINT_DIA", "MEASYEAR", "P1PNTCNT_EU",
+  "P1POINTCNT", "P2POINTCNT", "PLT_CN", "STATECD", "STRATUM_CN", "TPA_UNADJ",
+  "VOLCFNET", "cov_col", "cov_val", "estimate_d", "estimate_n", "eu_area", "n",
+  "n_h", "se", "se_d", "se_n", "var", "var_ratio", "var_raw", "var_val", "w_eu",
+  "w_h"
+))
 
 # Standard column key vectors used across aggregation and estimation.
 # .plot_keys_raw uses "CN" (the plot table's primary key before renaming to PLT_CN).
@@ -31,7 +39,7 @@ get_adj_factor_expr <- function() {
 #'
 #' Controls whether long-running operations show progress messages.
 #'
-#' @param verbose Logical. If TRUE (default), shows progress messages via cli.
+#' @param verbose Logical. If TRUE (default), shows progress messages.
 #' @export
 set_fiaplyr_verbosity <- function(verbose = TRUE) {
   options(fiaplyr.verbose = verbose)

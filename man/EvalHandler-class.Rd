@@ -12,6 +12,24 @@ Class for Evaluation Pipeline
 \describe{
 \item{\code{evalid}}{The evaluation ID (numeric).}
 
+\item{\code{plot_mutations}}{Pending plot-level mutation quosures.}
+
+\item{\code{plot_filters}}{Pending plot-level filter quosures.}
+
+\item{\code{plot_domains}}{Pending plot-level domain quosures.}
+
+\item{\code{tree_mutations}}{Pending tree-level mutation quosures.}
+
+\item{\code{cond_mutations}}{Pending condition-level mutation quosures.}
+
+\item{\code{tree_domains}}{Pending tree-level domain quosures.}
+
+\item{\code{cond_domains}}{Pending condition-level domain quosures.}
+
+\item{\code{tree_filters}}{Pending tree-level filter quosures.}
+
+\item{\code{cond_filters}}{Pending condition-level filter quosures.}
+
 \item{\code{tables}}{A list of lazy queries for the tables.}
 
 \item{\code{schema}}{The AnalysisSchema used.}

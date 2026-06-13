@@ -18,7 +18,7 @@ plot(...)
 
 ## Arguments
 
-- `...`: One or more named or unnamed expressions.
+- `...`: Zero or more named or unnamed expressions.
 
 ## Value
 

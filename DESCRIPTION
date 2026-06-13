@@ -1,24 +1,30 @@
 Package: fiaplyr
-Title: Interface to FIA Databases using dbplyr
-Version: 0.0.0.9000
-Authors@R: person("First", "Last", email = "first.last@example.com", role = c("aut", "cre"))
-Description: Provides an S4 class interface to query and aggregate data from Forest Inventory and Analysis (FIA) databases using dbplyr.
-License: MIT
+Title: Interface to FIA Databases with 'dbplyr'
+Version: 0.1.0
+Authors@R:
+    person("Bryce", "Frank", , "bfrank70@gmail.com", role = c("aut", "cre"))
+Description: Provides an S4 interface for querying, transforming, and
+    aggregating Forest Inventory and Analysis (FIA) database tables with
+    'dbplyr'. The package supports plot-, condition-, and tree-level
+    workflows for building inventory summaries and post-stratified estimates.
+License: MIT + file LICENSE
+URL: https://github.com/brycefrank/fiaplyr
+BugReports: https://github.com/brycefrank/fiaplyr/issues
+Depends:
+    R (>= 4.1.0)
 Encoding: UTF-8
-LazyData: true
 Imports:
     methods,
     dplyr,
     dbplyr,
     DBI,
-    cli,
     tidyr,
     rlang,
     lifecycle
 Suggests:
-    knitr,
-    rmarkdown
-VignetteBuilder: knitr
+    duckdb,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
 Collate:
     'methods.R'
     'scoped-helpers.R'
@@ -35,4 +41,5 @@ Collate:
     'utils.R'
     'explore.R'
 Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
 Config/roxygen2/version: 8.0.0

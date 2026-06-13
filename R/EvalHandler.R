@@ -1,6 +1,15 @@
 #' Class for Evaluation Pipeline
 #'
 #' @slot evalid The evaluation ID (numeric).
+#' @slot plot_mutations Pending plot-level mutation quosures.
+#' @slot plot_filters Pending plot-level filter quosures.
+#' @slot plot_domains Pending plot-level domain quosures.
+#' @slot tree_mutations Pending tree-level mutation quosures.
+#' @slot cond_mutations Pending condition-level mutation quosures.
+#' @slot tree_domains Pending tree-level domain quosures.
+#' @slot cond_domains Pending condition-level domain quosures.
+#' @slot tree_filters Pending tree-level filter quosures.
+#' @slot cond_filters Pending condition-level filter quosures.
 #' @slot tables A list of lazy queries for the tables.
 #' @slot schema The AnalysisSchema used.
 #' @slot internal_cache Environment for caching intermediate results.
@@ -41,9 +50,11 @@ setClass("EvalHandler",
 #' @export
 #'
 #' @examples
-#' # Connect to an evaluation with evalid 500601
-#' con <- DBI::dbConnect(duckdb::duckdb(), fiadb_vt_mini_path())
-#' handler <- eval_handler(con, evalid = 500601)
+#' if (requireNamespace("duckdb", quietly = TRUE)) {
+#'   con <- DBI::dbConnect(duckdb::duckdb(), fiadb_vt_mini_path())
+#'   handler <- eval_handler(con, evalid = 500601)
+#'   DBI::dbDisconnect(con, shutdown = TRUE)
+#' }
 eval_handler <- function(db, evalid, schema = new("StatusAnalysis"), backend = NULL) {
   tables <- initialize_tables(schema, db, evalid, backend)
 
@@ -548,6 +559,7 @@ setMethod("get_strata_weights", "EvalHandler", function(handler) {
 #' Get Evaluation ID
 #'
 #' @param handler A EvalHandler object.
+#' @param value The new evaluation ID.
 #' @return The evaluation ID.
 #' @export
 setGeneric("evalid", function(handler) standardGeneric("evalid"))
@@ -559,13 +571,13 @@ setMethod("evalid", "EvalHandler", function(handler) {
 
 #' Set Evaluation ID
 #'
-##' @param handler A EvalHandler object.
+#' @param handler A EvalHandler object.
 #' @param value The new evaluation ID.
 #' @return The modified object.
 #' @export
 setGeneric("evalid<-", function(handler, value) standardGeneric("evalid<-"))
 
-##' @describeIn evalid Set evaluation ID for EvalHandler
+#' @describeIn evalid Set evaluation ID for EvalHandler
 setMethod("evalid<-", "EvalHandler", function(handler, value) {
   handler@evalid <- value
   handler

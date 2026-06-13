@@ -9,8 +9,8 @@
 \arguments{
 \item{object}{A PostStratifiedEstimator object.}
 
-\item{...}{One or more formulas specifying estimation targets
-(e.g., tree ~ VOLCFGRS).}
+\item{...}{Exactly one scoped target helper specifying the estimation target
+(e.g., \code{tree(VOLCFGRS)} or \code{cond()}).}
 
 \item{output}{Output scale, either "mean" (default) or "total".}
 

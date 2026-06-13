@@ -15,4 +15,4 @@ set_fiaplyr_verbosity(verbose = TRUE)
 
 ## Arguments
 
-- `verbose`: Logical. If TRUE (default), shows progress messages via cli.
+- `verbose`: Logical. If TRUE (default), shows progress messages.

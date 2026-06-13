@@ -2,7 +2,7 @@
 % Please edit documentation in R/methods.R
 \name{subset}
 \alias{subset}
-\title{Subset a Handler}
+\title{Subset a Inventory Components on a Handler}
 \usage{
 subset(.data, ...)
 }
@@ -15,7 +15,7 @@ subset(.data, ...)
 The handler with pending filters queued.
 }
 \description{
-Subsetting discards data from the handler based on logical conditions. This
+Subsetting discards inventory components from the handler based on logical conditions. This
 is done in a hierarchical manner while preserving the integrity of the
 inventory structure. Subsetting is encouraged, as it increases the
 computation speed of the analysis.

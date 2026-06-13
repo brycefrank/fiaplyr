@@ -197,8 +197,9 @@
   return(res)
 }
 
-#' @keywords internal
 #' Prepare plot-level data with mutations and filters applied
+#' 
+#' @keywords internal
 .build_plot_data <- function(object) {
   res <- object@tables$plot
 

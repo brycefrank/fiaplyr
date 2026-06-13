@@ -7,7 +7,7 @@
 plot(...)
 }
 \arguments{
-\item{...}{One or more named or unnamed expressions.}
+\item{...}{Zero or more named or unnamed expressions.}
 }
 \value{
 A list of quosures tagged with \code{target_table = "plot"}.

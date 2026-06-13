@@ -9,7 +9,8 @@
 \arguments{
 \item{handler}{A EvalHandler object.}
 
-\item{...}{A formula specifying the aggregation target (e.g., tree ~ VOLCFGRS), and optional arguments like \code{sparse}.}
+\item{...}{A scoped target helper such as \code{tree(VOLCFGRS)} or \code{cond()}, and
+optional arguments like \code{sparse}.}
 }
 \value{
 A lazy query with plot-level summaries.

@@ -1,11 +1,11 @@
 ---
-title: "Subset a Handler"
-description: "Subsetting discards data from the handler based on logical conditions. This is done in a hierarchical manner while preserving the integrity of the inventory structure. Subsetting is encouraged, as it increases the computation speed of the analysis."
+title: "Subset a Inventory Components on a Handler"
+description: "Subsetting discards inventory components from the handler based on logical conditions. This is done in a hierarchical manner while preserving the integrity of the inventory structure. Subsetting is encouraged, as it increases the computation speed of the analysis."
 ---
 
 ## Description
 
-Subsetting discards data from the handler based on logical conditions. This
+Subsetting discards inventory components from the handler based on logical conditions. This
 is done in a hierarchical manner while preserving the integrity of the
 inventory structure. Subsetting is encouraged, as it increases the
 computation speed of the analysis.

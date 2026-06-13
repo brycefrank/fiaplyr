@@ -16,4 +16,4 @@ aggregate(handler, ...)
 ## Arguments
 
 - `handler`: A handler object.
-- `...`: Additional arguments.
+- `...`: A scoped target helper such as `tree(VOLCFGRS)` or `cond()`, plus any method-specific options such as `sparse = TRUE`.

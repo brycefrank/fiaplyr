@@ -1,3 +1,16 @@
 ^docs$
 inst/fiadb_vt_mini.db
 ^db$
+^\.github$
+^README\.Rmd$
+^TODO\.md$
+^margins\.md$
+^ref$
+^reverb_idea\.md$
+^scratch\.R$
+^scripts$
+^examples$
+^vignettes$
+^tests/manual_test_fiaplyr_eval\.R$
+^tests/test_implementation\.R$
+^tests/verify_filters\.R$

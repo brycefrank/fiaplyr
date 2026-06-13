@@ -26,5 +26,6 @@ and others.
 Domains are specified for a table using the associated helper. For example,
 \code{partition(tree(SPCD, STATUSCD))} would set the tree-level domains to be
 unique combinations of \code{SPCD} and \code{STATUSCD}. Columns added during
-\code{transform()} can be used as domain variables as well.
+\code{transform()} can be used as domain variables as well. Multiple helpers can
+be mixed in a single call, such as \code{partition(tree(SPCD), cond(OWNCD))}.
 }

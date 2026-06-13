@@ -22,6 +22,7 @@ evalid(handler) <- value
 ## Arguments
 
 - `handler`: A EvalHandler object.
+- `value`: The new evaluation ID.
 
 ## Value
 

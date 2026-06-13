@@ -24,6 +24,6 @@ in the appropriate scoping helper: \code{tree()}, \code{cond()}, or \code{plot()
 \dontrun{
   handler <- eval_handler(con, evalid = 500601)
   handler |>
-    partition(tree(SPCD))
+    partition(tree(SPCD), cond(OWNCD))
 }
 }

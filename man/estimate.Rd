@@ -9,7 +9,7 @@ estimate(object, ..., output = "mean", margins = FALSE)
 \arguments{
 \item{object}{An estimator object.}
 
-\item{...}{One or more formulas specifying estimation targets.}
+\item{...}{Exactly one scoped target helper specifying the estimation target.}
 
 \item{output}{Output scale, either "mean" (default) or "total".}
 

@@ -23,7 +23,7 @@ aggregate_data(schema, handler, ...)
 
 - `schema`: An AnalysisSchema object.
 - `handler`: The EvalHandler object.
-- `...`: Arguments for aggregation (formula, sparse, etc.)
+- `...`: Arguments for aggregation (scoped target helper, sparse, etc.)
 
 ## Value
 

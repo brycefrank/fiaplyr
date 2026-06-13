@@ -17,7 +17,8 @@ estimate_ratio(object, ..., domain_pairing = "all", include_components = FALSE)
 \arguments{
 \item{object}{A PostStratifiedRatioEstimator object.}
 
-\item{...}{Ratio formulas.}
+\item{...}{Exactly two scoped target helpers specifying the numerator and
+denominator targets, such as \code{tree(VOLCFNET)} and \code{cond()}.}
 
 \item{domain_pairing}{Domain pairing strategy, either \code{"all"} (default) for
 all numerator/denominator domain combinations or \code{"matched"} to only retain

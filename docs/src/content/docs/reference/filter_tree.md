@@ -1,5 +1,5 @@
 ---
-title: "Filter the Tree Table (Deprecated)"
+title: "Filter Tree Table"
 description: "**Deprecated.** Use `subset(tree(...))` instead."
 ---
 
@@ -10,15 +10,10 @@ description: "**Deprecated.** Use `subset(tree(...))` instead."
 ## Usage
 
 ```r
-## S4 method for signature 'EvalHandler'
 filter_tree(handler, ...)
 ```
 
 ## Arguments
 
-- `handler`: A EvalHandler object.
-- `...`: Logical predicates defined in terms of the variables in the tree table.
-
-## Value
-
-A EvalHandler object with pending filters.
+- `handler`: A handler object.
+- `...`: Additional arguments.

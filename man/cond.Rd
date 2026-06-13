@@ -7,7 +7,7 @@
 cond(...)
 }
 \arguments{
-\item{...}{One or more named or unnamed expressions.}
+\item{...}{Zero or more named or unnamed expressions.}
 }
 \value{
 A list of quosures tagged with \code{target_table = "cond"}.
@@ -23,5 +23,8 @@ variables.
   handler |>
     subset(cond(COND_STATUS_CD == 1)) |>
     partition(cond(FORTYPCD))
+
+  estimator |>
+    estimate(cond())
 }
 }

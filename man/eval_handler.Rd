@@ -26,7 +26,9 @@ manipulate the underlying data to produce estimates and aggregates of need.
 Refer to \href{/guides/status_estimates/}{Status Estimates} for an introduction.
 }
 \examples{
-# Connect to an evaluation with evalid 500601
-con <- DBI::dbConnect(duckdb::duckdb(), fiadb_vt_mini_path())
-handler <- eval_handler(con, evalid = 500601)
+if (requireNamespace("duckdb", quietly = TRUE)) {
+  con <- DBI::dbConnect(duckdb::duckdb(), fiadb_vt_mini_path())
+  handler <- eval_handler(con, evalid = 500601)
+  DBI::dbDisconnect(con, shutdown = TRUE)
+}
 }
