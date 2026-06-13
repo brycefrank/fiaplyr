@@ -14,9 +14,9 @@ handler <- eval_handler(con, 411001) |>
   set_tree_domains(SPCD)
 
 handler |>
-  aggregate(tree ~ VOLCFGRS | VOLCFNET)
+  aggregate(tree(VOLCFGRS, VOLCFNET))
 
 psr <- PostStratifiedRatioEstimator(handler, handler)
 
 psr |>
-  estimate_ratio(tree ~ VOLCFGRS, tree ~ VOLCFGRS)
+  estimate_ratio(tree(VOLCFGRS), tree(VOLCFGRS))

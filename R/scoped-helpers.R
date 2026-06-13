@@ -1,0 +1,69 @@
+#' Scoped Helper for Tree-Level Expressions
+#'
+#' Captures one or more expressions and tags them to be applied at the tree
+#' table level during lazy evaluation. Used with `transform()`, `subset()`,
+#' or `partition()` to explicitly scope mutations, filters, or domain
+#' variables.
+#'
+#' @param ... Zero or more named or unnamed expressions.
+#' @return A list of quosures tagged with `target_table = "tree"`.
+#' @export
+#' @examples
+#' \dontrun{
+#'   handler |>
+#'     transform(tree(BA = 0.005454 * DIA^2)) |>
+#'     subset(tree(STATUSCD == 1)) |>
+#'     partition(tree(SPCD))
+#' }
+tree <- function(...) {
+  qs <- rlang::enquos(...)
+  attr(qs, "target_table") <- "tree"
+  qs
+}
+
+#' Scoped Helper for Condition-Level Expressions
+#'
+#' Captures one or more expressions and tags them to be applied at the condition
+#' table level during lazy evaluation. Used with `transform()`, `subset()`,
+#' or `partition()` to explicitly scope mutations, filters, or domain
+#' variables.
+#'
+#' @param ... Zero or more named or unnamed expressions.
+#' @return A list of quosures tagged with `target_table = "cond"`.
+#' @export
+#' @examples
+#' \dontrun{
+#'   handler |>
+#'     subset(cond(COND_STATUS_CD == 1)) |>
+#'     partition(cond(FORTYPCD))
+#'
+#'   estimator |>
+#'     estimate(cond())
+#' }
+cond <- function(...) {
+  qs <- rlang::enquos(...)
+  attr(qs, "target_table") <- "cond"
+  qs
+}
+
+#' Scoped Helper for Plot-Level Expressions
+#'
+#' Captures one or more expressions and tags them to be applied at the plot
+#' table level during lazy evaluation. Used with `transform()`, `subset()`,
+#' or `partition()` to explicitly scope mutations, filters, or domain
+#' variables.
+#'
+#' @param ... Zero or more named or unnamed expressions.
+#' @return A list of quosures tagged with `target_table = "plot"`.
+#' @export
+#' @examples
+#' \dontrun{
+#'   handler |>
+#'     subset(plot(STATECD == 50)) |>
+#'     partition(plot(COUNTYCD))
+#' }
+plot <- function(...) {
+  qs <- rlang::enquos(...)
+  attr(qs, "target_table") <- "plot"
+  qs
+}

@@ -1,11 +1,11 @@
 ---
-title: "Mutate Tree Table"
-description: "Mutate Tree Table"
+title: "Mutate Tree Table (Deprecated)"
+description: "**Deprecated.** Use `transform(tree(...))` instead."
 ---
 
 ## Description
 
-Mutate Tree Table
+**Deprecated.** Use `transform(tree(...))` instead.
 
 ## Usage
 

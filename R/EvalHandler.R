@@ -12,6 +12,9 @@ setClass("EvalHandler",
     tables = "list",
     schema = "AnalysisSchema",
     internal_cache = "environment",
+    plot_mutations = "list",
+    plot_filters = "list",
+    plot_domains = "ANY",
     tree_mutations = "list",
     cond_mutations = "list",
     tree_domains = "ANY",
@@ -56,6 +59,9 @@ eval_handler <- function(db, evalid, schema = new("StatusAnalysis"), backend = N
     tables = tables,
     schema = schema,
     internal_cache = new.env(parent = emptyenv()),
+    plot_mutations = list(),
+    plot_filters = list(),
+    plot_domains = list(),
     tree_mutations = list(),
     cond_mutations = list(),
     tree_domains = list(),
@@ -140,11 +146,15 @@ setMethod("show", "EvalHandler", function(object) {
   cat("Measure Years:  ", s$min_meas, "-", s$max_meas, "\n")
 
   # Display domain variables if set
+  plot_dom_labels <- vapply(object@plot_domains, rlang::as_label, character(1))
   tree_dom_labels <- vapply(object@tree_domains, rlang::as_label, character(1))
   cond_dom_labels <- vapply(object@cond_domains, rlang::as_label, character(1))
 
-  if (length(tree_dom_labels) > 0 || length(cond_dom_labels) > 0) {
+  if (length(plot_dom_labels) > 0 || length(tree_dom_labels) > 0 || length(cond_dom_labels) > 0) {
     cat("\n")
+    if (length(plot_dom_labels) > 0) {
+      cat("Plot domains:   ", paste(plot_dom_labels, collapse = ", "), "\n")
+    }
     if (length(tree_dom_labels) > 0) {
       cat("Tree domains:   ", paste(tree_dom_labels, collapse = ", "), "\n")
     }
@@ -154,15 +164,205 @@ setMethod("show", "EvalHandler", function(object) {
   }
 })
 
-#' Mutate Tree Table
+#' Internal: Route and Queue Scoped Expressions
+#'
+#' Validates that all arguments are scoped via helpers and routes them to the
+#' appropriate handler slots (mutations, filters, or domains).
+#'
+#' @param handler An EvalHandler object.
+#' @param args Evaluated arguments from `rlang::list2(...)`.
+#' @param operation One of "append_mutations", "append_filters", or "set_domains".
+#' @return The modified handler.
+#' @keywords internal
+.route_scoped_expressions <- function(handler, args, operation = "append_mutations") {
+  if (length(args) == 0) {
+    return(handler)
+  }
+
+  # Check if the entire args list has a target_table attribute (from scoped helpers)
+  list_target_table <- attr(args, "target_table")
+  
+  if (!is.null(list_target_table)) {
+    # All expressions in this list share the same target
+    if (!list_target_table %in% c("tree", "cond", "plot")) {
+      rlang::abort(
+        sprintf("Invalid target table: '%s'. Must be 'tree', 'cond', or 'plot'.", list_target_table)
+      )
+    }
+    
+    slot_mutations <- paste0(list_target_table, "_mutations")
+    slot_filters <- paste0(list_target_table, "_filters")
+    slot_domains <- paste0(list_target_table, "_domains")
+    
+    if (operation == "append_mutations") {
+      slot(handler, slot_mutations) <- c(slot(handler, slot_mutations), args)
+    } else if (operation == "append_filters") {
+      slot(handler, slot_filters) <- c(slot(handler, slot_filters), args)
+    } else if (operation == "set_domains") {
+      slot(handler, slot_domains) <- args
+    }
+  } else {
+    domain_updates <- list(tree = NULL, cond = NULL, plot = NULL)
+
+    # Multiple expressions with potentially different targets
+    for (arg in args) {
+      if (is.null(arg)) next
+
+      target_table <- attr(arg, "target_table")
+
+      if (is.null(target_table)) {
+        rlang::abort(
+          "All expressions must be explicitly scoped using `tree()`, `cond()`, or `plot()`.",
+          class = "fiaplyr_unscoped_expr"
+        )
+      }
+
+      if (!target_table %in% c("tree", "cond", "plot")) {
+        rlang::abort(
+          sprintf("Invalid target table: '%s'. Must be 'tree', 'cond', or 'plot'.", target_table)
+        )
+      }
+
+      slot_mutations <- paste0(target_table, "_mutations")
+      slot_filters <- paste0(target_table, "_filters")
+      slot_domains <- paste0(target_table, "_domains")
+
+      if (operation == "append_mutations") {
+        slot(handler, slot_mutations) <- c(slot(handler, slot_mutations), arg)
+      } else if (operation == "append_filters") {
+        slot(handler, slot_filters) <- c(slot(handler, slot_filters), arg)
+      } else if (operation == "set_domains") {
+        domain_updates[[target_table]] <- c(domain_updates[[target_table]], arg)
+      }
+    }
+
+    if (operation == "set_domains") {
+      for (target_table in names(domain_updates)) {
+        if (is.null(domain_updates[[target_table]])) next
+
+        slot_domains <- paste0(target_table, "_domains")
+        slot(handler, slot_domains) <- domain_updates[[target_table]]
+      }
+    }
+  }
+  
+  handler
+}
+
+.has_scoped_helper_target <- function(arg) {
+  is.list(arg) && !is.null(attr(arg, "target_table"))
+}
+
+.normalize_scoped_args <- function(args_list, quosures) {
+  if (length(args_list) == 1 && .has_scoped_helper_target(args_list[[1]])) {
+    return(args_list[[1]])
+  }
+
+  if (length(args_list) > 1 && all(vapply(args_list, .has_scoped_helper_target, logical(1)))) {
+    return(args_list)
+  }
+
+  quosures
+}
+
+#' Transform: Add Derived Columns or Modify Values
+#'
+#' Add derived columns or modify existing ones at the plot, condition, or tree
+#' level. Expressions must be wrapped in the appropriate scoping helper:
+#' `tree()`, `cond()`, or `plot()`.
+#'
+#' @param .data An EvalHandler object.
+#' @param ... Scoped expressions using `tree()`, `cond()`, or `plot()` helpers.
+#' @return The handler with pending mutations queued.
+#' @export
+#' @examples
+#' \dontrun{
+#'   handler <- eval_handler(con, evalid = 500601)
+#'   handler |>
+#'     transform(tree(BA = 0.005454 * DIA^2))
+#' }
+setMethod("transform", "EvalHandler", function(.data, ...) {
+  # Get arguments as list - they may be tagged quosure lists from helpers
+  # or raw expressions that need to be captured
+  args_list <- list(...)
+
+  args <- .normalize_scoped_args(args_list, rlang::enquos(...))
+
+  .route_scoped_expressions(.data, args, operation = "append_mutations")
+})
+
+#' Subset: Apply Scoped Filters
+#'
+#' Filter rows at the plot, condition, or tree level using logical predicates.
+#' Expressions must be wrapped in the appropriate scoping helper:
+#' `tree()`, `cond()`, or `plot()`. Rows that do not satisfy conditions are
+#' excluded from all subsequent operations.
+#'
+#' @param .data An EvalHandler object.
+#' @param ... Scoped logical expressions using `tree()`, `cond()`, or `plot()` helpers.
+#' @return The handler with pending filters queued.
+#' @export
+#' @examples
+#' \dontrun{
+#'   handler <- eval_handler(con, evalid = 500601)
+#'   handler |>
+#'     subset(tree(STATUSCD == 1))
+#' }
+setMethod("subset", "EvalHandler", function(.data, ...) {
+  # Get arguments as list - they may be tagged quosure lists from helpers
+  # or raw expressions that need to be captured
+  args_list <- list(...)
+
+  args <- .normalize_scoped_args(args_list, rlang::enquos(...))
+
+  .route_scoped_expressions(.data, args, operation = "append_filters")
+})
+
+#' Partition: Specify Domain Variables
+#'
+#' Set domain (grouping) variables at the plot, condition, or tree level.
+#' Domain variables define how aggregation and estimation results are partitioned.
+#' Unlike `subset()`, partitions do not discard data. Expressions must be wrapped
+#' in the appropriate scoping helper: `tree()`, `cond()`, or `plot()`.
+#'
+#' @param .data An EvalHandler object.
+#' @param ... Scoped domain variable names using `tree()`, `cond()`, or `plot()` helpers.
+#' @return The handler with domain variables set.
+#' @export
+#' @examples
+#' \dontrun{
+#'   handler <- eval_handler(con, evalid = 500601)
+#'   handler |>
+#'     partition(tree(SPCD), cond(OWNCD))
+#' }
+setMethod("partition", "EvalHandler", function(.data, ...) {
+  # Get arguments as list - they may be tagged quosure lists from helpers
+  # or raw expressions that need to be captured
+  args_list <- list(...)
+
+  args <- .normalize_scoped_args(args_list, rlang::enquos(...))
+
+  .route_scoped_expressions(.data, args, operation = "set_domains")
+})
+
+#' Mutate Tree Table (Deprecated)
+#'
+#' **Deprecated.** Use `transform(tree(...))` instead.
 #'
 #' @param handler A EvalHandler object.
 #' @param ... Name-value pairs of expressions.
 #' @return A EvalHandler object with pending mutations.
 #' @export
 setMethod("mutate_tree", "EvalHandler", function(handler, ...) {
-  # Capture expressions as quosures
+  lifecycle::deprecate_warn(
+    "0.1.0",
+    "mutate_tree()",
+    details = "Use `handler |> transform(tree(...))` instead of `handler |> mutate_tree(...)` to apply tree-level mutations."
+  )
+
+  # Capture expressions as quosures and wrap them in tree()
   new_mutations <- dplyr::quos(...)
+  attr(new_mutations, "target_table") <- "tree"
 
   # Append to existing mutations
   handler@tree_mutations <- c(handler@tree_mutations, new_mutations)
@@ -170,15 +370,24 @@ setMethod("mutate_tree", "EvalHandler", function(handler, ...) {
   return(handler)
 })
 
-#' Mutate Condition Table
+#' Mutate Condition Table (Deprecated)
+#'
+#' **Deprecated.** Use `transform(cond(...))` instead.
 #'
 #' @param handler A EvalHandler object.
 #' @param ... Name-value pairs of expressions.
 #' @return A EvalHandler object with pending mutations.
 #' @export
 setMethod("mutate_cond", "EvalHandler", function(handler, ...) {
-  # Capture expressions as quosures
+  lifecycle::deprecate_warn(
+    "0.1.0",
+    "mutate_cond()",
+    details = "Use `handler |> transform(cond(...))` instead of `handler |> mutate_cond(...)` to apply condition-level mutations."
+  )
+
+  # Capture expressions as quosures and wrap them in cond()
   new_mutations <- dplyr::quos(...)
+  attr(new_mutations, "target_table") <- "cond"
 
   # Append to existing mutations
   handler@cond_mutations <- c(handler@cond_mutations, new_mutations)
@@ -186,19 +395,24 @@ setMethod("mutate_cond", "EvalHandler", function(handler, ...) {
   return(handler)
 })
 
-#' Set Tree Domain Variables
+#' Set Tree Domain Variables (Deprecated)
 #'
-#' Sets the domain variables used for grouping tree-level aggregations.
-#' A domain variable is a column (e.g., STATUSCD, SPCD) whose unique
-#' values or combinations define estimation domains.
+#' **Deprecated.** Use `partition(tree(...))` instead.
 #'
 #' @param .data A EvalHandler object.
 #' @param ... Domain variable names (unquoted column names).
 #' @return A EvalHandler object with the tree domain variables set.
 #' @export
 setMethod("set_tree_domains", "EvalHandler", function(.data, ...) {
-  # Capture expressions as quosures
+  lifecycle::deprecate_warn(
+    "0.1.0",
+    "set_tree_domains()",
+    details = "Use `handler |> partition(tree(...))` instead of `handler |> set_tree_domains(...)` to set tree domain variables."
+  )
+
+  # Capture expressions as quosures and wrap them in tree()
   new_groups <- dplyr::quos(...)
+  attr(new_groups, "target_table") <- "tree"
 
   # Overwrite existing grouping
   .data@tree_domains <- new_groups
@@ -206,19 +420,24 @@ setMethod("set_tree_domains", "EvalHandler", function(.data, ...) {
   return(.data)
 })
 
-#' Set Condition Domain Variables
+#' Set Condition Domain Variables (Deprecated)
 #'
-#' Sets the domain variables used for grouping condition-level aggregations.
-#' A domain variable is a column (e.g., FORTYPCD, OWNGRPCD) whose unique
-#' values or combinations define estimation domains.
+#' **Deprecated.** Use `partition(cond(...))` instead.
 #'
 #' @param .data A EvalHandler object.
 #' @param ... Domain variable names (unquoted column names).
 #' @return A EvalHandler object with the condition domain variables set.
 #' @export
 setMethod("set_cond_domains", "EvalHandler", function(.data, ...) {
-  # Capture expressions as quosures
+  lifecycle::deprecate_warn(
+    "0.1.0",
+    "set_cond_domains()",
+    details = "Use `handler |> partition(cond(...))` instead of `handler |> set_cond_domains(...)` to set condition domain variables."
+  )
+
+  # Capture expressions as quosures and wrap them in cond()
   new_groups <- dplyr::quos(...)
+  attr(new_groups, "target_table") <- "cond"
 
   # Overwrite existing grouping
   .data@cond_domains <- new_groups
@@ -226,59 +445,62 @@ setMethod("set_cond_domains", "EvalHandler", function(.data, ...) {
   return(.data)
 })
 
-#' Filter the Tree Table
+#' Filter the Tree Table (Deprecated)
 #'
-#' This function applies filters to the tree table. This is more complex than
-#' a standard `dplyr::filter()` because filters are applied lazily in tandem
-#' with other pre-joined tables (e.g., `REF_SPECIES`). However, the usage and
-#' interpretation is much the same, conditional statements are provided and
-#' tree records that do not satisfy the conditions will be excluded from all
-#' subsequent operations, including aggregations and estimates.
+#' **Deprecated.** Use `subset(tree(...))` instead.
 #'
-#' @param handler An [EvalHandler][EvalHandler-class] object.
-#' @param ... Logical predicates defined in terms of the variables in the tree
-#'  table.
-#' @return An [EvalHandler][EvalHandler-class] object with pending filters.
+#' @param handler A EvalHandler object.
+#' @param ... Logical predicates defined in terms of the variables in the tree table.
+#' @return A EvalHandler object with pending filters.
 #' @export
-#'
-#' @examples
-#' handler <- eval_handler(con, evalid = 500601) |>
-#'  filter_tree(STATUSCD == 1) # Only include live trees
 setMethod("filter_tree", "EvalHandler", function(handler, ...) {
+  lifecycle::deprecate_warn(
+    "0.1.0",
+    "filter_tree()",
+    details = "Use `handler |> subset(tree(...))` instead of `handler |> filter_tree(...)` to apply tree-level filters."
+  )
+
+  # Capture expressions as quosures and wrap them in tree()
   new_filters <- dplyr::quos(...)
+  attr(new_filters, "target_table") <- "tree"
+
   handler@tree_filters <- c(handler@tree_filters, new_filters)
 
   return(handler)
 })
 
-#' Filter the Condition Table
+#' Filter the Condition Table (Deprecated)
 #'
-#' This function applies filters to the condition table. This is more complex
-#' than a standard `dplyr::filter()` because filters are applied lazily in
-#' tandem with other pre-joined tables. For example, filtering to a specific
-#' `OWNGRPCD` will exclude all conditions *and* all trees that do not satisfy
-#' that condition, which will impact all subsequent operations.
+#' **Deprecated.** Use `subset(cond(...))` instead.
 #'
-#' @param handler An [EvalHandler][EvalHandler-class] object.
-#' @param ... Logical predicates defined in terms of the variables in the
-#'  condition table.
-#' @return An [EvalHandler][EvalHandler-class] object with pending filters.
+#' @param handler A EvalHandler object.
+#' @param ... Logical predicates defined in terms of the variables in the condition table.
+#' @return A EvalHandler object with pending filters.
 #' @export
-#'
-#' @examples
-#' handler <- eval_handler(con, evalid = 500601) |>
-#'  filter_cond(OWNGRPCD == 10)
 setMethod("filter_cond", "EvalHandler", function(handler, ...) {
+  lifecycle::deprecate_warn(
+    "0.1.0",
+    "filter_cond()",
+    details = "Use `handler |> subset(cond(...))` instead of `handler |> filter_cond(...)` to apply condition-level filters."
+  )
+
+  # Capture expressions as quosures and wrap them in cond()
   new_filters <- dplyr::quos(...)
+  attr(new_filters, "target_table") <- "cond"
+
   handler@cond_filters <- c(handler@cond_filters, new_filters)
 
   return(handler)
 })
 
-#' Aggregate Data to the Plot Level
+#' Aggregate a Handler to the Plot Level
+#'
+#' Aggregation generates plot (or subplot) level summaries of inventory
+#' components
 #'
 #' @param handler A EvalHandler object.
-#' @param ... A formula specifying the aggregation target (e.g., tree ~ VOLCFGRS), and optional arguments like `sparse`.
+#' @param ... A scoped target helper such as `tree(VOLCFGRS)` or `cond()`, and
+#'   optional arguments like `sparse`.
 #' @return A lazy query with plot-level summaries.
 #' @export
 setMethod("aggregate", "EvalHandler", function(handler, ...) {

@@ -2,7 +2,7 @@
 % Please edit documentation in R/EvalHandler.R
 \name{set_cond_domains,EvalHandler-method}
 \alias{set_cond_domains,EvalHandler-method}
-\title{Set Condition Domain Variables}
+\title{Set Condition Domain Variables (Deprecated)}
 \usage{
 \S4method{set_cond_domains}{EvalHandler}(.data, ...)
 }
@@ -15,7 +15,5 @@
 A EvalHandler object with the condition domain variables set.
 }
 \description{
-Sets the domain variables used for grouping condition-level aggregations.
-A domain variable is a column (e.g., FORTYPCD, OWNGRPCD) whose unique
-values or combinations define estimation domains.
+\strong{Deprecated.} Use \code{partition(cond(...))} instead.
 }

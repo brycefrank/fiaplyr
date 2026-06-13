@@ -64,8 +64,8 @@ setMethod("show", "PostStratifiedEstimator", function(object) {
 #' Estimate Population Parameters
 #'
 #' @param object A PostStratifiedEstimator object.
-#' @param ... One or more formulas specifying estimation targets
-#'   (e.g., tree ~ VOLCFGRS).
+#' @param ... Exactly one scoped target helper specifying the estimation target
+#'   (e.g., `tree(VOLCFGRS)` or `cond()`).
 #' @param output Output scale, either "mean" (default) or "total".
 #' @param margins Logical. If `TRUE`, returns the full cross-domain estimates
 #'   plus all marginal estimates produced by re-running the pipeline for every
@@ -75,35 +75,26 @@ setMethod("show", "PostStratifiedEstimator", function(object) {
 #' @return A dataframe with estimates.
 #' @export
 setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = "mean", margins = FALSE) {
-  formulas <- list(...)
-  if (length(formulas) == 0) stop("Must provide at least one formula.")
-  if (!all(vapply(formulas, inherits, logical(1), "formula"))) {
-    stop("All unnamed arguments must be formulas.")
+  args <- list(...)
+  if (length(args) != 1) {
+    stop("Must provide exactly one scoped target helper, such as `tree(VOLCFGRS)` or `cond()`.")
   }
   output <- match.arg(output, c("mean", "total"))
 
-  results <- lapply(formulas, function(formula) {
-    parsed <- parse_formula(formula)
-    slot_name <- parsed$slot
-    targets <- parsed$targets
+  parsed <- .parse_target_spec(args[[1]], "estimate")
+  slot_name <- parsed$slot
+  targets <- parsed$targets
 
-    if (slot_name == "cond") {
-      if (!all(targets == "1")) {
-        stop("Only 'cond ~ 1' is currently supported for condition estimates.")
-      }
-      return(.estimate_cond_internal(object, output = output, margins = margins))
-    } else if (slot_name == "tree") {
-      return(.estimate_tree_internal(object, targets, output = output, margins = margins))
-    } else {
-      stop("Unsupported slot: ", slot_name)
+  if (slot_name == "cond") {
+    if (length(targets) > 0 && !all(targets == "1")) {
+      stop("Only `estimate(cond())` or `estimate(cond(1))` is currently supported for condition estimates.")
     }
-  })
-
-  if (length(results) == 1) {
-    return(results[[1]])
+    return(.estimate_cond_internal(object, output = output, margins = margins))
+  } else if (slot_name == "tree") {
+    return(.estimate_tree_internal(object, targets, output = output, margins = margins))
+  } else {
+    stop("Unsupported slot: ", slot_name)
   }
-
-  dplyr::bind_rows(results)
 })
 
 # Internal helper: return all subsets of a list (including the empty set).

@@ -65,6 +65,49 @@
   return(final_res)
 }
 
+.resolve_partition_domains <- function(domains, scope, data_cols) {
+  if (length(domains) == 0) {
+    return(domains)
+  }
+
+  suffix <- switch(
+    scope,
+    plot = "",
+    cond = ".cond",
+    tree = ".tree",
+    rlang::abort(sprintf("Unknown partition scope: '%s'.", scope))
+  )
+
+  resolved <- lapply(domains, function(domain) {
+    expr <- rlang::get_expr(domain)
+
+    if (!rlang::is_symbol(expr) || identical(suffix, "")) {
+      return(domain)
+    }
+
+    scoped_name <- paste0(rlang::as_string(expr), suffix)
+    if (!scoped_name %in% data_cols) {
+      return(domain)
+    }
+
+    rlang::new_quosure(rlang::sym(scoped_name), env = rlang::get_env(domain))
+  })
+
+  names(resolved) <- names(domains)
+  resolved
+}
+
+.group_by_missing_vars <- function(.data, vars) {
+  missing_vars <- setdiff(vars, dplyr::group_vars(.data))
+
+  if (length(missing_vars) == 0) {
+    return(.data)
+  }
+
+  .data %>%
+    dplyr::group_by(!!!rlang::syms(missing_vars), .add = TRUE)
+}
+
 
 #' Aggregate condition data to plot or subplot levels
 #'
@@ -74,16 +117,21 @@
   res <- .build_cond_data(object)
 
   plot_keys <- .plot_keys_raw
+  plot_domains <- .resolve_partition_domains(object@plot_domains, "plot", colnames(res))
+  cond_domains <- .resolve_partition_domains(object@cond_domains, "cond", colnames(res))
 
   # Aggregate matching records
-  # We group by PLOT keys + any user defined groups
-  if (length(object@cond_domains) > 0) {
-    res <- res %>% dplyr::group_by(!!!object@cond_domains)
+  # We group by PLOT keys + any user defined groups (in hierarchical order)
+  if (length(plot_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!plot_domains)
+  }
+
+  if (length(cond_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!cond_domains, .add = TRUE)
   }
 
   # We also need to group by plot keys to ensure plot-level summary
-  res <- res %>%
-    dplyr::group_by(dplyr::across(dplyr::all_of(plot_keys)), .add = TRUE)
+  res <- .group_by_missing_vars(res, plot_keys)
 
   if (adjusted) {
     subptype_adj_factors <- .get_subptype_adjustment_factors(object)
@@ -129,16 +177,39 @@
 
 
 .build_cond_data <- function(object) {
-  res <- object@tables$plot %>%
+  # Start from prepared plot data
+  res <- .build_plot_data(object)
+
+  # Join to condition table
+  res <- res %>%
     dplyr::inner_join(object@tables$cond, by = c("CN" = "PLT_CN"), suffix = c("", ".cond"))
 
-  # Apply pending mutations from the handler object
+  # Apply pending condition-level mutations
   if (length(object@cond_mutations) > 0) {
     res <- res %>% dplyr::mutate(!!!object@cond_mutations)
   }
 
+  # Apply pending condition-level filters
   if (length(object@cond_filters) > 0) {
     res <- res %>% dplyr::filter(!!!object@cond_filters)
+  }
+
+  return(res)
+}
+
+#' @keywords internal
+#' Prepare plot-level data with mutations and filters applied
+.build_plot_data <- function(object) {
+  res <- object@tables$plot
+
+  # Apply plot-level mutations
+  if (length(object@plot_mutations) > 0) {
+    res <- res %>% dplyr::mutate(!!!object@plot_mutations)
+  }
+
+  # Apply plot-level filters
+  if (length(object@plot_filters) > 0) {
+    res <- res %>% dplyr::filter(!!!object@plot_filters)
   }
 
   return(res)
@@ -155,6 +226,9 @@
   res <- .build_tree_data(object)
 
   plot_keys <- .plot_keys_raw
+  plot_domains <- .resolve_partition_domains(object@plot_domains, "plot", colnames(res))
+  cond_domains <- .resolve_partition_domains(object@cond_domains, "cond", colnames(res))
+  tree_domains <- .resolve_partition_domains(object@tree_domains, "tree", colnames(res))
 
   # Determine target variables for aggregation
   target_vars <- dplyr::quos(...)
@@ -166,17 +240,21 @@
   }
 
   # Group by PLOT keys and user defined domains
-  if (length(object@cond_domains) > 0) {
-    res <- res %>% dplyr::group_by(!!!object@cond_domains)
+  # Order: plot domains, cond domains, tree domains (hierarchical)
+  if (length(plot_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!plot_domains)
   }
 
-  if (length(object@tree_domains) > 0) {
-    res <- res %>% dplyr::group_by(!!!object@tree_domains, .add = TRUE)
+  if (length(cond_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!cond_domains, .add = TRUE)
+  }
+
+  if (length(tree_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!tree_domains, .add = TRUE)
   }
 
   # We also need to group by plot keys to ensure plot-level summary
-  res <- res %>%
-    dplyr::group_by(dplyr::across(dplyr::all_of(plot_keys)), .add = TRUE)
+  res <- .group_by_missing_vars(res, plot_keys)
 
   # Perform the aggregation (summing)
   if (length(target_vars) == 0) {
@@ -214,10 +292,15 @@
 
 #' @keywords internal
 .build_tree_data <- function(object) {
-  res <- object@tables$plot %>%
+  # Start from prepared plot data (includes plot mutations/filters)
+  res <- .build_plot_data(object)
+
+  # Join to condition table, then tree table
+  res <- res %>%
     dplyr::inner_join(object@tables$cond, by = c("CN" = "PLT_CN"), suffix = c("", ".cond")) %>%
     dplyr::inner_join(object@tables$tree, by = c("CN" = "PLT_CN", "CONDID" = "CONDID"), suffix = c("", ".tree"))
 
+  # Join to reference species table if available
   if (!is.null(object@tables$ref_species)) {
     res <- res %>%
       dplyr::left_join(object@tables$ref_species, by = "SPCD", suffix = c("", ".ref"))
@@ -225,22 +308,26 @@
     warning("REF_SPECIES table not available; continuing without species reference columns.", call. = FALSE)
   }
 
-  # Apply standard filtering
+  # Apply standard default filter for tree data
   res <- res %>%
-    dplyr::filter(
-      !is.na(TPA_UNADJ)
-    )
+    dplyr::filter(!is.na(TPA_UNADJ))
 
-  # Apply pending mutations from the handler object
+  # Apply condition-level mutations (these affect all trees in those conditions)
   if (length(object@cond_mutations) > 0) {
     res <- res %>% dplyr::mutate(!!!object@cond_mutations)
   }
 
-  # These are user-defined expressions queued via mutate_tree()
+  # Apply tree-level mutations (these affect individual tree records)
   if (length(object@tree_mutations) > 0) {
     res <- res %>% dplyr::mutate(!!!object@tree_mutations)
   }
 
+  # Apply condition-level filters (these remove entire conditions and their trees)
+  if (length(object@cond_filters) > 0) {
+    res <- res %>% dplyr::filter(!!!object@cond_filters)
+  }
+
+  # Apply tree-level filters (these remove individual tree records)
   if (length(object@tree_filters) > 0) {
     res <- res %>% dplyr::filter(!!!object@tree_filters)
   }

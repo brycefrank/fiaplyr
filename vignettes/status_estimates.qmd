@@ -18,7 +18,7 @@ follow along with their own installation
 We will produce estimates for three use cases:
 
 1. The proportion of forested land in the state.
-2. Growing stock by species group.
+2. Growing stock by county.
 3. Average diameter by species.
 
 The first two cases are examples of post-stratified estimation, while the third
@@ -58,23 +58,21 @@ include conditions that are forested, which is obtained by filtering on
 
 ```{r}
 forested_handler <- handler |>
-  filter_cond(COND_STATUS_CD == 1)
+  subset(cond(COND_STATUS_CD == 1))
 ```
 
 Post-stratified estimates are made using the `PostStratifiedEstimator()` class.
 This class implements the standard FIA post-stratified estimator used most
 frequently in FIA state reports and similar products. Pass the handler to the
-estimator, and specify `cond ~ 1` as the estimation formula, which is the
-standard way to estimate condition proportions. The left-hand side of the
-estimation formula specifies the slot to estimate, and the right-hand side
-specifies the variables to use in the estimation. `1` is a placeholder used
-for the basic case of proportions.
+estimator, and specify the estimation target with the same scoped helpers used
+throughout the package. For example, `cond()` estimates condition proportions,
+while `tree(...)` estimates tree-level attributes.
 
 ```{r}
 ps_estimator <- PostStratifiedEstimator(forested_handler)
 
 for_prop_est <- ps_estimator |>
-  estimate(cond ~ 1)
+  estimate(cond())
 
 for_prop_est
 ```
@@ -87,7 +85,7 @@ sd_vec <- for_prop_est |>
   pull(se)
 ```
 
-## Growing Stock by Species Group
+## Growing Stock by County
 
 The estimation of growing stock is frequently used to assess the amount of
 merchantable timber within a region. Growing stock trees are identified in the
@@ -95,13 +93,30 @@ tree table with `TREECLCD == 2`.
 
 ```{r}
 growing_stock_handler <- handler |>
-  filter_tree(TREECLCD == 2) |>
-  set_tree_domains(SPGRPCD)
+  subset(tree(TREECLCD == 2)) |>
+  partition(cond(COUNTYCD))
 
 ps_estimator <- PostStratifiedEstimator(growing_stock_handler)
 
 growing_stock_est <- ps_estimator |>
-  estimate(tree ~ VOLCFGRS | VOLCFNET)
+  estimate(tree(VOLCFGRS))
 
-View(growing_stock_est)
+head(growing_stock_est)
 ```
+
+The above results require a certain care of interpretation. Like any domain
+estimate, the per-acre densities apply to the entire evaluation area, i.e.,
+the state of Vermont. So the estimate for COUNTYCD 1 is interpreted as,
+"cubic feet of growing stock per acre in the state of Vermont for trees that are
+in COUNTYCD 1" rather than "cubic feet of growing stock per acre in COUNTYCD 1".
+Hence, smaller counties will tend to have smaller estimates, because they occupy
+a smaller portion of the state, thereby deflating the per-acre density that
+applies to the entire state.
+
+Normalizing county estimates by their area is simple, but requires the user to
+fetch their own data. At minimum, a data frame describing the county proportion
+areas is needed. Another option is to use a ratio estimator, which is covered in
+a separate vignette. However, this imparts unnecessary variation, because the
+area of counties is known with certainty, and the ratio estimator is designed to
+account for the variation in the denominator (i.e., an estimate of the county
+size).

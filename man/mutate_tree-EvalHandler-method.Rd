@@ -2,7 +2,7 @@
 % Please edit documentation in R/EvalHandler.R
 \name{mutate_tree,EvalHandler-method}
 \alias{mutate_tree,EvalHandler-method}
-\title{Mutate Tree Table}
+\title{Mutate Tree Table (Deprecated)}
 \usage{
 \S4method{mutate_tree}{EvalHandler}(handler, ...)
 }
@@ -15,5 +15,5 @@
 A EvalHandler object with pending mutations.
 }
 \description{
-Mutate Tree Table
+\strong{Deprecated.} Use \code{transform(tree(...))} instead.
 }

@@ -13,13 +13,15 @@ Imports:
     DBI,
     cli,
     tidyr,
-    rlang
+    rlang,
+    lifecycle
 Suggests:
     knitr,
     rmarkdown
 VignetteBuilder: knitr
 Collate:
     'methods.R'
+    'scoped-helpers.R'
     'aggregate.R'
     'utils-formula.R'
     'DatabaseBackend.R'

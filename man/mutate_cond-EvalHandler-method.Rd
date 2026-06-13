@@ -2,7 +2,7 @@
 % Please edit documentation in R/EvalHandler.R
 \name{mutate_cond,EvalHandler-method}
 \alias{mutate_cond,EvalHandler-method}
-\title{Mutate Condition Table}
+\title{Mutate Condition Table (Deprecated)}
 \usage{
 \S4method{mutate_cond}{EvalHandler}(handler, ...)
 }
@@ -15,5 +15,5 @@
 A EvalHandler object with pending mutations.
 }
 \description{
-Mutate Condition Table
+\strong{Deprecated.} Use \code{transform(cond(...))} instead.
 }

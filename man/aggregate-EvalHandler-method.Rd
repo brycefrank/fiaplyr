@@ -2,7 +2,7 @@
 % Please edit documentation in R/EvalHandler.R
 \name{aggregate,EvalHandler-method}
 \alias{aggregate,EvalHandler-method}
-\title{Aggregate Data to the Plot Level}
+\title{Aggregate a Handler to the Plot Level}
 \usage{
 \S4method{aggregate}{EvalHandler}(handler, ...)
 }
@@ -15,5 +15,6 @@
 A lazy query with plot-level summaries.
 }
 \description{
-Aggregate Data to the Plot Level
+Aggregation generates plot (or subplot) level summaries of inventory
+components
 }

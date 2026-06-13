@@ -1,11 +1,11 @@
 ---
-title: "Mutate Condition Table"
-description: "Mutate Condition Table"
+title: "Mutate Condition Table (Deprecated)"
+description: "**Deprecated.** Use `transform(cond(...))` instead."
 ---
 
 ## Description
 
-Mutate Condition Table
+**Deprecated.** Use `transform(cond(...))` instead.
 
 ## Usage
 

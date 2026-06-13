@@ -1,13 +1,11 @@
 ---
-title: "Set Condition Domain Variables"
-description: "Sets the domain variables used for grouping condition-level aggregations. A domain variable is a column (e.g., FORTYPCD, OWNGRPCD) whose unique values or combinations define estimation domains."
+title: "Set Condition Domain Variables (Deprecated)"
+description: "**Deprecated.** Use `partition(cond(...))` instead."
 ---
 
 ## Description
 
-Sets the domain variables used for grouping condition-level aggregations.
-A domain variable is a column (e.g., FORTYPCD, OWNGRPCD) whose unique
-values or combinations define estimation domains.
+**Deprecated.** Use `partition(cond(...))` instead.
 
 ## Usage
 

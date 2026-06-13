@@ -47,3 +47,45 @@ parse_formula <- function(f) {
     targets = targets
   )
 }
+
+.parse_target_helper <- function(spec) {
+  target_table <- attr(spec, "target_table")
+
+  if (is.null(target_table) || !target_table %in% c("tree", "cond", "plot")) {
+    stop("Scoped target helpers must use `tree()`, `cond()`, or `plot()`.")
+  }
+
+  targets <- vapply(spec, rlang::as_label, character(1))
+
+  list(
+    slot = target_table,
+    targets = targets
+  )
+}
+
+.parse_target_spec <- function(spec, caller) {
+  if (inherits(spec, "formula")) {
+    parsed <- parse_formula(spec)
+    replacement <- if (parsed$slot == "cond" && identical(parsed$targets, "1")) {
+      paste0(caller, "(cond())")
+    } else {
+      paste0(caller, "(", parsed$slot, "(", paste(parsed$targets, collapse = ", "), "))")
+    }
+
+    lifecycle::deprecate_warn(
+      "0.1.0",
+      what = paste0(caller, "() with formula targets"),
+      details = paste0("Use `", replacement, "` instead.")
+    )
+
+    return(parsed)
+  }
+
+  if (is.list(spec) && !is.null(attr(spec, "target_table"))) {
+    return(.parse_target_helper(spec))
+  }
+
+  stop(
+    "Must provide exactly one scoped target helper such as `tree(VOLCFGRS)` or `cond()`."
+  )
+}

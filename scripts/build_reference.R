@@ -384,6 +384,7 @@ markdown_for_rd <- function(rd_path) {
 
   sections <- list(
     Description = render_rd_block(rd, "\\description"),
+    Details = render_rd_block(rd, "\\details"),
     Usage = rd_section_lines(rd, "\\usage", "Usage"),
     Arguments = format_arguments_rd(rd),
     Value = render_rd_block(rd, "\\value"),
@@ -409,6 +410,10 @@ markdown_for_rd <- function(rd_path) {
 
   if (length(sections$Description)) {
     lines <- c(lines, "## Description", "", sections$Description, "")
+  }
+
+  if (length(sections$Details)) {
+    lines <- c(lines, "## Details", "", sections$Details, "")
   }
 
   if (length(sections$Usage)) {
