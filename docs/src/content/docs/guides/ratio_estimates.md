@@ -18,12 +18,11 @@ estimates in the numerator, and another that specifies all estimates in
 the denominator. Then, estimates for all possible pairings are made.
 This can create an extremely expansive set of estimates for the user to
 interact with, and can be overwhelming at times. To reduce the
-complexity of the output, we suggest using filtering functions
-(`filter_tree`, `filter_cond`, etc.), rather than relying on granular
-domains.
+complexity of the output, we suggest using `subset()` rather than
+relying on granular partitions.
 
-To illustrate the power of the ratio estimator, we will estimate three
-ratios for the state of Vermont between 2003 and 2006.
+To illustrate the power of the ratio estimator, we will estimate two
+types of ratios for the state of Vermont between 2003 and 2006.
 
 ## Growing Stock divided by Forested Area
 
@@ -56,11 +55,11 @@ Then, create two sub-handlers, one that constructs the numerator
 ``` r
 # Define the numerator handler for growing stock (TREECLCD == 2)
 gs_handler <- handler |>
-  filter_tree(TREECLCD == 2)
+  subset(tree(TREECLCD == 2))
 
 # Define the denominator handler for forested area (COND_STATUS_CD == 1)
 fa_handler <- handler |>
-  filter_cond(COND_STATUS_CD == 1)
+  subset(cond(COND_STATUS_CD == 1))
 ```
 
 Establish the `PostStratifiedRatioEstimator` using the two handlers, and
@@ -88,6 +87,22 @@ which is 1,807 cubic feet per acre. The table defines the numerator
 variable `var_n`, and the denominator variable `var_d`. The point
 estimate and standard error are provided.
 
+If the user wishes to see the denominator and numerator estimates
+separately, they can be obtained with the `estimate` method on the
+numerator and denominator handlers, respectively.
+
+``` r
+estimate_ratio(psr, tree(VOLCFNET), cond(), include_components = TRUE)
+```
+
+    # A tibble: 1 × 8
+      var_n    var_d estimate    se estimate_n  se_n estimate_d    se_d
+      <chr>    <chr>    <dbl> <dbl>      <dbl> <dbl>      <dbl>   <dbl>
+    1 VOLCFNET prop     1807.  41.8      1396.  34.4      0.772 0.00909
+
+The above output includes the numerator and denominator estimates, and
+their standard errors.
+
 ## Diameter Height Ratio by Species
 
 A representation of the slenderness of trees is the diameter-height
@@ -102,16 +117,17 @@ argument.
 
 ``` r
 tree_handler <- handler |>
-  filter_tree(TREECLCD == 2, DIA >= 10, DIA <= 15, ACTUALHT == HT) |>
-  set_tree_domains(SPCD)
+  subset(tree(TREECLCD == 2, DIA >= 10, DIA <= 15, ACTUALHT == HT)) |>
+  partition(tree(SPCD))
 
 psr <- PostStratifiedRatioEstimator(tree_handler, tree_handler)
 
+# Prepare readable species labels
 species_labels <- handler@tables$ref_species |>
   select(SPCD, COMMON_NAME) |>
   collect()
 
-dhr <- estimate_ratio(psr, tree(HT), tree(DIA), include_components = TRUE, domain_pairing = "matched") |>
+dhr <- estimate_ratio(psr, tree(HT), tree(DIA), domain_pairing = "matched") |>
   arrange(desc(estimate)) |>
   filter(se != 0) |>
   left_join(species_labels, by = c("SPCD_n" = "SPCD"))
@@ -119,13 +135,12 @@ dhr <- estimate_ratio(psr, tree(HT), tree(DIA), include_components = TRUE, domai
 head(dhr)
 ```
 
-    # A tibble: 6 × 11
-      SPCD_n SPCD_d var_n var_d estimate       se estimate_n  se_n estimate_d   se_d
-       <dbl>  <dbl> <chr> <chr>    <dbl>    <dbl>      <dbl> <dbl>      <dbl>  <dbl>
-    1     71     71 HT    DIA       6.93  1.39e-7      0.524 0.555     0.0756 0.0801
-    2    125    125 HT    DIA       6.91  2.82e-1      2.44  1.72      0.352  0.252 
-    3    901    901 HT    DIA       6.73  1.47e-7      3.86  4.07      0.573  0.604 
-    4    402    402 HT    DIA       6.69  4.87e-1      8.13  3.30      1.22   0.450 
-    5    379    379 HT    DIA       6.24  7.79e-1      1.11  0.836     0.178  0.134 
-    6    743    743 HT    DIA       6.20  2.89e-1     10.8   3.51      1.74   0.548 
-    # ℹ 1 more variable: COMMON_NAME <chr>
+    # A tibble: 6 × 7
+      SPCD_n SPCD_d var_n var_d estimate          se COMMON_NAME      
+       <dbl>  <dbl> <chr> <chr>    <dbl>       <dbl> <chr>            
+    1     71     71 HT    DIA       6.93 0.000000139 tamarack         
+    2    125    125 HT    DIA       6.91 0.282       red pine         
+    3    901    901 HT    DIA       6.73 0.000000147 black locust     
+    4    402    402 HT    DIA       6.69 0.487       bitternut hickory
+    5    379    379 HT    DIA       6.24 0.779       gray birch       
+    6    743    743 HT    DIA       6.20 0.289       bigtooth aspen   

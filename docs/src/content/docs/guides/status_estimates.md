@@ -14,7 +14,7 @@ their own installation
 We will produce estimates for three use cases:
 
 1.  The proportion of forested land in the state.
-2.  Growing stock by species group.
+2.  Growing stock by county.
 3.  Average diameter by species.
 
 The first two cases are examples of post-stratified estimation, while
@@ -89,7 +89,7 @@ for_prop_est
       <chr>    <dbl>   <dbl>
     1 prop     0.772 0.00909
 
-## Growing Stock by Species Group
+## Growing Stock by County
 
 The estimation of growing stock is frequently used to assess the amount
 of merchantable timber within a region. Growing stock trees are
@@ -98,12 +98,40 @@ identified in the tree table with `TREECLCD == 2`.
 ``` r
 growing_stock_handler <- handler |>
   subset(tree(TREECLCD == 2)) |>
-  partition(tree(SPGRPCD))
+  partition(cond(COUNTYCD))
 
 ps_estimator <- PostStratifiedEstimator(growing_stock_handler)
 
 growing_stock_est <- ps_estimator |>
-  estimate(tree(VOLCFGRS, VOLCFNET))
+  estimate(tree(VOLCFGRS))
 
-View(growing_stock_est)
+head(growing_stock_est)
 ```
+
+    # A tibble: 6 × 4
+      COUNTYCD.cond var      estimate    se
+              <int> <chr>       <dbl> <dbl>
+    1             1 VOLCFGRS     91.1 13.3 
+    2             3 VOLCFGRS    137.  13.1 
+    3             5 VOLCFGRS     87.3  8.22
+    4             7 VOLCFGRS     72.4 10.4 
+    5             9 VOLCFGRS     87.6  8.13
+    6            11 VOLCFGRS     76.7  8.58
+
+The above results require a certain care of interpretation. Like any
+domain estimate, the per-acre densities apply to the entire evaluation
+area, i.e., the state of Vermont. So the estimate for COUNTYCD 1 is
+interpreted as, “cubic feet of growing stock per acre in the state of
+Vermont for trees that are in COUNTYCD 1” rather than “cubic feet of
+growing stock per acre in COUNTYCD 1”. Hence, smaller counties will tend
+to have smaller estimates, because they occupy a smaller portion of the
+state, thereby deflating the per-acre density that applies to the entire
+state.
+
+Normalizing county estimates by their area is simple, but requires the
+user to fetch their own data. At minimum, a data frame describing the
+county proportion areas is needed. Another option is to use a ratio
+estimator, which is covered in a separate vignette. However, this
+imparts unnecessary variation, because the area of counties is known
+with certainty, and the ratio estimator is designed to account for the
+variation in the denominator (i.e., an estimate of the county size).
