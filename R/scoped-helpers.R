@@ -67,3 +67,45 @@ plot <- function(...) {
   attr(qs, "target_table") <- "plot"
   qs
 }
+
+#' Scoped Helper for Previous-Plot-Level Expressions
+#'
+#' Captures one or more expressions and tags them to be applied at the previous
+#' plot table level during lazy evaluation.
+#'
+#' @param ... Zero or more named or unnamed expressions.
+#' @return A list of quosures tagged with `target_table = "pplot"`.
+#' @export
+pplot <- function(...) {
+  qs <- rlang::enquos(...)
+  attr(qs, "target_table") <- "pplot"
+  qs
+}
+
+#' Scoped Helper for Previous-Condition-Level Expressions
+#'
+#' Captures one or more expressions and tags them to be applied at the previous
+#' condition table level during lazy evaluation.
+#'
+#' @param ... Zero or more named or unnamed expressions.
+#' @return A list of quosures tagged with `target_table = "pcond"`.
+#' @export
+pcond <- function(...) {
+  qs <- rlang::enquos(...)
+  attr(qs, "target_table") <- "pcond"
+  qs
+}
+
+#' Scoped Helper for Previous-Tree-Level Expressions
+#'
+#' Captures one or more expressions and tags them to be applied at the previous
+#' tree table level during lazy evaluation.
+#'
+#' @param ... Zero or more named or unnamed expressions.
+#' @return A list of quosures tagged with `target_table = "ptree"`.
+#' @export
+ptree <- function(...) {
+  qs <- rlang::enquos(...)
+  attr(qs, "target_table") <- "ptree"
+  qs
+}

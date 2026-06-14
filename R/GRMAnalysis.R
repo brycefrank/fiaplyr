@@ -5,29 +5,145 @@ if (!methods::isClass("AnalysisSpec")) {
   setClass("AnalysisSpec", contains = "VIRTUAL")
 }
 
+if (!methods::isGeneric("initialize_tables")) {
+  setGeneric("initialize_tables", function(spec, db, evalid, backend = NULL) {
+    standardGeneric("initialize_tables")
+  })
+}
+
+if (!methods::isGeneric("aggregate_data")) {
+  setGeneric("aggregate_data", function(spec, handler, ...) {
+    standardGeneric("aggregate_data")
+  })
+}
+
 setClass("GRMAnalysis", contains = "AnalysisSpec")
 
 #' Initialize Tables for GRM Analysis
 #'
-#' @param schema A GRMAnalysis object.
+#' @param spec A GRMAnalysis object.
 #' @param db A DBIConnection object.
 #' @param evalid The evaluation ID.
 #' @param backend Optional DatabaseMapping for custom schema/table names.
 #' @return A list of lazy queries.
 #' @export
-setMethod("initialize_tables", "GRMAnalysis", function(schema, db, evalid, backend = NULL) {
-  # TODO: Implement GRM analysis table loading.
-  # This will likely involve additional tables beyond the StatusAnalysis set.
-  list()
+setMethod("initialize_tables", "GRMAnalysis", function(spec, db, evalid, backend = NULL) {
+  if (is.null(backend)) {
+    backend <- database_mapping()
+  }
+
+  tbl_ref <- function(name) get_table_ref(backend, name)
+
+  pop_eval_qry <- dplyr::tbl(db, tbl_ref("POP_EVAL")) %>%
+    dplyr::filter(EVALID == !!evalid)
+
+  pop_estn_unit_qry <- dplyr::tbl(db, tbl_ref("POP_ESTN_UNIT")) %>%
+    dplyr::semi_join(pop_eval_qry, by = c("EVAL_CN" = "CN"))
+
+  pop_stratum_qry <- dplyr::tbl(db, tbl_ref("POP_STRATUM")) %>%
+    dplyr::semi_join(pop_estn_unit_qry, by = c("ESTN_UNIT_CN" = "CN"))
+
+  pop_plot_stratum_assgn_qry <- dplyr::tbl(db, tbl_ref("POP_PLOT_STRATUM_ASSGN")) %>%
+    dplyr::semi_join(pop_stratum_qry, by = c("STRATUM_CN" = "CN"))
+
+  plot_qry <- dplyr::tbl(db, tbl_ref("PLOT")) %>%
+    dplyr::semi_join(pop_plot_stratum_assgn_qry, by = c("CN" = "PLT_CN"))
+
+  pplot_qry <- dplyr::tbl(db, tbl_ref("PLOT")) %>%
+    dplyr::semi_join(
+      plot_qry %>%
+        dplyr::filter(!is.na(PREV_PLT_CN)) %>%
+        dplyr::transmute(CN = PREV_PLT_CN) %>%
+        dplyr::distinct(),
+      by = "CN"
+    )
+
+  cond_qry <- dplyr::tbl(db, tbl_ref("COND")) %>%
+    dplyr::semi_join(plot_qry, by = c("PLT_CN" = "CN"))
+
+  pcond_qry <- dplyr::tbl(db, tbl_ref("COND")) %>%
+    dplyr::semi_join(pplot_qry, by = c("PLT_CN" = "CN"))
+
+  tree_qry <- dplyr::tbl(db, tbl_ref("TREE")) %>%
+    dplyr::semi_join(cond_qry, by = c("PLT_CN", "CONDID"))
+
+  ptree_qry <- dplyr::tbl(db, tbl_ref("TREE")) %>%
+    dplyr::semi_join(
+      tree_qry %>%
+        dplyr::filter(!is.na(PREV_TRE_CN)) %>%
+        dplyr::transmute(CN = PREV_TRE_CN) %>%
+        dplyr::distinct(),
+      by = "CN"
+    )
+
+  ref_species_qry <- tryCatch(
+    dplyr::tbl(db, tbl_ref("REF_SPECIES")),
+    error = function(e) NULL
+  )
+
+  subp_cond_qry <- tryCatch(
+    dplyr::tbl(db, tbl_ref("SUBP_COND")) %>%
+      dplyr::semi_join(cond_qry, by = c("PLT_CN", "CONDID")),
+    error = function(e) NULL
+  )
+
+  tree_grm_begin_qry <- tryCatch(
+    dplyr::tbl(db, tbl_ref("TREE_GRM_BEGIN")) %>%
+      dplyr::semi_join(plot_qry, by = c("PLT_CN" = "CN")),
+    error = function(e) NULL
+  )
+
+  tree_grm_midpt_qry <- tryCatch(
+    dplyr::tbl(db, tbl_ref("TREE_GRM_MIDPT")) %>%
+      dplyr::semi_join(plot_qry, by = c("PLT_CN" = "CN")),
+    error = function(e) NULL
+  )
+
+  tree_grm_component_qry <- tryCatch(
+    dplyr::tbl(db, tbl_ref("TREE_GRM_COMPONENT")) %>%
+      dplyr::semi_join(plot_qry, by = c("PLT_CN" = "CN")),
+    error = function(e) NULL
+  )
+
+  beginend_qry <- tryCatch(
+    dplyr::tbl(db, tbl_ref("BEGINEND")),
+    error = function(e) NULL
+  )
+
+  list(
+    pop_eval = pop_eval_qry,
+    pop_estn_unit = pop_estn_unit_qry,
+    pop_stratum = pop_stratum_qry,
+    pop_plot_stratum_assgn = pop_plot_stratum_assgn_qry,
+    plot = plot_qry,
+    pplot = pplot_qry,
+    cond = cond_qry,
+    pcond = pcond_qry,
+    tree = tree_qry,
+    ptree = ptree_qry,
+    ref_species = ref_species_qry,
+    subp_cond = subp_cond_qry,
+    tree_grm_begin = tree_grm_begin_qry,
+    tree_grm_midpt = tree_grm_midpt_qry,
+    tree_grm_component = tree_grm_component_qry,
+    beginend = beginend_qry
+  )
 })
 
 #' Aggregate Data for GRM Analysis
 #'
-#' @param schema A GRMAnalysis object.
+#' @param spec A GRMAnalysis object.
 #' @param handler The EvalHandler object.
 #' @param ... Arguments for aggregation.
 #' @return A lazy query with aggregates.
 #' @export
-setMethod("aggregate_data", "GRMAnalysis", function(schema, handler, ...) {
+setMethod("aggregate_data", "GRMAnalysis", function(spec, handler, ...) {
   stop("GRM analysis aggregation not yet implemented.")
+})
+
+#' @describeIn spec_summary_fields GRMAnalysis-specific summary fields
+#' @export
+setMethod("spec_summary_fields", "GRMAnalysis", function(spec, handler) {
+  # Placeholder for GRM-specific summary fields.
+  list()
 })

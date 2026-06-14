@@ -11,7 +11,7 @@
 #' @slot tree_filters Pending tree-level filter quosures.
 #' @slot cond_filters Pending condition-level filter quosures.
 #' @slot tables A list of lazy queries for the tables.
-#' @slot schema The AnalysisSpec used.
+#' @slot spec The AnalysisSpec used.
 #' @slot internal_cache Environment for caching intermediate results.
 #' @export
 setClass("EvalHandler",
@@ -19,7 +19,7 @@ setClass("EvalHandler",
   slots = list(
     evalid = "numeric",
     tables = "list",
-    schema = "AnalysisSpec",
+    spec = "AnalysisSpec",
     internal_cache = "environment",
     plot_mutations = "list",
     plot_filters = "list",
@@ -68,7 +68,7 @@ eval_handler <- function(db, evalid, spec = new("StatusAnalysis"), backend = NUL
     db = db,
     evalid = evalid,
     tables = tables,
-    schema = spec,
+    spec = spec,
     internal_cache = new.env(parent = emptyenv()),
     plot_mutations = list(),
     plot_filters = list(),
@@ -100,25 +100,17 @@ setMethod("summary", "EvalHandler", function(object) {
 
   if (length(eval_descr) == 0) eval_descr <- NA_character_
 
-  # Plot stats
-  plot_stats <- object@tables$plot %>%
-    dplyr::summarise(
-      n_plots = dplyr::n(),
-      min_invyr = min(INVYR, na.rm = TRUE),
-      max_invyr = max(INVYR, na.rm = TRUE),
-      min_meas = min(MEASYEAR, na.rm = TRUE),
-      max_meas = max(MEASYEAR, na.rm = TRUE)
-    ) %>%
-    dplyr::collect()
+  n_plots <- object@tables$plot %>%
+    dplyr::summarise(n_plots = dplyr::n()) %>%
+    dplyr::collect() %>%
+    dplyr::pull(n_plots)
 
-  res <- list(
+  spec_fields <- spec_summary_fields(object@spec, object)
+
+  res <- c(list(
     eval_descr = eval_descr,
-    n_plots = plot_stats$n_plots,
-    min_invyr = plot_stats$min_invyr,
-    max_invyr = plot_stats$max_invyr,
-    min_meas = plot_stats$min_meas,
-    max_meas = plot_stats$max_meas
-  )
+    n_plots = n_plots
+  ), spec_fields)
 
   # Populate cache
   object@internal_cache$summary <- res
@@ -153,8 +145,13 @@ setMethod("show", "EvalHandler", function(object) {
 
   cat("\n")
   cat("Plots:          ", s$n_plots, "\n")
-  cat("Inventory Years:", s$min_invyr, "-", s$max_invyr, "\n")
-  cat("Measure Years:  ", s$min_meas, "-", s$max_meas, "\n")
+
+  if (all(c("min_invyr", "max_invyr") %in% names(s))) {
+    cat("Inventory Years:", s$min_invyr, "-", s$max_invyr, "\n")
+  }
+  if (all(c("min_meas", "max_meas") %in% names(s))) {
+    cat("Measure Years:  ", s$min_meas, "-", s$max_meas, "\n")
+  }
 
   # Display domain variables if set
   plot_dom_labels <- vapply(object@plot_domains, rlang::as_label, character(1))
@@ -515,7 +512,7 @@ setMethod("filter_cond", "EvalHandler", function(handler, ...) {
 #' @return A lazy query with plot-level summaries.
 #' @export
 setMethod("aggregate", "EvalHandler", function(handler, ...) {
-  aggregate_data(handler@schema, handler, ...)
+  aggregate_data(handler@spec, handler, ...)
 })
 
 #' Aggregate Trees to Plot Level

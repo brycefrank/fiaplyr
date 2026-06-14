@@ -5,17 +5,29 @@ if (!methods::isClass("AnalysisSpec")) {
   setClass("AnalysisSpec", contains = "VIRTUAL")
 }
 
+if (!methods::isGeneric("initialize_tables")) {
+  setGeneric("initialize_tables", function(spec, db, evalid, backend = NULL) {
+    standardGeneric("initialize_tables")
+  })
+}
+
+if (!methods::isGeneric("aggregate_data")) {
+  setGeneric("aggregate_data", function(spec, handler, ...) {
+    standardGeneric("aggregate_data")
+  })
+}
+
 setClass("StatusAnalysis", contains = "AnalysisSpec")
 
 #' Initialize Tables for Status Analysis
 #'
-#' @param schema A StatusAnalysis object.
+#' @param spec A StatusAnalysis object.
 #' @param db A DBIConnection object.
 #' @param evalid The evaluation ID.
 #' @param backend Optional DatabaseMapping for custom schema/table names.
 #' @return A list of lazy queries.
 #' @export
-setMethod("initialize_tables", "StatusAnalysis", function(schema, db, evalid, backend = NULL) {
+setMethod("initialize_tables", "StatusAnalysis", function(spec, db, evalid, backend = NULL) {
   if (is.null(backend)) {
     backend <- database_mapping()
   }
@@ -66,12 +78,12 @@ setMethod("initialize_tables", "StatusAnalysis", function(schema, db, evalid, ba
 
 #' Aggregate Data for Status Analysis
 #'
-#' @param schema A StatusAnalysis object.
+#' @param spec A StatusAnalysis object.
 #' @param handler The EvalHandler object.
 #' @param ... Arguments for aggregation (scoped target helper, sparse, etc.)
 #' @return A lazy query with aggregates.
 #' @export
-setMethod("aggregate_data", "StatusAnalysis", function(schema, handler, ...) {
+setMethod("aggregate_data", "StatusAnalysis", function(spec, handler, ...) {
   args <- list(...)
   arg_names <- names(args)
   unnamed <- if (is.null(arg_names)) rep(TRUE, length(args)) else arg_names == ""
@@ -105,4 +117,24 @@ setMethod("aggregate_data", "StatusAnalysis", function(schema, handler, ...) {
   } else {
     stop("Unsupported slot: ", slot_name)
   }
+})
+
+#' @describeIn spec_summary_fields StatusAnalysis-specific summary fields
+#' @export
+setMethod("spec_summary_fields", "StatusAnalysis", function(spec, handler) {
+  plot_stats <- handler@tables$plot %>%
+    dplyr::summarise(
+      min_invyr = min(INVYR, na.rm = TRUE),
+      max_invyr = max(INVYR, na.rm = TRUE),
+      min_meas = min(MEASYEAR, na.rm = TRUE),
+      max_meas = max(MEASYEAR, na.rm = TRUE)
+    ) %>%
+    dplyr::collect()
+
+  list(
+    min_invyr = plot_stats$min_invyr,
+    max_invyr = plot_stats$max_invyr,
+    min_meas = plot_stats$min_meas,
+    max_meas = plot_stats$max_meas
+  )
 })

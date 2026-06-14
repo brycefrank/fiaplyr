@@ -32,7 +32,7 @@ Class for Evaluation Pipeline
 
 \item{\code{tables}}{A list of lazy queries for the tables.}
 
-\item{\code{schema}}{The AnalysisSchema used.}
+\item{\code{spec}}{The AnalysisSpec used.}
 
 \item{\code{internal_cache}}{Environment for caching intermediate results.}
 }}

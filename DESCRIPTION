@@ -32,7 +32,7 @@ Collate:
     'utils-formula.R'
     'DatabaseMapping.R'
     'BaseHandler.R'
-    'AnalysisSchema.R'
+    'AnalysisSpec.R'
     'StatusAnalysis.R'
     'GRMAnalysis.R'
     'EvalHandler.R'
