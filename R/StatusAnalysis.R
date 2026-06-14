@@ -1,6 +1,10 @@
 #' Status Analysis Spec
 #'
 #' @export
+if (!methods::isClass("AnalysisSpec")) {
+  setClass("AnalysisSpec", contains = "VIRTUAL")
+}
+
 setClass("StatusAnalysis", contains = "AnalysisSpec")
 
 #' Initialize Tables for Status Analysis
@@ -13,7 +17,7 @@ setClass("StatusAnalysis", contains = "AnalysisSpec")
 #' @export
 setMethod("initialize_tables", "StatusAnalysis", function(schema, db, evalid, backend = NULL) {
   if (is.null(backend)) {
-    backend <- database_backend()
+    backend <- database_mapping()
   }
 
   tbl_ref <- function(name) get_table_ref(backend, name)

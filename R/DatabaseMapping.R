@@ -31,7 +31,7 @@ setClass("DatabaseBackend", contains = "DatabaseMapping")
 #' @return A [DatabaseMapping][DatabaseMapping-class] object
 #'
 #' @examples
-#' custom_mapping <- database_backend(
+#' custom_mapping <- database_mapping(
 #'   schema_name = "MY_SCHEMA",
 #'   table_map = list(
 #'     POP_EVAL = "MY_POP_EVAL",
@@ -47,11 +47,18 @@ setClass("DatabaseBackend", contains = "DatabaseMapping")
 #' )
 #'
 #' @export
-database_backend <- function(schema_name = NULL, table_map = list()) {
+database_mapping <- function(schema_name = NULL, table_map = list()) {
   new("DatabaseMapping",
     schema_name = if (is.null(schema_name)) character(0) else schema_name,
     table_map = table_map
   )
+}
+
+#' Backward-compatible alias for older code.
+#'
+#' @export
+database_backend <- function(schema_name = NULL, table_map = list()) {
+  database_mapping(schema_name = schema_name, table_map = table_map)
 }
 
 #' Get Table Reference

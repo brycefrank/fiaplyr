@@ -10,7 +10,7 @@
 explore_evals <- function(db, backend = NULL) {
   # Use default backend if none provided
   if (is.null(backend)) {
-    backend <- database_backend()
+    backend <- database_mapping()
   }
   
   # Get table reference

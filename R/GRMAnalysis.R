@@ -1,6 +1,10 @@
 #' GRM Analysis Spec
 #'
 #' @export
+if (!methods::isClass("AnalysisSpec")) {
+  setClass("AnalysisSpec", contains = "VIRTUAL")
+}
+
 setClass("GRMAnalysis", contains = "AnalysisSpec")
 
 #' Initialize Tables for GRM Analysis
