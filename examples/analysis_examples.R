@@ -29,7 +29,7 @@ status_agg <- status_handler %>%
 
 # Initialize handler with the ChangeAnalysis spec.
 # This would load change-specific tables (e.g., TREE_GRM_COMPONENT) in the future.
-change_handler <- eval_handler(db, evalid = 411703, schema = new("ChangeAnalysis"))
+change_handler <- eval_handler(db, evalid = 411703, spec = new("ChangeAnalysis"))
 
 # Perform change aggregation
 # The API will support timepoint wrappers: b() for beginning, m() for midpoint, e() for ending.

@@ -43,7 +43,7 @@ setClass("EvalHandler",
 #' 
 #' @param db A DBIConnection object.
 #' @param evalid A numeric identifier for the evaluation.
-#' @param schema An [AnalysisSpec][AnalysisSpec-class] object. Defaults to [StatusAnalysis][StatusAnalysis-class].
+#' @param spec An [AnalysisSpec][AnalysisSpec-class] object. Defaults to [StatusAnalysis][StatusAnalysis-class].
 #' @param backend Optional DatabaseMapping for custom schema/table names.
 #'
 #' @return An object of class [EvalHandler][EvalHandler-class] connected to the specified evaluation.
@@ -55,8 +55,8 @@ setClass("EvalHandler",
 #'   handler <- eval_handler(con, evalid = 500601)
 #'   DBI::dbDisconnect(con, shutdown = TRUE)
 #' }
-eval_handler <- function(db, evalid, schema = new("StatusAnalysis"), backend = NULL) {
-  tables <- initialize_tables(schema, db, evalid, backend)
+eval_handler <- function(db, evalid, spec = new("StatusAnalysis"), backend = NULL) {
+  tables <- initialize_tables(spec, db, evalid, backend)
 
   if (!is.null(tables$pop_eval)) {
     if (tables$pop_eval %>% dplyr::tally() %>% dplyr::collect() %>% dplyr::pull(n) == 0) {
@@ -68,7 +68,7 @@ eval_handler <- function(db, evalid, schema = new("StatusAnalysis"), backend = N
     db = db,
     evalid = evalid,
     tables = tables,
-    schema = schema,
+    schema = spec,
     internal_cache = new.env(parent = emptyenv()),
     plot_mutations = list(),
     plot_filters = list(),
