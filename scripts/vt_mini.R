@@ -52,8 +52,10 @@ ensure_schema_loaded <- function(project_root) {
 		return(invisible(NULL))
 	}
 
-	source(file.path(project_root, "R", "DatabaseBackend.R"), chdir = TRUE)
+	source(file.path(project_root, "R", "DatabaseMapping.R"), chdir = TRUE)
 	source(file.path(project_root, "R", "AnalysisSchema.R"), chdir = TRUE)
+	source(file.path(project_root, "R", "StatusAnalysis.R"), chdir = TRUE)
+	source(file.path(project_root, "R", "GRMAnalysis.R"), chdir = TRUE)
 }
 
 materialize_subset <- function(sqlite_path, duckdb_path, evalid, overwrite = TRUE) {

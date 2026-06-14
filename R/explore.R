@@ -3,7 +3,7 @@
 #' Lists all available evaluations in the database with their descriptions.
 #'
 #' @param db A DBIConnection object connected to an FIA database.
-#' @param backend Optional DatabaseBackend for custom schema/table names.
+#' @param backend Optional DatabaseMapping for custom schema/table names.
 #' @return A tibble containing `EVALID` and `EVAL_DESCR`.
 #' @importFrom dplyr tbl select collect arrange
 #' @export

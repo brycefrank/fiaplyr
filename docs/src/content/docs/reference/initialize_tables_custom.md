@@ -30,7 +30,7 @@ initialize_tables_custom(
 
 ## Arguments
 
-- `schema`: An AnalysisSchema object.
+- `schema`: An AnalysisSpec object.
 - `db`: A DBIConnection object.
 - `evalid`: The evaluation ID.
 - `db_schema`: Optional database schema name to prefix table names.

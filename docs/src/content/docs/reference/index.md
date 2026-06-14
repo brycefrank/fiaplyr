@@ -44,7 +44,7 @@ These pages are generated from `man/*.Rd` during the docs build.
 
 ## Classes
 
-- [`AnalysisSchema`](./analysisschema-class)
+- [`AnalysisSpec`](./analysisschema-class)
 - [`BaseHandler`](./basehandler-class)
 - [`ChangeAnalysis`](./changeanalysis-class)
 - [`DatabaseBackend`](./databasebackend-class)

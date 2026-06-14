@@ -1,23 +1,26 @@
-#' Database Backend Class
+#' Database Mapping Class
 #'
 #' Handles database-specific schema and table naming conventions.
 #'
 #' @slot schema_name Optional schema/catalog name prefix
 #' @slot table_map Named list mapping standard table names to database-specific names
 #' @export
-setClass("DatabaseBackend",
+setClass("DatabaseMapping",
   slots = list(
     schema_name = "character",
     table_map = "list"
   )
 )
 
-#' Create a Database Backend
+# Backward-compatible alias kept so the existing namespace export still loads.
+setClass("DatabaseBackend", contains = "DatabaseMapping")
+
+#' Create a Database Mapping
 #'
-#' A database backend enables the use of alternative schema and table names,
+#' A database mapping enables the use of alternative schema and table names,
 #' and is passed to the [EvalHandler][EvalHandler-class]. When interacting with
-#' a standard FIADB, a backend is not necessary. However, if your database uses
-#' different schema and table names, then a database backend can be used to
+#' a standard FIADB, a mapping is not necessary. However, if your database uses
+#' different schema and table names, then a database mapping can be used to
 #' construct the handler. Users provide a schema name and an optional list that
 #' maps standard table names to custom table names, with the standard names as
 #' keys. `fiaplyr` only interacts with a handful of tables, see the example for
@@ -25,10 +28,10 @@ setClass("DatabaseBackend",
 #'
 #' @param schema_name Optional schema name (e.g., "MY_SCHMEMA_NAME")
 #' @param table_map Named list to override default table names
-#' @return A [DatabaseBackend][DatabaseBackend-class] object
+#' @return A [DatabaseMapping][DatabaseMapping-class] object
 #'
 #' @examples
-#' custom_backend <- database_backend(
+#' custom_mapping <- database_backend(
 #'   schema_name = "MY_SCHEMA",
 #'   table_map = list(
 #'     POP_EVAL = "MY_POP_EVAL",
@@ -45,7 +48,7 @@ setClass("DatabaseBackend",
 #'
 #' @export
 database_backend <- function(schema_name = NULL, table_map = list()) {
-  new("DatabaseBackend",
+  new("DatabaseMapping",
     schema_name = if (is.null(schema_name)) character(0) else schema_name,
     table_map = table_map
   )
@@ -53,14 +56,14 @@ database_backend <- function(schema_name = NULL, table_map = list()) {
 
 #' Get Table Reference
 #'
-#' @param backend A DatabaseBackend object
+#' @param backend A DatabaseMapping object
 #' @param standard_name The standard FIA table name
 #' @return A table reference (string or in_schema object)
 #' @export
 setGeneric("get_table_ref", function(backend, standard_name) standardGeneric("get_table_ref"))
 
-#' @describeIn get_table_ref Get table reference for DatabaseBackend
-setMethod("get_table_ref", "DatabaseBackend", function(backend, standard_name) {
+#' @describeIn get_table_ref Get table reference for DatabaseMapping
+setMethod("get_table_ref", "DatabaseMapping", function(backend, standard_name) {
   # Use custom name if provided, otherwise use standard name
   table_name <- if (is.null(backend@table_map[[standard_name]])) {
     standard_name

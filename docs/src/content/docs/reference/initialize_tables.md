@@ -21,7 +21,7 @@ initialize_tables(schema, db, evalid)
 
 ## Arguments
 
-- `schema`: An AnalysisSchema object.
+- `schema`: An AnalysisSpec object.
 - `db`: A DBIConnection object.
 - `evalid`: The evaluation ID.
 - `backend`: Optional DatabaseBackend for custom schema/table names.

@@ -14,7 +14,7 @@ explore_evals(db)
 # -----------------------------------------------------------------------------
 
 # Initialize handler for a specific evaluation (e.g., EVALID 12345)
-# By default, this uses the StatusAnalysis schema.
+# By default, this uses the StatusAnalysis spec.
 # It automatically loads PLOT, TREE, COND, etc.
 status_handler <- eval_handler(db, evalid = 411001)
 
@@ -27,7 +27,7 @@ status_agg <- status_handler %>%
 # Case 2: Change Analysis (Future Implementation)
 # -----------------------------------------------------------------------------
 
-# Initialize handler with the ChangeAnalysis schema.
+# Initialize handler with the ChangeAnalysis spec.
 # This would load change-specific tables (e.g., TREE_GRM_COMPONENT) in the future.
 change_handler <- eval_handler(db, evalid = 411703, schema = new("ChangeAnalysis"))
 

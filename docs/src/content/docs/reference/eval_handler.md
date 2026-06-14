@@ -21,7 +21,7 @@ eval_handler(db, evalid, schema = new("StatusAnalysis"), backend = NULL)
 
 - `db`: A DBIConnection object.
 - `evalid`: A numeric identifier for the evaluation.
-- `schema`: An [`AnalysisSchema`](../analysisschema-class) object. Defaults to [`StatusAnalysis`](../statusanalysis-class).
+- `schema`: An [`AnalysisSpec`](../analysisschema-class) object. Defaults to [`StatusAnalysis`](../statusanalysis-class).
 - `backend`: Optional DatabaseBackend for custom schema/table names.
 
 ## Value

@@ -11,7 +11,7 @@
 #' @slot tree_filters Pending tree-level filter quosures.
 #' @slot cond_filters Pending condition-level filter quosures.
 #' @slot tables A list of lazy queries for the tables.
-#' @slot schema The AnalysisSchema used.
+#' @slot schema The AnalysisSpec used.
 #' @slot internal_cache Environment for caching intermediate results.
 #' @export
 setClass("EvalHandler",
@@ -19,7 +19,7 @@ setClass("EvalHandler",
   slots = list(
     evalid = "numeric",
     tables = "list",
-    schema = "AnalysisSchema",
+    schema = "AnalysisSpec",
     internal_cache = "environment",
     plot_mutations = "list",
     plot_filters = "list",
@@ -43,8 +43,8 @@ setClass("EvalHandler",
 #' 
 #' @param db A DBIConnection object.
 #' @param evalid A numeric identifier for the evaluation.
-#' @param schema An [AnalysisSchema][AnalysisSchema-class] object. Defaults to [StatusAnalysis][StatusAnalysis-class].
-#' @param backend Optional DatabaseBackend for custom schema/table names.
+#' @param schema An [AnalysisSpec][AnalysisSpec-class] object. Defaults to [StatusAnalysis][StatusAnalysis-class].
+#' @param backend Optional DatabaseMapping for custom schema/table names.
 #'
 #' @return An object of class [EvalHandler][EvalHandler-class] connected to the specified evaluation.
 #' @export
