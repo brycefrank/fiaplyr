@@ -31,6 +31,24 @@ test_that("PostStratifiedEstimator estimates correct forested area", {
   expect_true(is.numeric(res$se))
 })
 
+test_that("condition estimates support MACRO condition proportion basis", {
+  con <- setup_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  DBI::dbExecute(con, "UPDATE COND SET PROP_BASIS = 'MACRO'")
+
+  handler <- eval_handler(con, evalid = 1001) |>
+    partition(cond(COND_STATUS_CD))
+
+  res <- handler |>
+    PostStratifiedEstimator() |>
+    estimate(cond())
+
+  expect_false(any(is.na(res$estimate)))
+  expect_false(any(is.na(res$se)))
+  expect_equal(sum(res$estimate), 1)
+})
+
 test_that("PostStratifiedEstimator supports mean and total outputs", {
   con <- setup_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))

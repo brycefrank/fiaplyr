@@ -137,6 +137,12 @@
     subptype_adj_factors <- .get_subptype_adjustment_factors(object)
 
     aggregated <- res |>
+      dplyr::mutate(
+        PROP_BASIS = dplyr::case_when(
+          PROP_BASIS == "MACRO" ~ "MACR",
+          TRUE ~ PROP_BASIS
+        )
+      ) |>
       dplyr::left_join(
         object@tables$pop_plot_stratum_assgn %>% dplyr::select(PLT_CN, STRATUM_CN),
         by = c("CN" = "PLT_CN")
@@ -146,7 +152,7 @@
         by = c("STRATUM_CN", "PROP_BASIS" = "SUBPTYPE")
       ) |>
       dplyr::summarise(
-        prop = sum(CONDPROP_UNADJ * ADJ_FACTOR, na.rm = TRUE)
+        prop = dplyr::coalesce(sum(CONDPROP_UNADJ * ADJ_FACTOR, na.rm = TRUE), 0)
       )
   } else {
     aggregated <- res %>%
