@@ -43,7 +43,7 @@ setClass("EvalHandler",
 #' 
 #' @param db A DBIConnection object.
 #' @param evalid A numeric identifier for the evaluation.
-#' @param spec An [AnalysisSpec][AnalysisSpec-class] object. Defaults to [StatusAnalysis][StatusAnalysis-class].
+#' @param spec An [AnalysisSpec][AnalysisSpec-class] object. Defaults to `new("StatusAnalysis")`.
 #' @param backend Optional DatabaseMapping for custom schema/table names.
 #'
 #' @return An object of class [EvalHandler][EvalHandler-class] connected to the specified evaluation.

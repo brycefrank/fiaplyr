@@ -1,22 +1,6 @@
 #' GRM Analysis Spec
 #'
 #' @export
-if (!methods::isClass("AnalysisSpec")) {
-  setClass("AnalysisSpec", contains = "VIRTUAL")
-}
-
-if (!methods::isGeneric("initialize_tables")) {
-  setGeneric("initialize_tables", function(spec, db, evalid, backend = NULL) {
-    standardGeneric("initialize_tables")
-  })
-}
-
-if (!methods::isGeneric("aggregate_data")) {
-  setGeneric("aggregate_data", function(spec, handler, ...) {
-    standardGeneric("aggregate_data")
-  })
-}
-
 setClass("GRMAnalysis", contains = "AnalysisSpec")
 
 #' Initialize Tables for GRM Analysis

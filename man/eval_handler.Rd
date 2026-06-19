@@ -11,7 +11,7 @@ eval_handler(db, evalid, spec = new("StatusAnalysis"), backend = NULL)
 
 \item{evalid}{A numeric identifier for the evaluation.}
 
-\item{spec}{An \link[=AnalysisSpec-class]{AnalysisSpec} object. Defaults to \link[=StatusAnalysis-class]{StatusAnalysis}.}
+\item{spec}{An \link[=AnalysisSpec-class]{AnalysisSpec} object. Defaults to \code{new("StatusAnalysis")}.}
 
 \item{backend}{Optional DatabaseMapping for custom schema/table names.}
 }
