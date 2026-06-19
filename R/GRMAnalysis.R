@@ -134,7 +134,45 @@ setMethod("initialize_tables", "GRMAnalysis", function(spec, db, evalid, backend
 #' @return A lazy query with aggregates.
 #' @export
 setMethod("aggregate_data", "GRMAnalysis", function(spec, handler, ...) {
-  stop("GRM analysis aggregation not yet implemented.")
+  args <- list(...)
+  arg_names <- names(args)
+  unnamed <- if (is.null(arg_names)) rep(TRUE, length(args)) else arg_names == ""
+
+  if (!any(unnamed)) {
+    stop("Must provide exactly one scoped target helper such as `tree(VOLCFGRS)`, `cond()`, or `tree_history(...)`.")
+  }
+
+  if (sum(unnamed) != 1) {
+    stop("`aggregate()` accepts exactly one scoped target helper per call.")
+  }
+
+  spec <- args[[which(unnamed)]]
+  sparse <- if ("sparse" %in% names(args)) args[["sparse"]] else FALSE
+
+  parsed <- .parse_target_spec(spec, "aggregate")
+  slot_name <- parsed$slot
+  targets <- parsed$targets
+
+  if (slot_name == "tree") {
+    if (length(targets) == 0 || (length(targets) == 1 && targets == "1")) {
+      return(.make_tree_aggregates(handler, sparse = sparse))
+    }
+    syms <- rlang::syms(targets)
+    return(.make_tree_aggregates(handler, !!!syms, sparse = sparse))
+  } else if (slot_name == "cond") {
+    if (length(targets) > 0 && !all(targets == "1")) {
+      stop("Only `aggregate(cond())` or `aggregate(cond(1))` is currently supported for condition aggregation.")
+    }
+    return(.make_cond_aggregates(handler, sparse = sparse))
+  } else if (slot_name == "tree_history") {
+    if (length(targets) == 0 || (length(targets) == 1 && targets == "1")) {
+      return(.make_tree_history_aggregates(handler, sparse = sparse))
+    }
+    syms <- rlang::syms(targets)
+    return(.make_tree_history_aggregates(handler, !!!syms, sparse = sparse))
+  } else {
+    stop("Unsupported slot: ", slot_name)
+  }
 })
 
 #' @describeIn spec_summary_fields GRMAnalysis-specific summary fields

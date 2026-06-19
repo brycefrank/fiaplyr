@@ -109,3 +109,17 @@ ptree <- function(...) {
   attr(qs, "target_table") <- "ptree"
   qs
 }
+
+#' Scoped Helper for Tree-History-Level Expressions
+#'
+#' Captures one or more expressions and tags them to be applied at the
+#' `tree_history` table level during lazy evaluation.
+#'
+#' @param ... Zero or more named or unnamed expressions.
+#' @return A list of quosures tagged with `target_table = "tree_history"`.
+#' @export
+tree_history <- function(...) {
+  qs <- rlang::enquos(...)
+  attr(qs, "target_table") <- "tree_history"
+  qs
+}

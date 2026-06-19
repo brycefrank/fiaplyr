@@ -75,6 +75,7 @@
     plot = "",
     cond = ".cond",
     tree = ".tree",
+    tree_history = ".tree_history",
     rlang::abort(sprintf("Unknown partition scope: '%s'.", scope))
   )
 
@@ -337,6 +338,82 @@
   return(final_res)
 }
 
+#' Aggregate tree history data to plot or subplot levels.
+#'
+#' Reserved for GRM-specific aggregation of tree history records.
+#'
+#' @param object A EvalHandler object.
+#' @param ... Additional arguments.
+#' @param sparse Logical. If TRUE, returns a sparse result.
+#' @keywords internal
+.make_tree_history_aggregates <- function(object, ..., sparse = FALSE) {
+  res <- .build_tree_history_data(object)
+
+  plot_keys <- .plot_keys_raw
+  plot_domains <- .resolve_partition_domains(object@plot_domains, "plot", colnames(res))
+  cond_domains <- .resolve_partition_domains(object@cond_domains, "cond", colnames(res))
+  tree_history_domains <- .resolve_partition_domains(object@tree_history_domains, "tree_history", colnames(res))
+
+  # Determine target variables for aggregation
+  target_vars <- dplyr::quos(...)
+
+  # Check if "1" is in the targets (implicit stem density)
+  vars_as_strings <- vapply(target_vars, rlang::as_label, character(1))
+  if ("1" %in% vars_as_strings) {
+    res <- res %>% dplyr::mutate(`1` = 1)
+  }
+
+  # Group by PLOT keys and user defined domains
+  # Order: plot domains, cond domains, tree_history domains (hierarchical)
+  if (length(plot_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!plot_domains)
+  }
+
+  if (length(cond_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!cond_domains, .add = TRUE)
+  }
+
+  if (length(tree_history_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!tree_history_domains, .add = TRUE)
+  }
+
+  # We also need to group by plot keys to ensure plot-level summary
+  res <- .group_by_missing_vars(res, plot_keys)
+
+  # Perform the aggregation (summing)
+  if (length(target_vars) == 0) {
+    aggregated <- res %>%
+      dplyr::summarise(
+        tree_count = sum(TPA_UNADJ, na.rm = TRUE)
+      ) %>%
+      dplyr::ungroup()
+  } else {
+    aggregated <- res %>%
+      dplyr::summarise(
+        dplyr::across(c(!!!target_vars), function(x) sum(TPA_UNADJ * x, na.rm = TRUE))
+      ) %>%
+      dplyr::ungroup()
+  }
+
+  # Identify Domain Variables
+  all_groups <- dplyr::group_vars(res)
+  domain_vars <- setdiff(all_groups, plot_keys)
+
+  # Use helper to build complete scaffold and merge
+  final_res <- .complete_scaffold(
+    plot_qry = object@tables$plot,
+    aggregated_qry = aggregated,
+    plot_keys = plot_keys,
+    domain_vars = domain_vars,
+    sparse = sparse
+  )
+
+  final_res <- final_res %>%
+    dplyr::rename(PLT_CN = CN)
+
+  return(final_res)
+}
+
 #' @keywords internal
 .build_tree_data <- function(object) {
   # Start from prepared plot data (includes plot mutations/filters)
@@ -377,6 +454,51 @@
   # Apply tree-level filters (these remove individual tree records)
   if (length(object@tree_filters) > 0) {
     res <- res %>% dplyr::filter(!!!object@tree_filters)
+  }
+
+  return(res)
+}
+
+#' @keywords internal
+.build_tree_history_data <- function(object) {
+  # Start from prepared plot data (includes plot mutations/filters)
+  res <- .build_plot_data(object)
+
+  # Join to condition table, then tree_history table
+  res <- res %>%
+    dplyr::inner_join(object@tables$cond, by = c("CN" = "PLT_CN"), suffix = c("", ".cond")) %>%
+    dplyr::inner_join(object@tables$tree_history, by = c("CN" = "PLT_CN", "CONDID" = "CONDID"), suffix = c("", ".tree_history"))
+
+  # Join to reference species table if available
+  if (!is.null(object@tables$ref_species)) {
+    res <- res %>%
+      dplyr::left_join(object@tables$ref_species, by = "SPCD", suffix = c("", ".ref"))
+  } else {
+    warning("REF_SPECIES table not available; continuing without species reference columns.", call. = FALSE)
+  }
+
+  # Apply standard default filter for tree history data
+  res <- res %>%
+    dplyr::filter(!is.na(TPA_UNADJ))
+
+  # Apply condition-level mutations (these affect all trees in those conditions)
+  if (length(object@cond_mutations) > 0) {
+    res <- res %>% dplyr::mutate(!!!object@cond_mutations)
+  }
+
+  # Apply tree-history-level mutations (these affect individual tree history records)
+  if (length(object@tree_history_mutations) > 0) {
+    res <- res %>% dplyr::mutate(!!!object@tree_history_mutations)
+  }
+
+  # Apply condition-level filters (these remove entire conditions and their trees)
+  if (length(object@cond_filters) > 0) {
+    res <- res %>% dplyr::filter(!!!object@cond_filters)
+  }
+
+  # Apply tree-history-level filters (these remove individual tree history records)
+  if (length(object@tree_history_filters) > 0) {
+    res <- res %>% dplyr::filter(!!!object@tree_history_filters)
   }
 
   return(res)

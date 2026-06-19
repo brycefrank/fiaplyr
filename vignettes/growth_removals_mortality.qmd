@@ -57,22 +57,43 @@ user. To create these transformations, users rely on the `transform` function,
 used in tandem with the `tree_history()` helper. For example, if the user
 desires an estimate of the mortality volume over the period, then each tree is
 assigned a value of zero if it is alive at the end of the period, and the
-midpoint volume if it is dead at the end of the period. This can be done "by
-hand" like so
+midpoint volume if it is dead at the end of the period. This can be done using
+the `grm_mortality()` gelper
 
 ```{r}
 handler |>
   transform(
     tree_history(
-      mort_vol = case_when(
-        STATUSCD_begin == 1 & STATUSCD == 2 ~ VOL_begmid,
-      )
+      survivor = grm_survivor()
     )
   ) 
 ```
 
+## Aggregation the the Plot Level
+
+When dealing with multiple plot visits, aggregation to the plot level is more
+complex than the single date case. This occurs because the core operation of
+making an aggregate is a weighted sum involving the expansion factor
+`TPA_UNADJ`, and one must engage with the question of which expansion factor
+to use: either the beginning, middle, or ending adjustment.
 
 
+```{r}
+t <- handler |> transform(tree_history(mortality = grm_mortality())) |> subset(tree_history(mortality == 1))
+
+t |> aggregate(tree_history(VOLCFGRS)) |> collect() |> summarise(mean(VOLCFGRS))
+
+handler@tables$pop_estn_unit |>
+  pull(AREA_USED) |>
+  sum()
+
+A <- 6152903
+
+# 935M per year, but evalidator gets ~ 101M...not terrible, but room for improvement...
+65.8 * A / 4.33
+
+# I am not counting ingrowth mortality
+```
 
 
 

@@ -6,10 +6,13 @@
 #' @slot plot_domains Pending plot-level domain quosures.
 #' @slot tree_mutations Pending tree-level mutation quosures.
 #' @slot cond_mutations Pending condition-level mutation quosures.
+#' @slot tree_history_mutations Pending tree-history-level mutation quosures.
 #' @slot tree_domains Pending tree-level domain quosures.
 #' @slot cond_domains Pending condition-level domain quosures.
+#' @slot tree_history_domains Pending tree-history-level domain quosures.
 #' @slot tree_filters Pending tree-level filter quosures.
 #' @slot cond_filters Pending condition-level filter quosures.
+#' @slot tree_history_filters Pending tree-history-level filter quosures.
 #' @slot tables A list of lazy queries for the tables.
 #' @slot spec The AnalysisSpec used.
 #' @slot internal_cache Environment for caching intermediate results.
@@ -26,10 +29,13 @@ setClass("EvalHandler",
     plot_domains = "ANY",
     tree_mutations = "list",
     cond_mutations = "list",
+    tree_history_mutations = "list",
     tree_domains = "ANY",
     cond_domains = "ANY",
+    tree_history_domains = "ANY",
     tree_filters = "list",
-    cond_filters = "list"
+    cond_filters = "list",
+    tree_history_filters = "list"
   )
 )
 
@@ -75,10 +81,13 @@ eval_handler <- function(db, evalid, spec = new("StatusAnalysis"), backend = NUL
     plot_domains = list(),
     tree_mutations = list(),
     cond_mutations = list(),
+    tree_history_mutations = list(),
     tree_domains = list(),
     cond_domains = list(),
+    tree_history_domains = list(),
     tree_filters = list(),
-    cond_filters = list()
+    cond_filters = list(),
+    tree_history_filters = list()
   )
 }
 
@@ -192,15 +201,16 @@ setMethod("show", "EvalHandler", function(object) {
   
   if (!is.null(list_target_table)) {
     # All expressions in this list share the same target
-    if (!list_target_table %in% c("tree", "cond", "plot")) {
+    if (!list_target_table %in% c("tree", "cond", "plot", "tree_history")) {
       rlang::abort(
-        sprintf("Invalid target table: '%s'. Must be 'tree', 'cond', or 'plot'.", list_target_table)
+        sprintf("Invalid target table: '%s'. Must be 'tree', 'cond', 'plot', or 'tree_history'.", list_target_table)
       )
     }
     
     slot_mutations <- paste0(list_target_table, "_mutations")
     slot_filters <- paste0(list_target_table, "_filters")
     slot_domains <- paste0(list_target_table, "_domains")
+    args <- .expand_grm_helpers_scoped(args, list_target_table)
     
     if (operation == "append_mutations") {
       slot(handler, slot_mutations) <- c(slot(handler, slot_mutations), args)
@@ -210,7 +220,7 @@ setMethod("show", "EvalHandler", function(object) {
       slot(handler, slot_domains) <- args
     }
   } else {
-    domain_updates <- list(tree = NULL, cond = NULL, plot = NULL)
+    domain_updates <- list(tree = NULL, cond = NULL, plot = NULL, tree_history = NULL)
 
     # Multiple expressions with potentially different targets
     for (arg in args) {
@@ -220,20 +230,21 @@ setMethod("show", "EvalHandler", function(object) {
 
       if (is.null(target_table)) {
         rlang::abort(
-          "All expressions must be explicitly scoped using `tree()`, `cond()`, or `plot()`.",
+          "All expressions must be explicitly scoped using `tree()`, `cond()`, `plot()`, or `tree_history()`.",
           class = "fiaplyr_unscoped_expr"
         )
       }
 
-      if (!target_table %in% c("tree", "cond", "plot")) {
+      if (!target_table %in% c("tree", "cond", "plot", "tree_history")) {
         rlang::abort(
-          sprintf("Invalid target table: '%s'. Must be 'tree', 'cond', or 'plot'.", target_table)
+          sprintf("Invalid target table: '%s'. Must be 'tree', 'cond', 'plot', or 'tree_history'.", target_table)
         )
       }
 
       slot_mutations <- paste0(target_table, "_mutations")
       slot_filters <- paste0(target_table, "_filters")
       slot_domains <- paste0(target_table, "_domains")
+      arg <- .expand_grm_helpers_scoped(arg, target_table)
 
       if (operation == "append_mutations") {
         slot(handler, slot_mutations) <- c(slot(handler, slot_mutations), arg)
@@ -259,6 +270,69 @@ setMethod("show", "EvalHandler", function(object) {
 
 .has_scoped_helper_target <- function(arg) {
   is.list(arg) && !is.null(attr(arg, "target_table"))
+}
+
+.grm_helper_names <- c("grm_survivor", "grm_ingrowth_live", "grm_mortality")
+
+.expand_grm_helpers_expr <- function(expr, env, target_table) {
+  if (rlang::is_call(expr)) {
+    fn_name <- rlang::call_name(expr)
+
+    if (!is.null(fn_name) && fn_name %in% .grm_helper_names) {
+      if (!identical(target_table, "tree_history")) {
+        rlang::abort(
+          paste0("`", fn_name, "()` can only be used inside `tree_history(...)`.")
+        )
+      }
+
+      expanded <- rlang::eval_tidy(expr, env = env)
+      if (rlang::is_quosure(expanded)) {
+        expanded <- rlang::get_expr(expanded)
+      }
+
+      if (!rlang::is_call(expanded) && !rlang::is_symbol(expanded)) {
+        rlang::abort(
+          paste0(
+            "`", fn_name, "()` must return an expression suitable for lazy SQL translation."
+          )
+        )
+      }
+
+      return(expanded)
+    }
+
+    call_parts <- as.list(expr)
+    if (length(call_parts) > 1) {
+      for (idx in 2:length(call_parts)) {
+        call_parts[[idx]] <- .expand_grm_helpers_expr(call_parts[[idx]], env, target_table)
+      }
+    }
+
+    return(as.call(call_parts))
+  }
+
+  expr
+}
+
+.expand_grm_helpers_quosure <- function(q, target_table) {
+  if (!rlang::is_quosure(q)) {
+    return(q)
+  }
+
+  new_expr <- .expand_grm_helpers_expr(
+    expr = rlang::get_expr(q),
+    env = rlang::get_env(q),
+    target_table = target_table
+  )
+
+  rlang::new_quosure(new_expr, env = rlang::get_env(q))
+}
+
+.expand_grm_helpers_scoped <- function(scoped_args, target_table) {
+  out <- lapply(scoped_args, .expand_grm_helpers_quosure, target_table = target_table)
+  names(out) <- names(scoped_args)
+  attr(out, "target_table") <- target_table
+  out
 }
 
 .normalize_scoped_args <- function(args_list, quosures) {
