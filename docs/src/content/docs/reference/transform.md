@@ -1,13 +1,13 @@
 ---
-title: "Transform Table with Scoped Mutations"
-description: "Add derived columns or modify existing ones on a specific table level (plot, condition, or tree). Expressions must be wrapped in scoping helpers (`tree()`, `cond()`, `plot()`) to specify their target table."
+title: "Add or Modify Columns of a Handler"
+description: "Add derived columns or modify existing ones on a specific table level Expressions must be wrapped in scoping helpers (`tree()`, `cond()`, etc) to specify their target table."
 ---
 
 ## Description
 
 Add derived columns or modify existing ones on a specific table level
-(plot, condition, or tree). Expressions must be wrapped in scoping helpers
-(`tree()`, `cond()`, `plot()`) to specify their target table.
+Expressions must be wrapped in scoping helpers (`tree()`, `cond()`, etc) to
+specify their target table.
 
 ## Usage
 
@@ -23,3 +23,11 @@ transform(handler, ...)
 ## Value
 
 The handler with pending mutations queued.
+
+## Examples
+
+```r
+# Add a basal area column to the tree table
+handler |>
+  transform(tree(BA = 0.005454 * DIA^2))
+```

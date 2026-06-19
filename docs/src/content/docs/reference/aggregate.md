@@ -1,11 +1,13 @@
 ---
 title: "Aggregate Data to Plot Level"
-description: "Aggregate Data to Plot Level"
+description: "Aggregation is the process of summing tree, condition, or other component values to the plot level, which can be used to create dataframes of aggregated data, useful for a variety of applications and diagnostics."
 ---
 
 ## Description
 
-Aggregate Data to Plot Level
+Aggregation is the process of summing tree, condition, or other component
+values to the plot level, which can be used to create dataframes of
+aggregated data, useful for a variety of applications and diagnostics.
 
 ## Usage
 
@@ -17,3 +19,11 @@ aggregate(handler, ...)
 
 - `handler`: A handler object.
 - `...`: A scoped target helper such as `tree(VOLCFGRS)` or `cond()`, plus any method-specific options such as `sparse = TRUE`.
+
+## Examples
+
+```r
+# Aggregate gross volume to the plot level
+handler |>
+  aggregate(tree(VOLCFGRS))
+```

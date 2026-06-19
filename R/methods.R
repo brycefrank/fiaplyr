@@ -1,10 +1,18 @@
 #' Aggregate Data to Plot Level
 #'
+#' Aggregation is the process of summing tree, condition, or other component
+#' values to the plot level, which can be used to create dataframes of
+#' aggregated data, useful for a variety of applications and diagnostics.
+#'
 #' @param handler A handler object.
 #' @param ... A scoped target helper such as `tree(VOLCFGRS)` or `cond()`, plus
 #'   any method-specific options such as `sparse = TRUE`.
-#' @importFrom stats aggregate
 #' @export
+#'
+#' @examples
+#' # Aggregate gross volume to the plot level
+#' handler |>
+#'   aggregate(tree(VOLCFGRS))
 setGeneric("aggregate", function(handler, ...) standardGeneric("aggregate"))
 
 #' Aggregate Trees to Plot Level
@@ -69,24 +77,29 @@ setGeneric("set_tree_domains", function(handler, ...) standardGeneric("set_tree_
 #' @param ... Additional arguments.
 setGeneric("set_cond_domains", function(handler, ...) standardGeneric("set_cond_domains"))
 
-#' Transform Table with Scoped Mutations
+#' Add or Modify Columns of a Handler
 #'
 #' Add derived columns or modify existing ones on a specific table level
-#' (plot, condition, or tree). Expressions must be wrapped in scoping helpers
-#' (`tree()`, `cond()`, `plot()`) to specify their target table.
+#' Expressions must be wrapped in scoping helpers (`tree()`, `cond()`, etc) to
+#' specify their target table.
 #'
 #' @param handler A handler object.
 #' @param ... Scoped expressions using `tree()`, `cond()`, or `plot()` helpers.
 #' @return The handler with pending mutations queued.
 #' @export
+#'
+#' @examples
+#' # Add a basal area column to the tree table
+#' handler |>
+#'   transform(tree(BA = 0.005454 * DIA^2))
 setGeneric("transform", function(handler, ...) standardGeneric("transform"))
 
-#' Subset a Inventory Components on a Handler
+#' Subset Inventory Components of a Handler
 #'
-#' Subsetting discards inventory components from the handler based on logical conditions. This
-#' is done in a hierarchical manner while preserving the integrity of the
-#' inventory structure. Subsetting is encouraged, as it increases the
-#' computation speed of the analysis.
+#' Subsetting discards inventory components from the handler based on logical
+#' conditions. This is done in a hierarchical manner while preserving the
+#' integrity of the inventory structure. Subsetting is encouraged, as it
+#' increases the computation speed of the analysis.
 #'
 #' Subsetting is done using the `tree()` and `cond()` helpers. For
 #' example `subset(tree(STATUSCD == 1))` would retain only live trees in later
@@ -99,6 +112,10 @@ setGeneric("transform", function(handler, ...) standardGeneric("transform"))
 #' @param ... Scoped logical expressions using `tree()`, `cond()`, or `plot()` helpers.
 #' @return The handler with pending filters queued.
 #' @export
+#' @examples
+#' # Retain only live trees
+#' handler |>
+#'  subset(tree(STATUSCD == 1))
 setGeneric("subset", function(handler, ...) standardGeneric("subset"))
 
 #' Partition a Handler into Domains
@@ -120,6 +137,11 @@ setGeneric("subset", function(handler, ...) standardGeneric("subset"))
 #' @param ... Scoped domain variable names using `tree()`, `cond()`, or `plot()` helpers.
 #' @return The handler with domain variables set.
 #' @export
+#'
+#' @examples
+#' # Set tree-level domains to be unique combinations of species and status code
+#' handler |>
+#'   partition(tree(SPCD, STATUSCD))
 setGeneric("partition", function(handler, ...) standardGeneric("partition"))
 
 #' Get Strata Weights

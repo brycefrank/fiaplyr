@@ -34,3 +34,11 @@ partition(handler, ...)
 ## Value
 
 The handler with domain variables set.
+
+## Examples
+
+```r
+# Set tree-level domains to be unique combinations of species and status code
+handler |>
+  partition(tree(SPCD, STATUSCD))
+```

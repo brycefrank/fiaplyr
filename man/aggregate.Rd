@@ -13,5 +13,12 @@ aggregate(handler, ...)
 any method-specific options such as \code{sparse = TRUE}.}
 }
 \description{
-Aggregate Data to Plot Level
+Aggregation is the process of summing tree, condition, or other component
+values to the plot level, which can be used to create dataframes of
+aggregated data, useful for a variety of applications and diagnostics.
+}
+\examples{
+# Aggregate gross volume to the plot level
+handler |>
+  aggregate(tree(VOLCFGRS))
 }
