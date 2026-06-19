@@ -37,9 +37,9 @@ setGeneric("aggregate_data", function(spec, handler, ...) {
 #' @param handler The EvalHandler object.
 #' @return A named list of summary fields.
 #' @export
-methods::setGeneric("spec_summary_fields", function(spec, handler) {
-  methods::standardGeneric("spec_summary_fields")
-}, where = topenv())
+setGeneric("spec_summary_fields", function(spec, handler) {
+  standardGeneric("spec_summary_fields")
+})
 
 #' @describeIn spec_summary_fields Default summary fields for AnalysisSpec
 methods::setMethod("spec_summary_fields", "AnalysisSpec", function(spec, handler) {

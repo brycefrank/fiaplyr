@@ -1,0 +1,95 @@
+---
+title: "Growth, Removals, and Mortality"
+knitr:
+  opts_chunk:
+    echo: true
+    warning: false
+    message: false
+---
+
+Growth, removals, and mortality (GRM) refers to a set of estimation procedures
+used by the FIA to quantify forest change. GRM is somewhat peculiar in that more
+constraints on potential outputs exist compared to the simpler case of status
+estimates. This is because GRM relies, in part, on the prediction of
+midpoint values (i.e., values of an attribute in between field measurements),
+and these predictions are only made for a subset of variables. Following this
+philosophy, `fiaplyr` uses a specific analysis specification, `GRMAnalysis`,
+that faithfully implements this paradigm. A more generic, but experimental,
+form of change estimation is in development called `PairAnalysis` (forthcoming).
+Still, `GRMAnalysis` is a powerful tool for estimating forest change, and
+produces compliant estimates with a wide range of utility. This vignette
+demonstrates the underlying GRM concepts, and shows how two examples:
+
+1. Annual net growth of merchantable bole wood volume
+
+## Specifying a Handler
+
+To begin with GRM analyses, specify a handler as always. However, this handler
+must use an evaluation ending in `3` which indicates a GRM-specific evaluation.
+We also pass the `GRMAnalysis` specification.
+
+```{r}
+library(fiaplyr)
+library(DBI)
+library(duckdb)
+library(dplyr)
+
+con <- dbConnect(duckdb(), fiadb_vt_mini_path())
+handler <- eval_handler(con, 501103, spec = new("GRMAnalysis"))
+
+handler
+```
+
+Here, we see the handler is initialized with a GRM evaluation, and the summary
+statement gives particulars. In this type of evaluation, the `tree` and `cond`
+helpers refer to the revisit data. Additional slots that are not given in
+a `StatusAnalysis` are available, which are used to derive change values,
+among other uses. The most important of these tables is `tree_history`, which
+represents the history of tree measurements for the beginning, midpoint, and
+end of the remeasurement period. Users interact with this table using the
+`tree_history()` helper, among other functions.
+
+## GRM Transformations
+
+Roughly, GRM analyses involve sophisticated transformations of columns in the
+`tree_history` slot, and these transformations depend upon the objectives of the
+user. To create these transformations, users rely on the `transform` function,
+used in tandem with the `tree_history()` helper. For example, if the user
+desires an estimate of the mortality volume over the period, then each tree is
+assigned a value of zero if it is alive at the end of the period, and the
+midpoint volume if it is dead at the end of the period. This can be done "by
+hand" like so
+
+```{r}
+handler |>
+  transform(
+    tree_history(
+      mort_vol = case_when(
+        STATUSCD_begin == 1 & STATUSCD == 2 ~ VOL_begmid,
+      )
+    )
+  ) 
+```
+
+
+
+
+
+
+A basic example is that of mortality. An initial volume
+(or other attribute) is observed at the beginning of the remeasurement period,
+and a final volume is observed at the end. If the tree died during the period,
+then the contribution of the tree to
+
+## Annual Net Growth of Merchantable Bole Wood Volume
+
+Following the GRM paradigm, net growth represents the amount of added woody
+material across the landscape after subtracting mortality (note that removals
+are not subtracted). Dividing this value by the number of years in the
+remeasurement period gives the annual net growth.
+
+```{r}
+handler |>
+
+```
+

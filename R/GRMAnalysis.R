@@ -73,19 +73,19 @@ setMethod("initialize_tables", "GRMAnalysis", function(spec, db, evalid, backend
 
   tree_grm_begin_qry <- tryCatch(
     dplyr::tbl(db, tbl_ref("TREE_GRM_BEGIN")) %>%
-      dplyr::semi_join(plot_qry, by = c("PLT_CN" = "CN")),
+      dplyr::semi_join(tree_qry, by = c("TRE_CN" = "CN")),
     error = function(e) NULL
   )
 
   tree_grm_midpt_qry <- tryCatch(
     dplyr::tbl(db, tbl_ref("TREE_GRM_MIDPT")) %>%
-      dplyr::semi_join(plot_qry, by = c("PLT_CN" = "CN")),
+      dplyr::semi_join(tree_qry, by = c("TRE_CN" = "CN")),
     error = function(e) NULL
   )
 
   tree_grm_component_qry <- tryCatch(
     dplyr::tbl(db, tbl_ref("TREE_GRM_COMPONENT")) %>%
-      dplyr::semi_join(plot_qry, by = c("PLT_CN" = "CN")),
+      dplyr::semi_join(tree_qry, by = c("TRE_CN" = "CN")),
     error = function(e) NULL
   )
 
@@ -93,6 +93,17 @@ setMethod("initialize_tables", "GRMAnalysis", function(spec, db, evalid, backend
     dplyr::tbl(db, tbl_ref("BEGINEND")),
     error = function(e) NULL
   )
+
+  tree_history_qry <- tree_qry
+
+  tree_history_qry <- tree_history_qry %>%
+    dplyr::left_join(tree_grm_begin_qry, by = c("CN" = "TRE_CN"), suffix = c("", "_begin"))
+
+  tree_history_qry <- tree_history_qry %>%
+    dplyr::left_join(tree_grm_midpt_qry, by = c("CN" = "TRE_CN"), suffix = c("", "_midpt"))
+
+  tree_history_qry <- tree_history_qry %>%
+    dplyr::left_join(tree_grm_component_qry, by = c("CN" = "TRE_CN"), suffix = c("", "_component"))
 
   list(
     pop_eval = pop_eval_qry,
@@ -110,6 +121,7 @@ setMethod("initialize_tables", "GRMAnalysis", function(spec, db, evalid, backend
     tree_grm_begin = tree_grm_begin_qry,
     tree_grm_midpt = tree_grm_midpt_qry,
     tree_grm_component = tree_grm_component_qry,
+    tree_history = tree_history_qry,
     beginend = beginend_qry
   )
 })
