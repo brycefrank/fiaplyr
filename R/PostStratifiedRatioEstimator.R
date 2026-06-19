@@ -101,15 +101,19 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
     .ps_eu_cov(cov_cols) %>%
     .ps_pop_cov(object@numerator, cov_cols)
 
-  # Pivot pop_cov to long format using the known lookup (avoids fragile name parsing)
-  pop_cov_long <- pop_cov %>%
-    tidyr::pivot_longer(
-      cols = dplyr::all_of(cov_cols),
-      names_to = "cov_col",
-      values_to = "cov_val"
-    ) %>%
-    dplyr::left_join(cov_pair_df, by = "cov_col") %>%
-    dplyr::select(-cov_col)
+  # Pivot pop_cov to long format lazily: one slice per covariance pair, then
+  # UNION ALL.  This avoids collect() + tidyr::pivot_longer() on a lazy query.
+  pop_cov_domain_vars <- setdiff(colnames(pop_cov), cov_cols)
+  cov_slices <- lapply(seq_len(nrow(cov_pair_df)), function(i) {
+    cc <- cov_pair_df$cov_col[i]
+    vn <- cov_pair_df$var_n[i]
+    vd <- cov_pair_df$var_d[i]
+    pop_cov %>%
+      dplyr::select(dplyr::all_of(c(pop_cov_domain_vars, cc))) %>%
+      dplyr::mutate(var_n = vn, var_d = vd, cov_val = .data[[cc]]) %>%
+      dplyr::select(-dplyr::all_of(cc))
+  })
+  pop_cov_long <- Reduce(dplyr::union_all, cov_slices)
   # Columns: [domain_vars_n, domain_vars_d, var_n, var_d, cov_val]
 
   # 6. Identify domain columns for each side
@@ -193,13 +197,15 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
 
   final_res <- pop_full %>%
     dplyr::mutate(
-      estimate = estimate_n / estimate_d,
+      estimate  = estimate_n / estimate_d,
       var_ratio = (1 / estimate_d^2) * (
         se_n^2 +
           (estimate_n / estimate_d)^2 * se_d^2 -
           2 * (estimate_n / estimate_d) * cov_val
-      ),
-      se = sqrt(pmax(var_ratio, 0))
+      )
+    ) %>%
+    dplyr::mutate(
+      se = sqrt(dplyr::if_else(var_ratio < 0, 0, var_ratio))
     ) %>%
     dplyr::select(dplyr::all_of(out_cols))
 

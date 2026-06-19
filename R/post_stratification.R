@@ -171,7 +171,8 @@
 #' @param handler A EvalHandler object.
 #' @param targets Character vector of original target column names.
 #' @param output Output scale: "mean" (default) or "total".
-#' @return A lazy query with population-level estimates and standard errors.
+#' @return A lazy query with population-level estimates and standard errors,
+#'   in long format with columns \code{[domain_vars, var, estimate, se]}.
 #' @noRd
 .ps_pop_stats <- function(eu_stats, handler, targets, output = "mean") {
   output <- match.arg(output, c("mean", "total"))
@@ -185,7 +186,6 @@
 
   mean_targets <- paste0(targets, "_mean")
   var_targets <- paste0(targets, "_var")
-  se_targets <- paste0(targets, "_se")
   all_stat_cols <- c(mean_targets, var_targets)
 
   all_cols <- colnames(eu_stats)
@@ -210,39 +210,23 @@
     ) %>%
     dplyr::ungroup()
 
-  result <- result %>% dplyr::collect()
+  # Build the long-format result lazily: produce one slice per target and
+  # combine with UNION ALL, avoiding an early collect() + pivot_longer().
+  slices <- lapply(seq_along(targets), function(i) {
+    mean_col <- mean_targets[i]
+    var_col  <- var_targets[i]
+    t        <- targets[i]
+    result %>%
+      dplyr::select(dplyr::all_of(c(domain_vars, mean_col, var_col))) %>%
+      dplyr::mutate(
+        var      = t,
+        estimate = .data[[mean_col]],
+        se       = sqrt(.data[[var_col]])
+      ) %>%
+      dplyr::select(dplyr::all_of(c(domain_vars, "var", "estimate", "se")))
+  })
 
-  mean_long <- result %>%
-    dplyr::select(dplyr::all_of(c(domain_vars, mean_targets))) %>%
-    tidyr::pivot_longer(
-      cols = dplyr::all_of(mean_targets),
-      names_to = "var_raw",
-      values_to = "estimate"
-    ) %>%
-    dplyr::mutate(var = sub("_mean$", "", var_raw)) %>%
-    dplyr::select(-var_raw)
-
-  var_long <- result %>%
-    dplyr::select(dplyr::all_of(c(domain_vars, var_targets))) %>%
-    tidyr::pivot_longer(
-      cols = dplyr::all_of(var_targets),
-      names_to = "var_raw",
-      values_to = "var_val"
-    ) %>%
-    dplyr::mutate(var = sub("_var$", "", var_raw)) %>%
-    dplyr::select(-var_raw)
-
-  if (length(domain_vars) == 0) {
-    joined_long <- dplyr::inner_join(mean_long, var_long, by = "var")
-  } else {
-    joined_long <- dplyr::inner_join(mean_long, var_long, by = c(domain_vars, "var"))
-  }
-
-  final_res <- joined_long %>%
-    dplyr::mutate(se = sqrt(var_val)) %>%
-    dplyr::select(dplyr::all_of(domain_vars), var, estimate, se)
-
-  final_res
+  Reduce(dplyr::union_all, slices)
 }
 
 
@@ -343,7 +327,7 @@
 #' @param eu_cov EU-level covariances (output of .ps_eu_cov).
 #' @param handler A EvalHandler object (used to fetch EU weights).
 #' @param cov_cols Character vector of covariance column names.
-#' @return A collected tibble with population-level covariances.
+#' @return A lazy query with population-level covariances.
 #' @noRd
 .ps_pop_cov <- function(eu_cov, handler, cov_cols) {
   eu_weights <- handler@tables$pop_estn_unit %>%
@@ -362,6 +346,5 @@
         ~ sum(.x * w_eu^2, na.rm = TRUE)
       )
     ) %>%
-    dplyr::ungroup() %>%
-    dplyr::collect()
+    dplyr::ungroup()
 }

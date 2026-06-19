@@ -42,7 +42,8 @@ test_that("condition estimates support MACRO condition proportion basis", {
 
   res <- handler |>
     PostStratifiedEstimator() |>
-    estimate(cond())
+    estimate(cond()) |>
+    dplyr::collect()
 
   expect_false(any(is.na(res$estimate)))
   expect_false(any(is.na(res$se)))
@@ -89,7 +90,7 @@ test_that("margins=TRUE for cond adds grand total row and full rows", {
   pe <- PostStratifiedEstimator(handler)
 
   res_margins <- estimate(pe, cond(), margins = TRUE)
-  res_full    <- estimate(pe, cond(), margins = FALSE)
+  res_full    <- estimate(pe, cond(), margins = FALSE) |> dplyr::collect()
 
   # Grand total rows have NA for COND_STATUS_CD
   grand_total <- res_margins[is.na(res_margins$COND_STATUS_CD), ]
@@ -155,7 +156,7 @@ test_that("marginal estimates match direct re-estimation with reduced domains", 
   handler_spcd <- eval_handler(con, evalid = 1001) |>
     partition(tree(SPCD))
   pe_spcd <- PostStratifiedEstimator(handler_spcd)
-  res_spcd <- estimate(pe_spcd, tree(VOLCFGRS))
+  res_spcd <- estimate(pe_spcd, tree(VOLCFGRS)) |> dplyr::collect()
   res_spcd <- res_spcd[order(res_spcd$SPCD), ]
 
   expect_equal(spcd_margin$estimate, res_spcd$estimate, tolerance = 1e-10)
@@ -165,7 +166,7 @@ test_that("marginal estimates match direct re-estimation with reduced domains", 
   grand_total <- res_margins[is.na(res_margins$SPCD) & is.na(res_margins$COND_STATUS_CD), ]
   handler_none <- eval_handler(con, evalid = 1001)
   pe_none <- PostStratifiedEstimator(handler_none)
-  res_none <- estimate(pe_none, tree(VOLCFGRS))
+  res_none <- estimate(pe_none, tree(VOLCFGRS)) |> dplyr::collect()
 
   expect_equal(grand_total$estimate, res_none$estimate, tolerance = 1e-10)
   expect_equal(grand_total$se,       res_none$se,       tolerance = 1e-10)
@@ -179,7 +180,7 @@ test_that("margins=TRUE with no domains returns a single grand total row", {
   pe <- PostStratifiedEstimator(handler)
 
   res_margins <- estimate(pe, tree(VOLCFGRS), margins = TRUE)
-  res_plain   <- estimate(pe, tree(VOLCFGRS), margins = FALSE)
+  res_plain   <- estimate(pe, tree(VOLCFGRS), margins = FALSE) |> dplyr::collect()
 
   expect_equal(nrow(res_margins), nrow(res_plain))
   expect_equal(res_margins$estimate, res_plain$estimate, tolerance = 1e-10)
@@ -194,10 +195,10 @@ test_that("is_marginal column is absent when margins=FALSE", {
     partition(tree(SPCD), cond(COND_STATUS_CD))
   pe <- PostStratifiedEstimator(handler)
 
-  res_tree <- estimate(pe, tree(VOLCFGRS), margins = FALSE)
+  res_tree <- estimate(pe, tree(VOLCFGRS), margins = FALSE) |> dplyr::collect()
   expect_false("is_marginal" %in% colnames(res_tree))
 
-  res_cond <- estimate(pe, cond(), margins = FALSE)
+  res_cond <- estimate(pe, cond(), margins = FALSE) |> dplyr::collect()
   expect_false("is_marginal" %in% colnames(res_cond))
 })
 

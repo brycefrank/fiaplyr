@@ -17,7 +17,8 @@ test_that("PostStratifiedRatioEstimator estimates correct ratios", {
   # Calculate Ratio: Volume per Area (by Species and Forest Type)
   # Num: tree(VOLCFNET)
   # Den: cond() (Implicit Area)
-  res <- estimate_ratio(ratio_est, tree(VOLCFNET), cond())
+  res <- estimate_ratio(ratio_est, tree(VOLCFNET), cond()) |>
+    dplyr::collect()
 
   # Verify structure
   expected_cols <- c("SPCD_n", "FORTYPCD_d", "var_n", "var_d", "estimate", "se")

@@ -138,7 +138,7 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = 
   results <- lapply(cond_subsets, function(dom) {
     h <- object@handler
     h@cond_domains <- dom
-    res <- .run_cond_estimation(h, output = output)
+    res <- .run_cond_estimation(h, output = output) %>% dplyr::collect()
     res$is_marginal <- length(dom) < n_full
     res
   })
@@ -165,7 +165,7 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = 
       h <- object@handler
       h@tree_domains <- t
       h@cond_domains <- c
-      res <- .run_tree_estimation(h, targets, output = output)
+      res <- .run_tree_estimation(h, targets, output = output) %>% dplyr::collect()
       res$is_marginal <- !(length(t) == n_full_tree && length(c) == n_full_cond)
       results[[length(results) + 1]] <- res
     }
