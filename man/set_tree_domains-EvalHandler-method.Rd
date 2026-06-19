@@ -4,10 +4,10 @@
 \alias{set_tree_domains,EvalHandler-method}
 \title{Set Tree Domain Variables (Deprecated)}
 \usage{
-\S4method{set_tree_domains}{EvalHandler}(.data, ...)
+\S4method{set_tree_domains}{EvalHandler}(handler, ...)
 }
 \arguments{
-\item{.data}{A EvalHandler object.}
+\item{handler}{A EvalHandler object.}
 
 \item{...}{Domain variable names (unquoted column names).}
 }

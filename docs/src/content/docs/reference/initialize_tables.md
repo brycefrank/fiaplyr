@@ -1,39 +1,25 @@
 ---
-title: "Initialize Tables"
-description: "Initialize Tables"
+title: "Initialize Tables for an Analysis Spec"
+description: "Initialize Tables for an Analysis Spec"
 ---
 
 ## Description
 
-Initialize Tables
+Initialize Tables for an Analysis Spec
 
 ## Usage
 
 ```r
-initialize_tables(schema, db, evalid, backend = NULL)
-
-## S4 method for signature 'StatusAnalysis'
-initialize_tables(schema, db, evalid, backend = NULL)
-
-## S4 method for signature 'ChangeAnalysis'
-initialize_tables(schema, db, evalid)
+initialize_tables(spec, db, evalid, backend = NULL)
 ```
 
 ## Arguments
 
-- `schema`: An AnalysisSpec object.
+- `spec`: An AnalysisSpec object.
 - `db`: A DBIConnection object.
 - `evalid`: The evaluation ID.
-- `backend`: Optional DatabaseBackend for custom schema/table names.
+- `backend`: Optional DatabaseMapping for custom schema/table names.
 
 ## Value
 
 A list of lazy queries.
-
-## Additional Details
-
-Methods (by class)
-
-`initialize_tables(StatusAnalysis)`: Initialize tables for Status Analysis
-
-`initialize_tables(ChangeAnalysis)`: Initialize tables for Change Analysis (Skeleton)

@@ -4,10 +4,10 @@
 \alias{transform,EvalHandler-method}
 \title{Transform: Add Derived Columns or Modify Values}
 \usage{
-\S4method{transform}{EvalHandler}(.data, ...)
+\S4method{transform}{EvalHandler}(handler, ...)
 }
 \arguments{
-\item{.data}{An EvalHandler object.}
+\item{handler}{An EvalHandler object.}
 
 \item{...}{Scoped expressions using \code{tree()}, \code{cond()}, or \code{plot()} helpers.}
 }

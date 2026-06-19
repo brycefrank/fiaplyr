@@ -4,10 +4,10 @@
 \alias{set_cond_domains}
 \title{Set Condition Domain Variables}
 \usage{
-set_cond_domains(.data, ...)
+set_cond_domains(handler, ...)
 }
 \arguments{
-\item{.data}{A handler object.}
+\item{handler}{A handler object.}
 
 \item{...}{Additional arguments.}
 }

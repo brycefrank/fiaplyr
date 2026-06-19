@@ -279,7 +279,7 @@ setMethod("show", "EvalHandler", function(object) {
 #' level. Expressions must be wrapped in the appropriate scoping helper:
 #' `tree()`, `cond()`, or `plot()`.
 #'
-#' @param .data An EvalHandler object.
+#' @param handler An EvalHandler object.
 #' @param ... Scoped expressions using `tree()`, `cond()`, or `plot()` helpers.
 #' @return The handler with pending mutations queued.
 #' @export
@@ -289,14 +289,14 @@ setMethod("show", "EvalHandler", function(object) {
 #'   handler |>
 #'     transform(tree(BA = 0.005454 * DIA^2))
 #' }
-setMethod("transform", "EvalHandler", function(.data, ...) {
+setMethod("transform", "EvalHandler", function(handler, ...) {
   # Get arguments as list - they may be tagged quosure lists from helpers
   # or raw expressions that need to be captured
   args_list <- list(...)
 
   args <- .normalize_scoped_args(args_list, rlang::enquos(...))
 
-  .route_scoped_expressions(.data, args, operation = "append_mutations")
+  .route_scoped_expressions(handler, args, operation = "append_mutations")
 })
 
 #' Subset: Apply Scoped Filters
@@ -306,7 +306,7 @@ setMethod("transform", "EvalHandler", function(.data, ...) {
 #' `tree()`, `cond()`, or `plot()`. Rows that do not satisfy conditions are
 #' excluded from all subsequent operations.
 #'
-#' @param .data An EvalHandler object.
+#' @param handler An EvalHandler object.
 #' @param ... Scoped logical expressions using `tree()`, `cond()`, or `plot()` helpers.
 #' @return The handler with pending filters queued.
 #' @export
@@ -316,14 +316,14 @@ setMethod("transform", "EvalHandler", function(.data, ...) {
 #'   handler |>
 #'     subset(tree(STATUSCD == 1))
 #' }
-setMethod("subset", "EvalHandler", function(.data, ...) {
+setMethod("subset", "EvalHandler", function(handler, ...) {
   # Get arguments as list - they may be tagged quosure lists from helpers
   # or raw expressions that need to be captured
   args_list <- list(...)
 
   args <- .normalize_scoped_args(args_list, rlang::enquos(...))
 
-  .route_scoped_expressions(.data, args, operation = "append_filters")
+  .route_scoped_expressions(handler, args, operation = "append_filters")
 })
 
 #' Partition: Specify Domain Variables
@@ -333,7 +333,7 @@ setMethod("subset", "EvalHandler", function(.data, ...) {
 #' Unlike `subset()`, partitions do not discard data. Expressions must be wrapped
 #' in the appropriate scoping helper: `tree()`, `cond()`, or `plot()`.
 #'
-#' @param .data An EvalHandler object.
+#' @param handler An EvalHandler object.
 #' @param ... Scoped domain variable names using `tree()`, `cond()`, or `plot()` helpers.
 #' @return The handler with domain variables set.
 #' @export
@@ -343,14 +343,14 @@ setMethod("subset", "EvalHandler", function(.data, ...) {
 #'   handler |>
 #'     partition(tree(SPCD), cond(OWNCD))
 #' }
-setMethod("partition", "EvalHandler", function(.data, ...) {
+setMethod("partition", "EvalHandler", function(handler, ...) {
   # Get arguments as list - they may be tagged quosure lists from helpers
   # or raw expressions that need to be captured
   args_list <- list(...)
 
   args <- .normalize_scoped_args(args_list, rlang::enquos(...))
 
-  .route_scoped_expressions(.data, args, operation = "set_domains")
+  .route_scoped_expressions(handler, args, operation = "set_domains")
 })
 
 #' Mutate Tree Table (Deprecated)
@@ -407,11 +407,11 @@ setMethod("mutate_cond", "EvalHandler", function(handler, ...) {
 #'
 #' **Deprecated.** Use `partition(tree(...))` instead.
 #'
-#' @param .data A EvalHandler object.
+#' @param handler A EvalHandler object.
 #' @param ... Domain variable names (unquoted column names).
 #' @return A EvalHandler object with the tree domain variables set.
 #' @export
-setMethod("set_tree_domains", "EvalHandler", function(.data, ...) {
+setMethod("set_tree_domains", "EvalHandler", function(handler, ...) {
   lifecycle::deprecate_warn(
     "0.1.0",
     "set_tree_domains()",
@@ -423,20 +423,20 @@ setMethod("set_tree_domains", "EvalHandler", function(.data, ...) {
   attr(new_groups, "target_table") <- "tree"
 
   # Overwrite existing grouping
-  .data@tree_domains <- new_groups
+  handler@tree_domains <- new_groups
 
-  return(.data)
+  return(handler)
 })
 
 #' Set Condition Domain Variables (Deprecated)
 #'
 #' **Deprecated.** Use `partition(cond(...))` instead.
 #'
-#' @param .data A EvalHandler object.
+#' @param handler A EvalHandler object.
 #' @param ... Domain variable names (unquoted column names).
 #' @return A EvalHandler object with the condition domain variables set.
 #' @export
-setMethod("set_cond_domains", "EvalHandler", function(.data, ...) {
+setMethod("set_cond_domains", "EvalHandler", function(handler, ...) {
   lifecycle::deprecate_warn(
     "0.1.0",
     "set_cond_domains()",
@@ -448,9 +448,9 @@ setMethod("set_cond_domains", "EvalHandler", function(.data, ...) {
   attr(new_groups, "target_table") <- "cond"
 
   # Overwrite existing grouping
-  .data@cond_domains <- new_groups
+  handler@cond_domains <- new_groups
 
-  return(.data)
+  return(handler)
 })
 
 #' Filter the Tree Table (Deprecated)

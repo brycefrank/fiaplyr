@@ -10,10 +10,10 @@ description: "**Deprecated.** Use `partition(cond(...))` instead."
 ## Usage
 
 ```r
-set_cond_domains(.data, ...)
+set_cond_domains(handler, ...)
 ```
 
 ## Arguments
 
-- `.data`: A handler object.
+- `handler`: A handler object.
 - `...`: Additional arguments.

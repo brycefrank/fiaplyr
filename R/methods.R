@@ -57,17 +57,17 @@ setGeneric("filter_cond", function(handler, ...) standardGeneric("filter_cond"))
 #' @rdname set_tree_domains
 #' @title Set Tree Domain Variables
 #' @description **Deprecated.** Use `partition(tree(...))` instead.
-#' @param .data A handler object.
+#' @param handler A handler object.
 #' @param ... Additional arguments.
-setGeneric("set_tree_domains", function(.data, ...) standardGeneric("set_tree_domains"))
+setGeneric("set_tree_domains", function(handler, ...) standardGeneric("set_tree_domains"))
 
 #' @export
 #' @rdname set_cond_domains
 #' @title Set Condition Domain Variables
 #' @description **Deprecated.** Use `partition(cond(...))` instead.
-#' @param .data A handler object.
+#' @param handler A handler object.
 #' @param ... Additional arguments.
-setGeneric("set_cond_domains", function(.data, ...) standardGeneric("set_cond_domains"))
+setGeneric("set_cond_domains", function(handler, ...) standardGeneric("set_cond_domains"))
 
 #' Transform Table with Scoped Mutations
 #'
@@ -75,11 +75,11 @@ setGeneric("set_cond_domains", function(.data, ...) standardGeneric("set_cond_do
 #' (plot, condition, or tree). Expressions must be wrapped in scoping helpers
 #' (`tree()`, `cond()`, `plot()`) to specify their target table.
 #'
-#' @param .data A handler object.
+#' @param handler A handler object.
 #' @param ... Scoped expressions using `tree()`, `cond()`, or `plot()` helpers.
 #' @return The handler with pending mutations queued.
 #' @export
-setGeneric("transform", function(.data, ...) standardGeneric("transform"))
+setGeneric("transform", function(handler, ...) standardGeneric("transform"))
 
 #' Subset a Inventory Components on a Handler
 #'
@@ -95,11 +95,11 @@ setGeneric("transform", function(.data, ...) standardGeneric("transform"))
 #' statements for `tree` apply only to trees. This ensures that the resulting
 #' data structure remains consistent (e.g., no trees without conditions, etc).
 #'
-#' @param .data A handler object.
+#' @param handler A handler object.
 #' @param ... Scoped logical expressions using `tree()`, `cond()`, or `plot()` helpers.
 #' @return The handler with pending filters queued.
 #' @export
-setGeneric("subset", function(.data, ...) standardGeneric("subset"))
+setGeneric("subset", function(handler, ...) standardGeneric("subset"))
 
 #' Partition a Handler into Domains
 #'
@@ -116,11 +116,11 @@ setGeneric("subset", function(.data, ...) standardGeneric("subset"))
 #' `transform()` can be used as domain variables as well. Multiple helpers can
 #' be mixed in a single call, such as `partition(tree(SPCD), cond(OWNCD))`.
 #'
-#' @param .data A handler object.
+#' @param handler A handler object.
 #' @param ... Scoped domain variable names using `tree()`, `cond()`, or `plot()` helpers.
 #' @return The handler with domain variables set.
 #' @export
-setGeneric("partition", function(.data, ...) standardGeneric("partition"))
+setGeneric("partition", function(handler, ...) standardGeneric("partition"))
 
 #' Get Strata Weights
 #'

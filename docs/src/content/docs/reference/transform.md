@@ -12,12 +12,12 @@ Add derived columns or modify existing ones on a specific table level
 ## Usage
 
 ```r
-transform(.data, ...)
+transform(handler, ...)
 ```
 
 ## Arguments
 
-- `.data`: A handler object.
+- `handler`: A handler object.
 - `...`: Scoped expressions using `tree()`, `cond()`, or `plot()` helpers.
 
 ## Value

@@ -4,10 +4,10 @@
 \alias{transform}
 \title{Transform Table with Scoped Mutations}
 \usage{
-transform(.data, ...)
+transform(handler, ...)
 }
 \arguments{
-\item{.data}{A handler object.}
+\item{handler}{A handler object.}
 
 \item{...}{Scoped expressions using \code{tree()}, \code{cond()}, or \code{plot()} helpers.}
 }

@@ -4,10 +4,10 @@
 \alias{set_cond_domains,EvalHandler-method}
 \title{Set Condition Domain Variables (Deprecated)}
 \usage{
-\S4method{set_cond_domains}{EvalHandler}(.data, ...)
+\S4method{set_cond_domains}{EvalHandler}(handler, ...)
 }
 \arguments{
-\item{.data}{A EvalHandler object.}
+\item{handler}{A EvalHandler object.}
 
 \item{...}{Domain variable names (unquoted column names).}
 }

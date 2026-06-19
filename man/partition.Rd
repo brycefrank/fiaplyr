@@ -4,10 +4,10 @@
 \alias{partition}
 \title{Partition a Handler into Domains}
 \usage{
-partition(.data, ...)
+partition(handler, ...)
 }
 \arguments{
-\item{.data}{A handler object.}
+\item{handler}{A handler object.}
 
 \item{...}{Scoped domain variable names using \code{tree()}, \code{cond()}, or \code{plot()} helpers.}
 }

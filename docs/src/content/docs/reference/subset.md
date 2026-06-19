@@ -22,12 +22,12 @@ data structure remains consistent (e.g., no trees without conditions, etc).
 ## Usage
 
 ```r
-subset(.data, ...)
+subset(handler, ...)
 ```
 
 ## Arguments
 
-- `.data`: A handler object.
+- `handler`: A handler object.
 - `...`: Scoped logical expressions using `tree()`, `cond()`, or `plot()` helpers.
 
 ## Value

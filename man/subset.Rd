@@ -4,10 +4,10 @@
 \alias{subset}
 \title{Subset a Inventory Components on a Handler}
 \usage{
-subset(.data, ...)
+subset(handler, ...)
 }
 \arguments{
-\item{.data}{A handler object.}
+\item{handler}{A handler object.}
 
 \item{...}{Scoped logical expressions using \code{tree()}, \code{cond()}, or \code{plot()} helpers.}
 }

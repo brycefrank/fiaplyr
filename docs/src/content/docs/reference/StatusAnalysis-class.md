@@ -1,8 +1,8 @@
 ---
-title: "Status Analysis Schema"
-description: "Status Analysis Schema"
+title: "Status Analysis Specification Class"
+description: "Status Analysis Specification Class"
 ---
 
 ## Description
 
-Status Analysis Schema
+Status Analysis Specification Class

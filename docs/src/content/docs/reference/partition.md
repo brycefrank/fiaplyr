@@ -23,12 +23,12 @@ be mixed in a single call, such as `partition(tree(SPCD), cond(OWNCD))`.
 ## Usage
 
 ```r
-partition(.data, ...)
+partition(handler, ...)
 ```
 
 ## Arguments
 
-- `.data`: A handler object.
+- `handler`: A handler object.
 - `...`: Scoped domain variable names using `tree()`, `cond()`, or `plot()` helpers.
 
 ## Value

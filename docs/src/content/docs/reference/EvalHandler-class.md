@@ -33,6 +33,6 @@ Slots
 
 `tables`A list of lazy queries for the tables.
 
-`schema`The AnalysisSpec used.
+`spec`The AnalysisSpec used.
 
 `internal_cache`Environment for caching intermediate results.

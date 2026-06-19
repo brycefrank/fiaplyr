@@ -4,10 +4,10 @@
 \alias{set_tree_domains}
 \title{Set Tree Domain Variables}
 \usage{
-set_tree_domains(.data, ...)
+set_tree_domains(handler, ...)
 }
 \arguments{
-\item{.data}{A handler object.}
+\item{handler}{A handler object.}
 
 \item{...}{Additional arguments.}
 }
