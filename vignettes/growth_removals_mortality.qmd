@@ -8,19 +8,15 @@ knitr:
 ---
 
 Growth, removals, and mortality (GRM) refers to a set of estimation procedures
-used by the FIA to quantify forest change. GRM is somewhat peculiar in that more
-constraints on potential outputs exist compared to the simpler case of status
-estimates. This is because GRM relies, in part, on the prediction of
-midpoint values (i.e., values of an attribute in between field measurements),
-and these predictions are only made for a subset of variables. Following this
-philosophy, `fiaplyr` uses a specific analysis specification, `GRMAnalysis`,
-that faithfully implements this paradigm. A more generic, but experimental,
-form of change estimation is in development called `PairAnalysis` (forthcoming).
-Still, `GRMAnalysis` is a powerful tool for estimating forest change, and
-produces compliant estimates with a wide range of utility. This vignette
-demonstrates the underlying GRM concepts, and shows how two examples:
-
-1. Annual net growth of merchantable bole wood volume
+used by the FIA to quantify forest change. Broadly, the paradigm relies on
+three discrete time points, referred to as the beginning, midpoint, and end of
+the remeasurement period for a given plot. Beginning and end values are
+observed, or at least derived from observed values, and the midpoint values 
+are predicted based on these observations. We refer to this three point
+structure as a tree history, and it is the core of the GRM paradigm. In this
+vignette, we demonstrate how to produce GRM estimates using `fiaplyr`, and
+demonstrate that interacting with the tree history, which is a slot  within
+the handler, allows for a wide range of change estimates.
 
 ## Specifying a Handler
 
@@ -42,12 +38,42 @@ handler
 
 Here, we see the handler is initialized with a GRM evaluation, and the summary
 statement gives particulars. In this type of evaluation, the `tree` and `cond`
-helpers refer to the revisit data. Additional slots that are not given in
-a `StatusAnalysis` are available, which are used to derive change values,
-among other uses. The most important of these tables is `tree_history`, which
-represents the history of tree measurements for the beginning, midpoint, and
-end of the remeasurement period. Users interact with this table using the
-`tree_history()` helper, among other functions.
+helpers refer to the revisit data. The `tree_history` slot represents the
+history of tree measurements for the beginning, midpoint, and end of the
+remeasurement period. Users interact with this table using the `tree_history()`
+helper, much in the same way as regular status variables. The `tree_history`
+table is expansive, containing hundreds of columns, but some basics can be
+viewed to learn about the structure of the data. For example, to see the
+beginning, midpoint, and end values for diameter, 
+
+```{r}
+handler@tables$tree_history |>
+  select(INVYR, PLOT, DIA_begin, DIA_midpt, DIA) |>
+  head()
+```
+
+Notice that the beginning and midpoint values have suffixes, while the end does
+not. This complies with typical FIA conventions.
+
+## Tree Transitions
+
+In the GRM paradigm, trees undergo transitions, primarily based on their life
+history. For example, a tree that is measured and alive at the beginning of the
+period may survive to the endpoint, wherein it is classified as a survivor tree.
+`fiaplyr` includes a suite of transition functions that ease the computation
+of transition values, all of which have the `grm_` prefix. All transition
+functions can be used in the `tree_history()` helper.
+
+```{r}
+handler@tables$tree_history |>
+  mutate(
+    survivor = grm_survivor(),
+    mortality = grm_mortality(),
+    ingrowth_live = grm_ingrowth_live()
+  ) |>
+  select(survivor, mortality, ingrowth_live) |>
+  head()
+```
 
 ## GRM Transformations
 
@@ -68,6 +94,9 @@ handler |>
     )
   ) 
 ```
+    This estimate path is available for `GRMAnalysis` handlers that include the
+    `tree_history` table.
+
 
 ## Aggregation the the Plot Level
 
@@ -75,24 +104,35 @@ When dealing with multiple plot visits, aggregation to the plot level is more
 complex than the single date case. This occurs because the core operation of
 making an aggregate is a weighted sum involving the expansion factor
 `TPA_UNADJ`, and one must engage with the question of which expansion factor
-to use: either the beginning, middle, or ending adjustment.
+to use: either the beginning, middle, or ending trees per acre. 
 
 
 ```{r}
-t <- handler |> transform(tree_history(mortality = grm_mortality())) |> subset(tree_history(mortality == 1))
+mort_handler <- handler |>
+  transform(
+    tree_history(
+      mortality = grm_mortality(),
+      ingrowth = grm_ingrowth_live()
+    )
+  ) |>
+  subset(
+    tree_history(mortality == 1, DIA_begin >= 5, WOODLAND == 'N')
+  )
 
-t |> aggregate(tree_history(VOLCFGRS)) |> collect() |> summarise(mean(VOLCFGRS))
+y_bar <- mort_handler |>
+  aggregate(tree_history(VOLCFGRS)) |>
+  pull(VOLCFGRS) |>
+  mean()
 
-handler@tables$pop_estn_unit |>
+A <- mort_handler@tables$pop_estn_unit |>
   pull(AREA_USED) |>
   sum()
 
-A <- 6152903
+A * y_bar
 
-# 935M per year, but evalidator gets ~ 101M...not terrible, but room for improvement...
-65.8 * A / 4.33
-
-# I am not counting ingrowth mortality
+mort_handler |>
+  PostStratifiedEstimator() |>
+  estimate(tree_history(VOLCFGRS), output = "total")
 ```
 
 

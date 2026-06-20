@@ -260,3 +260,71 @@ test_that("is_marginal correctly flags cond marginal rows", {
   expect_true(all(!full_rows$is_marginal))
   expect_true(all(marginal_rows$is_marginal))
 })
+
+setup_grm_test_db <- function() {
+  con <- setup_test_db()
+
+  DBI::dbWriteTable(con, "TREE_GRM_BEGIN", data.frame(
+    TRE_CN = c(1, 2, 3, 4, 5, 6, 7, 8),
+    STATUSCD_begin = 1L,
+    PREVDIA = 10,
+    stringsAsFactors = FALSE
+  ))
+
+  DBI::dbWriteTable(con, "TREE_GRM_MIDPT", data.frame(
+    TRE_CN = c(1, 2, 3, 4, 5, 6, 7, 8),
+    stringsAsFactors = FALSE
+  ))
+
+  DBI::dbWriteTable(con, "TREE_GRM_COMPONENT", data.frame(
+    TRE_CN = c(1, 2, 3, 4, 5, 6, 7, 8),
+    stringsAsFactors = FALSE
+  ))
+
+  con
+}
+
+test_that("PostStratifiedEstimator supports tree_history estimates for GRM handlers", {
+  con <- setup_grm_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001, spec = new("GRMAnalysis"))
+  pe <- PostStratifiedEstimator(handler)
+
+  res <- estimate(pe, tree_history(VOLCFNET)) |>
+    dplyr::collect()
+
+  expect_true(nrow(res) > 0)
+  expect_true(all(c("estimate", "se", "var") %in% colnames(res)))
+  expect_false("is_marginal" %in% colnames(res))
+})
+
+test_that("tree_history margins use cond and tree_history domains", {
+  con <- setup_grm_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001, spec = new("GRMAnalysis")) |>
+    partition(cond(COND_STATUS_CD), tree_history(SPCD))
+  pe <- PostStratifiedEstimator(handler)
+
+  res <- estimate(pe, tree_history(VOLCFNET), margins = TRUE) |>
+    dplyr::collect()
+
+  expect_true("is_marginal" %in% colnames(res))
+  expect_true(any(is.na(res$COND_STATUS_CD)))
+  expect_true(any(is.na(res$SPCD)))
+  expect_equal(sum(is.na(res$COND_STATUS_CD) & is.na(res$SPCD)), 1L)
+})
+
+test_that("tree_history estimates require GRMAnalysis handlers", {
+  con <- setup_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001)
+  pe <- PostStratifiedEstimator(handler)
+
+  expect_error(
+    estimate(pe, tree_history(VOLCFNET)),
+    "requires a GRMAnalysis handler"
+  )
+})

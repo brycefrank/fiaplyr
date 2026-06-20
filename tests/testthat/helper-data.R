@@ -49,6 +49,7 @@ setup_test_db <- function() {
     MEASYEAR = 2020,
     STATECD = 1,
     COUNTYCD = 1,
+    PREV_PLT_CN = NA_integer_,
     PLOT = c(1, 2, 3, 4, 5, 6, 7, 8),
     stringsAsFactors = FALSE
   ))
@@ -69,12 +70,14 @@ setup_test_db <- function() {
   # TREE
   # A few trees in each estimation unit.
   write_table("TREE", data.frame(
+    CN = c(1, 2, 3, 4, 5, 6, 7, 8),
     PLT_CN = c(101, 101, 103, 104, 201, 201, 203, 204),
     CONDID = c(1, 1, 1, 1, 1, 1, 1, 1),
     DIA = c(10, 12, 8, 14, 10, 12, 8, 14),
     VOLCFNET = c(10, 15, 5, 20, 10, 15, 5, 20),
     VOLCFGRS = c(11, 16, 6, 21, 11, 16, 6, 21),
     SPCD = c(1, 2, 1, 2, 1, 2, 1, 2), # 1=Pine, 2=Oak
+    PREV_TRE_CN = NA_integer_,
     TPA_UNADJ = c(6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0),
     stringsAsFactors = FALSE
   ))

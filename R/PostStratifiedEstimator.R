@@ -92,7 +92,12 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = 
     }
     return(.estimate_cond_internal(object, targets = targets, target_names = target_names, output = output, margins = margins))
   } else if (slot_name == "tree") {
-    return(.estimate_tree_internal(object, targets, target_names = target_names, output = output, margins = margins))
+    return(.estimate_tree_internal(object, targets, output = output, margins = margins))
+  } else if (slot_name == "tree_history") {
+    if (!inherits(object@handler@spec, "GRMAnalysis")) {
+      stop("`estimate(tree_history(...))` requires a GRMAnalysis handler.")
+    }
+    return(.estimate_tree_history_internal(object, targets, output = output, margins = margins))
   } else {
     stop("Unsupported slot: ", slot_name)
   }
@@ -123,9 +128,18 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = 
 
   plot_data <- .make_tree_aggregates(handler, !!!syms, adjusted = TRUE, sparse = TRUE)
   strata_data <- .ps_join_strata(plot_data, handler)
-  strata_stats <- .ps_strata_stats(strata_data, resolved_targets)
-  eu_stats <- .ps_eu_stats(strata_stats, resolved_targets)
-  .ps_pop_stats(eu_stats, handler, resolved_targets, output = output)
+  strata_stats <- .ps_strata_stats(strata_data, targets)
+  eu_stats <- .ps_eu_stats(strata_stats, targets)
+  .ps_pop_stats(eu_stats, handler, targets, output)
+}
+
+.run_tree_history_estimation <- function(handler, targets, output = "mean") {
+  syms <- rlang::syms(targets)
+  plot_data <- .make_tree_history_aggregates(handler, !!!syms, sparse = TRUE)
+  strata_data <- .ps_join_strata(plot_data, handler)
+  strata_stats <- .ps_strata_stats(strata_data, targets)
+  eu_stats <- .ps_eu_stats(strata_stats, targets)
+  .ps_pop_stats(eu_stats, handler, targets, output)
 }
 
 .run_cond_estimation <- function(handler, target_names = NULL, output = "mean") {
@@ -138,9 +152,9 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = 
   }
 
   strata_data <- .ps_join_strata(plot_data, handler)
-  strata_stats <- .ps_strata_stats(strata_data, cond_target)
-  eu_stats <- .ps_eu_stats(strata_stats, cond_target)
-  .ps_pop_stats(eu_stats, handler, cond_target, output = output)
+  strata_stats <- .ps_strata_stats(strata_data, "prop")
+  eu_stats <- .ps_eu_stats(strata_stats, "prop")
+  .ps_pop_stats(eu_stats, handler, "prop", output)
 }
 
 # Internal helper for condition estimation
@@ -192,5 +206,32 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = 
       results[[length(results) + 1]] <- res
     }
   }
+  dplyr::bind_rows(results)
+}
+
+# Internal helper for tree history estimation
+.estimate_tree_history_internal <- function(object, targets, output = "mean", margins = FALSE) {
+  if (!margins) {
+    return(.run_tree_history_estimation(object@handler, targets, output = output))
+  }
+
+  n_full_cond <- length(object@handler@cond_domains)
+  n_full_tree_history <- length(object@handler@tree_history_domains)
+
+  cond_subsets <- .all_subsets(object@handler@cond_domains)
+  tree_history_subsets <- .all_subsets(object@handler@tree_history_domains)
+
+  results <- list()
+  for (c in cond_subsets) {
+    for (th in tree_history_subsets) {
+      h <- object@handler
+      h@cond_domains <- c
+      h@tree_history_domains <- th
+      res <- .run_tree_history_estimation(h, targets, output = output)
+      res$is_marginal <- !(length(c) == n_full_cond && length(th) == n_full_tree_history)
+      results[[length(results) + 1]] <- res
+    }
+  }
+
   dplyr::bind_rows(results)
 }
