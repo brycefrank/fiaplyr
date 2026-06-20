@@ -75,6 +75,23 @@ test_that("missing REF_SPECIES warns and continues", {
   )
 })
 
+test_that("missing SUBP_COND is tolerated", {
+  con <- setup_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  DBI::dbRemoveTable(con, "SUBP_COND")
+
+  handler <- eval_handler(con, evalid = 1001)
+
+  expect_null(handler@tables$subp_cond)
+
+  res <- handler %>%
+    aggregate(cond()) %>%
+    dplyr::collect()
+
+  expect_true(nrow(res) > 0)
+})
+
 add_shared_countycd_columns <- function(con) {
   DBI::dbExecute(con, "ALTER TABLE COND ADD COLUMN COUNTYCD DOUBLE")
   DBI::dbExecute(con, "UPDATE COND SET COUNTYCD = CASE WHEN CONDID = 1 THEN 10 ELSE 20 END")

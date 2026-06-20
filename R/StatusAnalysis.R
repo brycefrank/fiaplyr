@@ -44,8 +44,11 @@ setMethod("initialize_tables", "StatusAnalysis", function(spec, db, evalid, back
     error = function(e) NULL
   )
 
-  subp_cond_qry <- dplyr::tbl(db, tbl_ref("SUBP_COND")) %>%
-    dplyr::semi_join(cond_qry, by = c("PLT_CN", "CONDID"))
+  subp_cond_qry <- tryCatch(
+    dplyr::tbl(db, tbl_ref("SUBP_COND")) %>%
+      dplyr::semi_join(cond_qry, by = c("PLT_CN", "CONDID")),
+    error = function(e) NULL
+  )
 
   list(
     pop_eval = pop_eval_qry,
