@@ -27,7 +27,7 @@ A named list of summary fields.
 \description{
 Build Spec-Specific Summary Fields
 }
-\section{Methods (by class)}{
+\section{Functions}{
 \itemize{
 \item \code{spec_summary_fields(AnalysisSpec)}: Default summary fields for AnalysisSpec
 

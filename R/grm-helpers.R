@@ -52,9 +52,9 @@ grm_ingrowth_live <- function(end_status = 1L, as_integer = TRUE) {
 #'
 #' @return No return value; always errors until implemented.
 #' @export
-grm_mortality <- function(begin_status = 1L, end_status = 2L, as_integer = TRUE) {
+grm_mortality <- function(begin_status = 1L, end_status = 2L, agentcd = 80L, as_integer = TRUE) {
   mortality_expr <- rlang::expr(
-    STATUSCD_begin == !!begin_status & STATUSCD == !!end_status
+    STATUSCD_begin == !!begin_status & STATUSCD == !!end_status & AGENTCD != !!agentcd
   )
   if (isTRUE(as_integer)) {
     return(rlang::expr(dplyr::if_else(!!mortality_expr, 1L, 0L, missing = 0L)))

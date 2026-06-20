@@ -22,13 +22,19 @@ Class for Evaluation Pipeline
 
 \item{\code{cond_mutations}}{Pending condition-level mutation quosures.}
 
+\item{\code{tree_history_mutations}}{Pending tree-history-level mutation quosures.}
+
 \item{\code{tree_domains}}{Pending tree-level domain quosures.}
 
 \item{\code{cond_domains}}{Pending condition-level domain quosures.}
 
+\item{\code{tree_history_domains}}{Pending tree-history-level domain quosures.}
+
 \item{\code{tree_filters}}{Pending tree-level filter quosures.}
 
 \item{\code{cond_filters}}{Pending condition-level filter quosures.}
+
+\item{\code{tree_history_filters}}{Pending tree-history-level filter quosures.}
 
 \item{\code{tables}}{A list of lazy queries for the tables.}
 
