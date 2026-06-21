@@ -512,6 +512,36 @@ setMethod("get_strata_weights", "EvalHandler", function(handler) {
     )
 })
 
+#' @describeIn materialize Materialize a prepared table for EvalHandler
+setMethod("materialize", "EvalHandler", function(handler, slot) {
+  slot <- as.character(slot)
+
+  if (length(slot) != 1 || is.na(slot) || !nzchar(slot)) {
+    stop("`slot` must resolve to exactly one non-empty table name.", call. = FALSE)
+  }
+
+  if (!slot %in% c("plot", "cond", "tree", "tree_history")) {
+    stop("Unsupported slot: ", slot, call. = FALSE)
+  }
+
+  if (slot == "tree_history") {
+    if (is.null(handler@tables$tree_history)) {
+      stop("`tree_history` is not available for this analysis spec.", call. = FALSE)
+    }
+    return(.build_tree_history_data(handler))
+  }
+
+  if (slot == "tree") {
+    return(.build_tree_data(handler))
+  }
+
+  if (slot == "cond") {
+    return(.build_cond_data(handler))
+  }
+
+  .build_plot_data(handler)
+})
+
 #' Get Evaluation ID
 #'
 #' @param handler A EvalHandler object.

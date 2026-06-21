@@ -340,3 +340,79 @@ test_that("aggregate() errors for non-numeric expander", {
     "must be numeric"
   )
 })
+
+test_that("materialize() returns lazy prepared tables for status handlers", {
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001) %>%
+    transform(
+      plot(PLOT_BUCKET = PLOT * 10),
+      cond(COND_BUCKET = CONDID * 100),
+      tree(TREE_BUCKET = SPCD * 1000)
+    ) %>%
+    subset(
+      plot(PLOT <= 4),
+      cond(COND_STATUS_CD == 1),
+      tree(SPCD == 1)
+    )
+
+  plot_q <- materialize(handler, "plot")
+  cond_q <- materialize(handler, "cond")
+  tree_q <- materialize(handler, "tree")
+
+  expect_true(dplyr::is.tbl(plot_q))
+  expect_true(dplyr::is.tbl(cond_q))
+  expect_true(dplyr::is.tbl(tree_q))
+
+  plot_res <- plot_q %>% dplyr::collect()
+  cond_res <- cond_q %>% dplyr::collect()
+  tree_res <- tree_q %>% dplyr::collect()
+
+  expect_true(all(plot_res$PLOT <= 4))
+  expect_true(all(cond_res$COND_STATUS_CD == 1))
+  expect_true(all(tree_res$SPCD == 1))
+  expect_equal(plot_res$PLOT_BUCKET, plot_res$PLOT * 10)
+  expect_equal(cond_res$COND_BUCKET, cond_res$CONDID * 100)
+  expect_equal(tree_res$TREE_BUCKET, tree_res$SPCD * 1000)
+})
+
+test_that("materialize() handles GRM tree_history tables", {
+  con <- setup_grm_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1003, spec = new("GRMAnalysis")) %>%
+    transform(
+      tree_history(HIST_FLAG = STATUSCD_begin + 1)
+    ) %>%
+    subset(
+      tree_history(DIA_begin >= 10)
+    )
+
+  tree_history_q <- materialize(handler, "tree_history")
+
+  expect_true(dplyr::is.tbl(tree_history_q))
+
+  tree_history_res <- tree_history_q %>% dplyr::collect()
+
+  expect_true(nrow(tree_history_res) > 0)
+  expect_true(all(tree_history_res$DIA_begin >= 10))
+  expect_equal(tree_history_res$HIST_FLAG, tree_history_res$STATUSCD_begin + 1)
+})
+
+test_that("materialize() rejects invalid slots and unsupported tree_history usage", {
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001)
+
+  expect_error(
+    materialize(handler, "bogus"),
+    "Unsupported slot"
+  )
+
+  expect_error(
+    materialize(handler, "tree_history"),
+    "not available for this analysis spec"
+  )
+})

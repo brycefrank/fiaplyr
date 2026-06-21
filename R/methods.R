@@ -100,6 +100,17 @@ setGeneric("subset", function(handler, ...) standardGeneric("subset"))
 #'   partition(tree(SPCD, STATUSCD))
 setGeneric("partition", function(handler, ...) standardGeneric("partition"))
 
+#' Materialize a Handler Table
+#'
+#' Render the prepared table for a specific slot after any pending subsets,
+#' transformations, and domain settings have been applied.
+#'
+#' @param handler A handler object.
+#' @param slot The table slot to materialize.
+#' @return A lazy query for the requested table.
+#' @export
+setGeneric("materialize", function(handler, slot) standardGeneric("materialize"))
+
 #' Get Strata Weights
 #'
 #' @param handler A handler object.
