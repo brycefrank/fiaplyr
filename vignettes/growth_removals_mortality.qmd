@@ -8,15 +8,17 @@ knitr:
 ---
 
 Growth, removals, and mortality (GRM) refers to a set of estimation procedures
-used by the FIA to quantify forest change. Broadly, the paradigm relies on
-three discrete time points, referred to as the beginning, midpoint, and end of
-the remeasurement period for a given plot. Beginning and end values are
-observed, or at least derived from observed values, and the midpoint values 
-are predicted based on these observations. We refer to this three point
-structure as a tree history, and it is the core of the GRM paradigm. In this
-vignette, we demonstrate how to produce GRM estimates using `fiaplyr`, and
-demonstrate that interacting with the tree history, which is a slot  within
-the handler, allows for a wide range of change estimates.
+used by the FIA to quantify forest change. Broadly, trees are assigned to change
+classes, which we refer to as transitions. Then, estimates are constructed based
+on the transition and desired output of the user. Typical outputs include
+estimates of mortality volume, removals, and others. `fiaplyr` provides both
+high-level and low-level access to the GRM paradigm. This vignette focuses on
+high-level access suitable for most basic use cases and focuses on three
+tree bases: all live trees, growing stock trees, and sawtimber trees, and
+two land bases: forest land and timberland. The user selects the GRM
+configuration by specifying the tree and land bases, and proceeding within
+those constraints. More granular analyses can be done with `fiaplyr`, but we
+focus first on these basic cases.
 
 ## Specifying a Handler
 
@@ -31,24 +33,20 @@ library(duckdb)
 library(dplyr)
 
 con <- dbConnect(duckdb(), fiadb_vt_mini_path())
-handler <- eval_handler(con, 501103, spec = new("GRMAnalysis"))
+handler <- eval_handler(con, 501103, spec = grm_analysis())
 
 handler
 ```
 
 Here, we see the handler is initialized with a GRM evaluation, and the summary
-statement gives particulars. In this type of evaluation, the `tree` and `cond`
-helpers refer to the revisit data. The `tree_history` slot represents the
-history of tree measurements for the beginning, midpoint, and end of the
-remeasurement period. Users interact with this table using the `tree_history()`
-helper, much in the same way as regular status variables. The `tree_history`
-table is expansive, containing hundreds of columns, but some basics can be
-viewed to learn about the structure of the data. For example, to see the
-beginning, midpoint, and end values for diameter, 
+statement gives particulars. The specification defaults to a tree basis of
+`all_live` and a land basis of `forest_land`, but these can be changed by
+setting the `tree_basis` and `land_basis` arguments in the `grm_analysis()`
+function.
 
 ```{r}
 handler@tables$tree_history |>
-  select(INVYR, PLOT, DIA_begin, DIA_midpt, DIA) |>
+  select(DIA_begin, DIA_midpt, DIA) |>
   head()
 ```
 
@@ -60,16 +58,15 @@ not. This complies with typical FIA conventions.
 In the GRM paradigm, trees undergo transitions, primarily based on their life
 history. For example, a tree that is measured and alive at the beginning of the
 period may survive to the endpoint, wherein it is classified as a survivor tree.
-`fiaplyr` includes a suite of transition functions that ease the computation
-of transition values, all of which have the `grm_` prefix. All transition
-functions can be used in the `tree_history()` helper.
+These transition values can be written directly with `tree_history()`
+expressions against the `tree_history` columns.
 
 ```{r}
 handler@tables$tree_history |>
   mutate(
-    survivor = grm_survivor(),
-    mortality = grm_mortality(),
-    ingrowth_live = grm_ingrowth_live()
+    survivor = dplyr::if_else(STATUSCD_begin == 1L & STATUSCD == 1L, 1L, 0L, missing = 0L),
+    mortality = dplyr::if_else(STATUSCD_begin == 1L & STATUSCD == 2L & AGENTCD != 80L, 1L, 0L, missing = 0L),
+    ingrowth_live = dplyr::if_else(is.na(PREVDIA) & STATUSCD == 1L, 1L, 0L, missing = 0L)
   ) |>
   select(survivor, mortality, ingrowth_live) |>
   head()
@@ -83,14 +80,13 @@ user. To create these transformations, users rely on the `transform` function,
 used in tandem with the `tree_history()` helper. For example, if the user
 desires an estimate of the mortality volume over the period, then each tree is
 assigned a value of zero if it is alive at the end of the period, and the
-midpoint volume if it is dead at the end of the period. This can be done using
-the `grm_mortality()` helper
+midpoint volume if it is dead at the end of the period.
 
 ```{r}
 handler |>
   transform(
     tree_history(
-      survivor = grm_survivor()
+      survivor = STATUSCD_begin == 1L & STATUSCD == 1L
     )
   ) 
 ```
@@ -112,7 +108,7 @@ mort_handler <- handler |>
   transform(
     tree_history(
       mortality = (STATUSCD_begin == 1L & STATUSCD == 2L) | (is.na(STATUSCD_begin) & STATUSCD == 2L),
-      ingrowth = grm_ingrowth_live()
+      ingrowth = is.na(PREVDIA) & STATUSCD == 1L
     )
   ) |>
   subset(

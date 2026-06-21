@@ -4,7 +4,7 @@
 \alias{estimate,PostStratifiedEstimator-method}
 \title{Estimate Population Parameters}
 \usage{
-\S4method{estimate}{PostStratifiedEstimator}(object, ..., output = "mean", margins = FALSE)
+\S4method{estimate}{PostStratifiedEstimator}(object, ..., output = "mean", margins = FALSE, expander = TPA_UNADJ)
 }
 \arguments{
 \item{object}{A PostStratifiedEstimator object.}
@@ -19,6 +19,9 @@ plus all marginal estimates produced by re-running the pipeline for every
 strict subset of the active domain variables (including the grand total
 with no domains). Dropped domain columns appear as \code{NA}. Defaults to
 \code{FALSE}.}
+
+\item{expander}{Tree expansion column used when aggregating tree and
+tree-history targets (for example, \code{TPA_UNADJ}). Defaults to \code{TPA_UNADJ}.}
 }
 \value{
 A dataframe with estimates.

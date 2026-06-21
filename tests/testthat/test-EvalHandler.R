@@ -20,6 +20,63 @@ test_that("EvalHandler initializes correctly", {
   expect_equal(nrow(trees), 8) # 8 trees across both estimation units
 })
 
+test_that("status_analysis() returns a StatusAnalysis spec", {
+  spec <- status_analysis()
+
+  expect_s4_class(spec, "StatusAnalysis")
+  expect_s4_class(spec, "AnalysisSpec")
+})
+
+test_that("grm_analysis() returns a GRMAnalysis spec", {
+  spec <- grm_analysis()
+
+  expect_s4_class(spec, "GRMAnalysis")
+  expect_s4_class(spec, "AnalysisSpec")
+  expect_identical(spec@tree_basis, "all_live")
+  expect_identical(spec@land_basis, "forest_land")
+  expect_true(is.list(spec@component_rules))
+  expect_true(length(spec@component_rules) > 0)
+})
+
+test_that("grm_analysis() supports explicit bases and validates input", {
+  spec <- grm_analysis(tree_basis = "sawtimber", land_basis = "timberland")
+
+  expect_identical(spec@tree_basis, "sawtimber")
+  expect_identical(spec@land_basis, "timberland")
+
+  expect_error(
+    grm_analysis(tree_basis = "not_a_domain"),
+    "should be one of"
+  )
+
+  expect_error(
+    grm_analysis(land_basis = "not_a_domain"),
+    "should be one of"
+  )
+})
+
+test_that("GRM spec summary fields are shown in handler summary and print output", {
+  con <- setup_grm_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(
+    con,
+    evalid = 1003,
+    spec = grm_analysis(tree_basis = "sawtimber", land_basis = "timberland")
+  )
+
+  s <- summary(handler)
+  expect_identical(s$tree_basis, "sawtimber")
+  expect_identical(s$land_basis, "timberland")
+  expect_identical(s$n_component_rules, 5L)
+
+  shown <- capture.output(show(handler))
+  expect_true(any(grepl("GRM Spec", shown, fixed = TRUE)))
+  expect_true(any(grepl("Tree basis:\\s+sawtimber", shown)))
+  expect_true(any(grepl("Land basis:\\s+timberland", shown)))
+  expect_true(any(grepl("Rules:\\s+5", shown)))
+})
+
 test_that("EvalHandler filters correctly by evalid", {
   con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))

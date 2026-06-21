@@ -3,6 +3,17 @@
 #' @export
 setClass("StatusAnalysis", contains = "AnalysisSpec")
 
+#' Create a Status Analysis Specification
+#'
+#' Construct a [StatusAnalysis][StatusAnalysis-class] object for use with
+#' [eval_handler()].
+#'
+#' @return A [StatusAnalysis][StatusAnalysis-class] object.
+#' @export
+status_analysis <- function() {
+  new("StatusAnalysis")
+}
+
 #' Initialize Tables for Status Analysis
 #'
 #' @param spec A StatusAnalysis object.

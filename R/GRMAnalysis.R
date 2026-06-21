@@ -1,7 +1,51 @@
 #' GRM Analysis Spec
 #'
 #' @export
-setClass("GRMAnalysis", contains = "AnalysisSpec")
+setClass("GRMAnalysis",
+  contains = "AnalysisSpec",
+  slots = c(
+    tree_basis = "character",
+    land_basis = "character",
+    component_rules = "list"
+  ),
+  prototype = list(
+    tree_basis = "all_live",
+    land_basis = "forest_land",
+    component_rules = list()
+  )
+)
+
+#' Create a GRM Analysis Specification
+#'
+#' Construct a [GRMAnalysis][GRMAnalysis-class] object for use with
+#' [eval_handler()].
+#'
+#' @param tree_basis Tree basis preset. One of `all_live`,
+#'   `growing_stock`, or `sawtimber`.
+#' @param land_basis Land basis preset. One of `forest_land` or
+#'   `timberland`.
+#' @return A [GRMAnalysis][GRMAnalysis-class] object.
+#' @export
+grm_analysis <- function(
+    tree_basis = "all_live",
+    land_basis = "forest_land") {
+  tree_basis <- match.arg(tree_basis, c("all_live", "growing_stock", "sawtimber"))
+  land_basis <- match.arg(land_basis, c("forest_land", "timberland"))
+
+  rules <- rlang::exprs(
+    STATUSCD == 1 & PREV_STATUSCD == 1 ~ "survivor",
+    STATUSCD == 2 & PREV_STATUSCD == 1 ~ "mortality",
+    STATUSCD == 3 & PREV_STATUSCD == 1 ~ "removal",
+    STATUSCD == 1 & is.na(PREV_STATUSCD) ~ "ingrowth",
+    TRUE ~ "other"
+  )
+
+  new("GRMAnalysis",
+    tree_basis = tree_basis,
+    land_basis = land_basis,
+    component_rules = rules
+  )
+}
 
 #' Initialize Tables for GRM Analysis
 #'
@@ -178,6 +222,44 @@ setMethod("aggregate_data", "GRMAnalysis", function(spec, handler, ..., expander
 #' @describeIn spec_summary_fields GRMAnalysis-specific summary fields
 #' @export
 setMethod("spec_summary_fields", "GRMAnalysis", function(spec, handler) {
-  # Placeholder for GRM-specific summary fields.
-  list()
+  list(
+    tree_basis = spec@tree_basis,
+    land_basis = spec@land_basis,
+    n_component_rules = length(spec@component_rules)
+  )
 })
+
+# internal function, not exported
+get_tree_basis_filters <- function(basis) {
+  switch(basis,
+    "all_live" = rlang::exprs(
+      DIA >= 5.0 | DIA_begin >= 5.0 
+    ),
+    "growing_stock" = rlang::exprs(
+      TREECLCD == 2,
+      DIA >= 5.0 | DIA_begin >= 5.0
+    ),
+    "sawtimber" = rlang::exprs(
+      TREECLCD == 2,
+      # Example of complex logic handled cleanly outside the core handler
+      (SPCD < 300 & (DIA >= 9.0 | DIA_begin >= 9.0)) | 
+      (SPCD >= 300 & (DIA >= 11.0 | DIA_begin >= 11.0))
+    ),
+    stop(sprintf("Unknown tree basis: '%s'", basis))
+  )
+}
+
+# internal function, not exported
+get_land_basis_filters <- function(basis) {
+  switch(basis,
+    "forest_land" = rlang::exprs(
+      COND_STATUS_CD == 1
+    ),
+    "timberland" = rlang::exprs(
+      COND_STATUS_CD == 1,
+      SITECLCD %in% 1:6,
+      RESERVCD == 0
+    ),
+    stop(sprintf("Unknown land basis: '%s'", basis))
+  )
+}

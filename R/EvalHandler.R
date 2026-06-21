@@ -49,7 +49,8 @@ setClass("EvalHandler",
 #' 
 #' @param db A DBIConnection object.
 #' @param evalid A numeric identifier for the evaluation.
-#' @param spec An [AnalysisSpec][AnalysisSpec-class] object. Defaults to `new("StatusAnalysis")`.
+#' @param spec An [AnalysisSpec][AnalysisSpec-class] object. Defaults to
+#'   [status_analysis()].
 #' @param backend Optional DatabaseMapping for custom schema/table names.
 #'
 #' @return An object of class [EvalHandler][EvalHandler-class] connected to the specified evaluation.
@@ -61,7 +62,7 @@ setClass("EvalHandler",
 #'   handler <- eval_handler(con, evalid = 500601)
 #'   DBI::dbDisconnect(con, shutdown = TRUE)
 #' }
-eval_handler <- function(db, evalid, spec = new("StatusAnalysis"), backend = NULL) {
+eval_handler <- function(db, evalid, spec = status_analysis(), backend = NULL) {
   tables <- initialize_tables(spec, db, evalid, backend)
 
   if (!is.null(tables$pop_eval)) {
@@ -162,6 +163,16 @@ setMethod("show", "EvalHandler", function(object) {
     cat("Measure Years:  ", s$min_meas, "-", s$max_meas, "\n")
   }
 
+  if (all(c("tree_basis", "land_basis") %in% names(s))) {
+    cat("\n")
+    cat("GRM Spec\n")
+    cat("Tree basis:     ", s$tree_basis, "\n")
+    cat("Land basis:     ", s$land_basis, "\n")
+    if ("n_component_rules" %in% names(s)) {
+      cat("Rules:          ", s$n_component_rules, "\n")
+    }
+  }
+
   # Display domain variables if set
   plot_dom_labels <- vapply(object@plot_domains, rlang::as_label, character(1))
   tree_dom_labels <- vapply(object@tree_domains, rlang::as_label, character(1))
@@ -210,7 +221,6 @@ setMethod("show", "EvalHandler", function(object) {
     slot_mutations <- paste0(list_target_table, "_mutations")
     slot_filters <- paste0(list_target_table, "_filters")
     slot_domains <- paste0(list_target_table, "_domains")
-    args <- .expand_grm_helpers_scoped(args, list_target_table)
     
     if (operation == "append_mutations") {
       slot(handler, slot_mutations) <- c(slot(handler, slot_mutations), args)
@@ -244,7 +254,6 @@ setMethod("show", "EvalHandler", function(object) {
       slot_mutations <- paste0(target_table, "_mutations")
       slot_filters <- paste0(target_table, "_filters")
       slot_domains <- paste0(target_table, "_domains")
-      arg <- .expand_grm_helpers_scoped(arg, target_table)
 
       if (operation == "append_mutations") {
         slot(handler, slot_mutations) <- c(slot(handler, slot_mutations), arg)
@@ -270,69 +279,6 @@ setMethod("show", "EvalHandler", function(object) {
 
 .has_scoped_helper_target <- function(arg) {
   is.list(arg) && !is.null(attr(arg, "target_table"))
-}
-
-.grm_helper_names <- c("grm_survivor", "grm_ingrowth_live", "grm_mortality")
-
-.expand_grm_helpers_expr <- function(expr, env, target_table) {
-  if (rlang::is_call(expr)) {
-    fn_name <- rlang::call_name(expr)
-
-    if (!is.null(fn_name) && fn_name %in% .grm_helper_names) {
-      if (!identical(target_table, "tree_history")) {
-        rlang::abort(
-          paste0("`", fn_name, "()` can only be used inside `tree_history(...)`.")
-        )
-      }
-
-      expanded <- rlang::eval_tidy(expr, env = env)
-      if (rlang::is_quosure(expanded)) {
-        expanded <- rlang::get_expr(expanded)
-      }
-
-      if (!rlang::is_call(expanded) && !rlang::is_symbol(expanded)) {
-        rlang::abort(
-          paste0(
-            "`", fn_name, "()` must return an expression suitable for lazy SQL translation."
-          )
-        )
-      }
-
-      return(expanded)
-    }
-
-    call_parts <- as.list(expr)
-    if (length(call_parts) > 1) {
-      for (idx in 2:length(call_parts)) {
-        call_parts[[idx]] <- .expand_grm_helpers_expr(call_parts[[idx]], env, target_table)
-      }
-    }
-
-    return(as.call(call_parts))
-  }
-
-  expr
-}
-
-.expand_grm_helpers_quosure <- function(q, target_table) {
-  if (!rlang::is_quosure(q)) {
-    return(q)
-  }
-
-  new_expr <- .expand_grm_helpers_expr(
-    expr = rlang::get_expr(q),
-    env = rlang::get_env(q),
-    target_table = target_table
-  )
-
-  rlang::new_quosure(new_expr, env = rlang::get_env(q))
-}
-
-.expand_grm_helpers_scoped <- function(scoped_args, target_table) {
-  out <- lapply(scoped_args, .expand_grm_helpers_quosure, target_table = target_table)
-  names(out) <- names(scoped_args)
-  attr(out, "target_table") <- target_table
-  out
 }
 
 .normalize_scoped_args <- function(args_list, quosures) {
