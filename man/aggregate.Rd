@@ -4,13 +4,16 @@
 \alias{aggregate}
 \title{Aggregate Data to Plot Level}
 \usage{
-aggregate(handler, ...)
+aggregate(handler, ..., expander = TPA_UNADJ)
 }
 \arguments{
 \item{handler}{A handler object.}
 
 \item{...}{A scoped target helper such as \code{tree(VOLCFGRS)} or \code{cond()}, plus
 any method-specific options such as \code{sparse = TRUE}.}
+
+\item{expander}{Tree expansion column used when summing tree-level values to
+the plot level (for example, \code{TPA_UNADJ}). Defaults to \code{TPA_UNADJ}.}
 }
 \description{
 Aggregation is the process of summing tree, condition, or other component
@@ -20,5 +23,5 @@ aggregated data, useful for a variety of applications and diagnostics.
 \examples{
 # Aggregate gross volume to the plot level
 handler |>
-  aggregate(tree(VOLCFGRS))
+  aggregate(tree(VOLCFGRS), expander = TPA_UNADJ)
 }

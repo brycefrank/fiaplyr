@@ -138,12 +138,20 @@ setMethod("initialize_tables", "GRMAnalysis", function(spec, db, evalid, backend
 #' @param spec A GRMAnalysis object.
 #' @param handler The EvalHandler object.
 #' @param ... Arguments for aggregation.
+#' @param expander Tree expansion column used when aggregating tree-level
+#'   summaries (for example, `TPA_UNADJ`).
 #' @return A lazy query with aggregates.
 #' @export
-setMethod("aggregate_data", "GRMAnalysis", function(spec, handler, ...) {
+setMethod("aggregate_data", "GRMAnalysis", function(spec, handler, ..., expander) {
   args <- list(...)
   arg_names <- names(args)
   unnamed <- if (is.null(arg_names)) rep(TRUE, length(args)) else arg_names == ""
+
+  named_args <- if (is.null(arg_names)) character(0) else arg_names[!unnamed & nzchar(arg_names)]
+  unknown_named <- setdiff(named_args, "sparse")
+  if (length(unknown_named) > 0) {
+    stop("Unknown named argument(s) for `aggregate()`: ", paste(unknown_named, collapse = ", "), call. = FALSE)
+  }
 
   if (!any(unnamed)) {
     stop("Must provide exactly one scoped target helper such as `tree(VOLCFGRS)`, `cond()`, or `tree_history(...)`.")
@@ -153,19 +161,20 @@ setMethod("aggregate_data", "GRMAnalysis", function(spec, handler, ...) {
     stop("`aggregate()` accepts exactly one scoped target helper per call.")
   }
 
-  spec <- args[[which(unnamed)]]
+  target_spec <- args[[which(unnamed)]]
   sparse <- if ("sparse" %in% names(args)) args[["sparse"]] else FALSE
+  expander_name <- rlang::as_name(rlang::ensym(expander))
 
-  parsed <- .parse_target_spec(spec, "aggregate")
+  parsed <- .parse_target_spec(target_spec, "aggregate")
   slot_name <- parsed$slot
   targets <- parsed$targets
 
   if (slot_name == "tree") {
     if (length(targets) == 0 || (length(targets) == 1 && targets == "1")) {
-      return(.make_tree_aggregates(handler, sparse = sparse))
+      return(.make_tree_aggregates(handler, sparse = sparse, expander = expander_name))
     }
     syms <- rlang::syms(targets)
-    return(.make_tree_aggregates(handler, !!!syms, sparse = sparse))
+    return(.make_tree_aggregates(handler, !!!syms, sparse = sparse, expander = expander_name))
   } else if (slot_name == "cond") {
     if (length(targets) > 0 && !all(targets == "1")) {
       stop("Only `aggregate(cond())` or `aggregate(cond(1))` is currently supported for condition aggregation.")
@@ -173,10 +182,10 @@ setMethod("aggregate_data", "GRMAnalysis", function(spec, handler, ...) {
     return(.make_cond_aggregates(handler, sparse = sparse))
   } else if (slot_name == "tree_history") {
     if (length(targets) == 0 || (length(targets) == 1 && targets == "1")) {
-      return(.make_tree_history_aggregates(handler, sparse = sparse))
+      return(.make_tree_history_aggregates(handler, sparse = sparse, expander = expander_name))
     }
     syms <- rlang::syms(targets)
-    return(.make_tree_history_aggregates(handler, !!!syms, sparse = sparse))
+    return(.make_tree_history_aggregates(handler, !!!syms, sparse = sparse, expander = expander_name))
   } else {
     stop("Unsupported slot: ", slot_name)
   }

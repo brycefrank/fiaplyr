@@ -4,7 +4,7 @@
 \alias{aggregate_data,GRMAnalysis-method}
 \title{Aggregate Data for GRM Analysis}
 \usage{
-\S4method{aggregate_data}{GRMAnalysis}(spec, handler, ...)
+\S4method{aggregate_data}{GRMAnalysis}(spec, handler, ..., expander)
 }
 \arguments{
 \item{spec}{A GRMAnalysis object.}
@@ -12,6 +12,9 @@
 \item{handler}{The EvalHandler object.}
 
 \item{...}{Arguments for aggregation.}
+
+\item{expander}{Tree expansion column used when aggregating tree-level
+summaries (for example, \code{TPA_UNADJ}).}
 }
 \value{
 A lazy query with aggregates.

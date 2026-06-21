@@ -8,6 +8,7 @@ density for the plot.}
 .make_tree_aggregates(
   object,
   ...,
+  expander = "TPA_UNADJ",
   adjusted = FALSE,
   level = "plot",
   sparse = FALSE
@@ -17,6 +18,8 @@ density for the plot.}
 \item{object}{A EvalHandler object.}
 
 \item{...}{Variables to aggregate (tidy-select supported)}
+
+\item{expander}{Tree expansion column used for weighting tree-level sums.}
 
 \item{level}{The level to aggregate to. Can be "plot" or "subplot".}
 }

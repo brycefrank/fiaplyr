@@ -1,5 +1,5 @@
 test_that("PostStratifiedRatioEstimator estimates correct ratios", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   # Create Handlers
@@ -45,7 +45,7 @@ test_that("PostStratifiedRatioEstimator estimates correct ratios", {
 })
 
 test_that("PostStratifiedRatioEstimator supports ratios without explicit domains", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001)
@@ -78,7 +78,7 @@ test_that("estimate_ratio() preserves user-defined target names", {
 })
 
 test_that("PostStratifiedRatioEstimator supports shared domains on both sides", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001) |>
@@ -99,7 +99,7 @@ test_that("PostStratifiedRatioEstimator supports shared domains on both sides", 
 })
 
 test_that("PostStratifiedRatioEstimator can restrict ratios to matched domains", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001) |>
@@ -125,7 +125,7 @@ test_that("PostStratifiedRatioEstimator can restrict ratios to matched domains",
 })
 
 test_that("PostStratifiedRatioEstimator rejects matched domains with incompatible schemas", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler_num <- eval_handler(con, evalid = 1001) |>
@@ -148,7 +148,7 @@ test_that("PostStratifiedRatioEstimator rejects matched domains with incompatibl
 })
 
 test_that("PostStratifiedRatioEstimator can append numerator and denominator component stats", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001)

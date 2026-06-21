@@ -139,6 +139,34 @@
   }, character(1))
 }
 
+.validate_expander_column <- function(.data, expander, target) {
+  if (!is.character(expander) || length(expander) != 1 || is.na(expander) || expander == "") {
+    stop("`expander` must resolve to exactly one column name.", call. = FALSE)
+  }
+
+  if (!expander %in% colnames(.data)) {
+    stop(
+      "`expander` column `", expander, "` was not found in ", target, " aggregation data.",
+      call. = FALSE
+    )
+  }
+
+  probe <- tryCatch(
+    .data %>%
+      dplyr::select(dplyr::all_of(expander)) %>%
+      dplyr::collect(n = 1),
+    error = function(e) {
+      stop("Unable to validate `expander` column `", expander, "`: ", conditionMessage(e), call. = FALSE)
+    }
+  )
+
+  if (ncol(probe) != 1 || !is.numeric(probe[[1]])) {
+    stop("`expander` column `", expander, "` must be numeric.", call. = FALSE)
+  }
+
+  invisible(expander)
+}
+
 
 #' Aggregate condition data to plot or subplot levels
 #'
@@ -258,10 +286,15 @@
 #'
 #' @param object A EvalHandler object.
 #' @param ... Variables to aggregate (tidy-select supported)
+#' @param expander Tree expansion column used for weighting tree-level sums.
 #' @param level The level to aggregate to. Can be "plot" or "subplot".
 #' @keywords internal
-.make_tree_aggregates <- function(object, ..., adjusted = FALSE, level = "plot", sparse = FALSE) {
+.make_tree_aggregates <- function(object, ..., expander = "TPA_UNADJ", adjusted = FALSE, level = "plot", sparse = FALSE) {
   res <- .build_tree_data(object)
+  .validate_expander_column(res, expander, "tree")
+  res <- res %>%
+    dplyr::mutate(.expander_wt = .data[[expander]]) %>%
+    dplyr::filter(!is.na(.expander_wt))
 
   plot_keys <- .plot_keys_raw
   plot_domains <- .resolve_partition_domains(object@plot_domains, "plot", colnames(res))
@@ -298,7 +331,7 @@
   if (length(target_vars) == 0) {
     aggregated <- res %>%
       dplyr::summarise(
-        tree_count = sum(TPA_UNADJ, na.rm = TRUE)
+        tree_count = sum(.expander_wt, na.rm = TRUE)
       ) %>%
       dplyr::ungroup()
   } else {
@@ -314,7 +347,7 @@
 
     aggregated <- res %>%
       dplyr::summarise(
-        !!!agg_exprs
+        dplyr::across(c(!!!target_vars), function(x) sum(.expander_wt * x, na.rm = TRUE))
       ) %>%
       dplyr::ungroup()
   }
@@ -344,10 +377,15 @@
 #'
 #' @param object A EvalHandler object.
 #' @param ... Additional arguments.
+#' @param expander Tree expansion column used for weighting tree-history sums.
 #' @param sparse Logical. If TRUE, returns a sparse result.
 #' @keywords internal
-.make_tree_history_aggregates <- function(object, ..., sparse = FALSE) {
+.make_tree_history_aggregates <- function(object, ..., expander = "TPA_UNADJ", sparse = FALSE) {
   res <- .build_tree_history_data(object)
+  .validate_expander_column(res, expander, "tree_history")
+  res <- res %>%
+    dplyr::mutate(.expander_wt = .data[[expander]]) %>%
+    dplyr::filter(!is.na(.expander_wt))
 
   plot_keys <- .plot_keys_raw
   plot_domains <- .resolve_partition_domains(object@plot_domains, "plot", colnames(res))
@@ -384,13 +422,13 @@
   if (length(target_vars) == 0) {
     aggregated <- res %>%
       dplyr::summarise(
-        tree_count = sum(TPA_UNADJ, na.rm = TRUE)
+        tree_count = sum(.expander_wt, na.rm = TRUE)
       ) %>%
       dplyr::ungroup()
   } else {
     aggregated <- res %>%
       dplyr::summarise(
-        dplyr::across(c(!!!target_vars), function(x) sum(TPA_UNADJ * x, na.rm = TRUE))
+        dplyr::across(c(!!!target_vars), function(x) sum(.expander_wt * x, na.rm = TRUE))
       ) %>%
       dplyr::ungroup()
   }
@@ -432,10 +470,6 @@
     warning("REF_SPECIES table not available; continuing without species reference columns.", call. = FALSE)
   }
 
-  # Apply standard default filter for tree data
-  res <- res %>%
-    dplyr::filter(!is.na(TPA_UNADJ))
-
   # Apply condition-level mutations (these affect all trees in those conditions)
   if (length(object@cond_mutations) > 0) {
     res <- res %>% dplyr::mutate(!!!object@cond_mutations)
@@ -476,10 +510,6 @@
   } else {
     warning("REF_SPECIES table not available; continuing without species reference columns.", call. = FALSE)
   }
-
-  # Apply standard default filter for tree history data
-  res <- res %>%
-    dplyr::filter(!is.na(TPA_UNADJ))
 
   # Apply condition-level mutations (these affect all trees in those conditions)
   if (length(object@cond_mutations) > 0) {

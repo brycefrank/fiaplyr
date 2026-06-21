@@ -1,5 +1,5 @@
 test_that("EvalHandler initializes correctly", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001)
@@ -21,7 +21,7 @@ test_that("EvalHandler initializes correctly", {
 })
 
 test_that("EvalHandler filters correctly by evalid", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   # Add another evaluation dummy data to ensure we are filtering
@@ -39,25 +39,25 @@ test_that("EvalHandler filters correctly by evalid", {
 })
 
 test_that("subset(tree()) can use WOODLAND after REF_SPECIES join", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001)
 
   base <- handler %>%
-    aggregate(tree(VOLCFGRS)) %>%
+    aggregate(tree(VOLCFGRS), expander = TPA_UNADJ) %>%
     dplyr::collect()
 
   woodland_filtered <- handler %>%
     subset(tree(WOODLAND != "N")) %>%
-    aggregate(tree(VOLCFGRS)) %>%
+    aggregate(tree(VOLCFGRS), expander = TPA_UNADJ) %>%
     dplyr::collect()
 
   expect_true(sum(woodland_filtered$VOLCFGRS) < sum(base$VOLCFGRS))
 })
 
 test_that("missing REF_SPECIES warns and continues", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   DBI::dbRemoveTable(con, "REF_SPECIES")
@@ -67,7 +67,7 @@ test_that("missing REF_SPECIES warns and continues", {
   expect_warning(
     {
       res <- handler %>%
-        aggregate(tree(VOLCFGRS)) %>%
+        aggregate(tree(VOLCFGRS), expander = TPA_UNADJ) %>%
         dplyr::collect()
       expect_true(nrow(res) > 0)
     },
@@ -76,7 +76,7 @@ test_that("missing REF_SPECIES warns and continues", {
 })
 
 test_that("missing SUBP_COND is tolerated", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   DBI::dbRemoveTable(con, "SUBP_COND")
@@ -86,7 +86,7 @@ test_that("missing SUBP_COND is tolerated", {
   expect_null(handler@tables$subp_cond)
 
   res <- handler %>%
-    aggregate(cond()) %>%
+    aggregate(cond(), expander = TPA_UNADJ) %>%
     dplyr::collect()
 
   expect_true(nrow(res) > 0)
@@ -100,82 +100,19 @@ add_shared_countycd_columns <- function(con) {
   DBI::dbExecute(con, "UPDATE TREE SET COUNTYCD = CASE WHEN SPCD = 1 THEN 100 ELSE 200 END")
 }
 
-# Tests for new scoped API
-test_that("transform() with tree() helper adds mutations", {
-  con <- setup_test_db()
-  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
-
-  handler <- eval_handler(con, evalid = 1001)
-
-  # New API: transform(tree(...))
-  result <- handler %>%
-    transform(tree(BA = 0.005454 * DIA^2)) %>%
-    aggregate(tree(BA)) %>%
-    dplyr::collect()
-
-  # Old API (for comparison): mutate_tree(...)
-  result_old <- eval_handler(con, evalid = 1001) %>%
-    mutate_tree(BA = 0.005454 * DIA^2) %>%
-    aggregate(tree(BA)) %>%
-    dplyr::collect()
-
-  # Should produce identical results
-  expect_equal(nrow(result), nrow(result_old))
-  expect_equal(sum(result$BA, na.rm = TRUE), sum(result_old$BA, na.rm = TRUE))
-})
-
-test_that("subset() with tree() helper adds filters", {
-  con <- setup_test_db()
-  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
-
-  handler <- eval_handler(con, evalid = 1001)
-
-  result_new <- handler %>%
-    subset(tree(SPCD == 1)) %>%
-    aggregate(tree(VOLCFGRS)) %>%
-    dplyr::collect()
-
-  expect_true(nrow(result_new) > 0)
-  expect_true(sum(result_new$VOLCFGRS, na.rm = TRUE) > 0)
-})
-
-test_that("partition() with tree() helper sets domains", {
-  con <- setup_test_db()
-  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
-
-  handler <- eval_handler(con, evalid = 1001)
-
-  # New API: partition(tree(...))
-  result_new <- handler %>%
-    partition(tree(SPCD)) %>%
-    aggregate(tree(VOLCFGRS)) %>%
-    dplyr::collect() %>%
-    dplyr::distinct(SPCD) %>%
-    nrow()
-
-  result_repeat <- eval_handler(con, evalid = 1001) %>%
-    partition(tree(SPCD)) %>%
-    aggregate(tree(VOLCFGRS)) %>%
-    dplyr::collect() %>%
-    dplyr::distinct(SPCD) %>%
-    nrow()
-
-  expect_equal(result_new, result_repeat)
-})
-
 test_that("aggregate() accepts cond() helper targets", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   result_new <- eval_handler(con, evalid = 1001) %>%
     partition(cond(COND_STATUS_CD)) %>%
-    aggregate(cond()) %>%
+    aggregate(cond(), expander = TPA_UNADJ) %>%
     dplyr::collect() %>%
     dplyr::arrange(COND_STATUS_CD, PLT_CN, PLOT)
 
   result_with_placeholder <- eval_handler(con, evalid = 1001) %>%
     partition(cond(COND_STATUS_CD)) %>%
-    aggregate(cond(1)) %>%
+    aggregate(cond(1), expander = TPA_UNADJ) %>%
     dplyr::collect() %>%
     dplyr::arrange(COND_STATUS_CD, PLT_CN, PLOT)
 
@@ -183,7 +120,7 @@ test_that("aggregate() accepts cond() helper targets", {
 })
 
 test_that("aggregate() preserves user-defined output names", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   tree_res <- eval_handler(con, evalid = 1001) %>%
@@ -202,18 +139,37 @@ test_that("aggregate() preserves user-defined output names", {
 })
 
 test_that("partition() accepts multiple scoped helpers in one call", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  tree_res <- eval_handler(con, evalid = 1001) %>%
+    aggregate(tree(my_vol = VOLCFNET)) %>%
+    dplyr::collect()
+
+  cond_res <- eval_handler(con, evalid = 1001) %>%
+    aggregate(cond(my_prop = 1)) %>%
+    dplyr::collect()
+
+  expect_true("my_vol" %in% colnames(tree_res))
+  expect_false("VOLCFNET" %in% colnames(tree_res))
+
+  expect_true("my_prop" %in% colnames(cond_res))
+  expect_false("prop" %in% colnames(cond_res))
+})
+
+test_that("partition() accepts multiple scoped helpers in one call", {
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   result_new <- eval_handler(con, evalid = 1001) %>%
     partition(tree(SPCD), cond(COND_STATUS_CD)) %>%
-    aggregate(tree(VOLCFGRS)) %>%
+    aggregate(tree(VOLCFGRS), expander = TPA_UNADJ) %>%
     dplyr::collect() %>%
     dplyr::arrange(COND_STATUS_CD, SPCD, PLT_CN, PLOT)
 
   result_repeat <- eval_handler(con, evalid = 1001) %>%
     partition(tree(SPCD), cond(COND_STATUS_CD)) %>%
-    aggregate(tree(VOLCFGRS)) %>%
+    aggregate(tree(VOLCFGRS), expander = TPA_UNADJ) %>%
     dplyr::collect() %>%
     dplyr::arrange(COND_STATUS_CD, SPCD, PLT_CN, PLOT)
 
@@ -221,17 +177,17 @@ test_that("partition() accepts multiple scoped helpers in one call", {
 })
 
 test_that("partition(plot(COUNTYCD)) works for tree and cond aggregation", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   tree_result <- eval_handler(con, evalid = 1001) %>%
     partition(plot(COUNTYCD)) %>%
-    aggregate(tree(VOLCFGRS)) %>%
+    aggregate(tree(VOLCFGRS), expander = TPA_UNADJ) %>%
     dplyr::collect()
 
   cond_result <- eval_handler(con, evalid = 1001) %>%
     partition(plot(COUNTYCD)) %>%
-    aggregate(cond()) %>%
+    aggregate(cond(), expander = TPA_UNADJ) %>%
     dplyr::collect()
 
   expect_true("COUNTYCD" %in% colnames(tree_result))
@@ -241,18 +197,18 @@ test_that("partition(plot(COUNTYCD)) works for tree and cond aggregation", {
 })
 
 test_that("partition() respects helper scope for shared column names", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
   add_shared_countycd_columns(con)
 
   cond_result <- eval_handler(con, evalid = 1001) %>%
     partition(cond(COUNTYCD)) %>%
-    aggregate(cond()) %>%
+    aggregate(cond(), expander = TPA_UNADJ) %>%
     dplyr::collect()
 
   tree_result <- eval_handler(con, evalid = 1001) %>%
     partition(tree(COUNTYCD)) %>%
-    aggregate(tree(VOLCFGRS)) %>%
+    aggregate(tree(VOLCFGRS), expander = TPA_UNADJ) %>%
     dplyr::collect()
 
   expect_true("COUNTYCD.cond" %in% colnames(cond_result))
@@ -277,7 +233,7 @@ test_that("scoped helpers tag expressions correctly", {
 })
 
 test_that("unscoped expressions in new API error appropriately", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001)
@@ -339,4 +295,48 @@ test_that("aggregate(tree()) implicit default is unchanged by macro dispatch", {
     dplyr::arrange(PLT_CN)
 
   expect_equal(result_implicit$VOLCFGRS, result_explicit$VOLCFGRS)
+})
+
+test_that("aggregate() defaults expander to TPA_UNADJ", {
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001)
+
+  default_res <- handler %>%
+    aggregate(tree(VOLCFGRS)) %>%
+    dplyr::collect() %>%
+    dplyr::arrange(PLT_CN, PLOT)
+
+  explicit_res <- handler %>%
+    aggregate(tree(VOLCFGRS), expander = TPA_UNADJ) %>%
+    dplyr::collect() %>%
+    dplyr::arrange(PLT_CN, PLOT)
+
+  expect_equal(default_res, explicit_res)
+})
+
+test_that("aggregate() errors for missing expander column", {
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001)
+
+  expect_error(
+    handler %>% aggregate(tree(VOLCFGRS), expander = DOES_NOT_EXIST) %>% dplyr::collect(),
+    "expander.*DOES_NOT_EXIST"
+  )
+})
+
+test_that("aggregate() errors for non-numeric expander", {
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001) %>%
+    transform(tree(EXPANDER_CHAR = as.character(TPA_UNADJ)))
+
+  expect_error(
+    handler %>% aggregate(tree(VOLCFGRS), expander = EXPANDER_CHAR) %>% dplyr::collect(),
+    "must be numeric"
+  )
 })

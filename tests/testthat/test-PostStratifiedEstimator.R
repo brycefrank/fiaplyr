@@ -1,5 +1,5 @@
 test_that("PostStratifiedEstimator estimates correct forested area", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   # Create Handlers
@@ -50,7 +50,7 @@ test_that("condition estimates support MACRO condition proportion basis", {
 })
 
 test_that("PostStratifiedEstimator supports mean and total outputs", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001) |>
@@ -101,7 +101,7 @@ test_that("estimate() preserves user-defined target names", {
 })
 
 test_that("margins=TRUE for cond adds grand total row and full rows", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001) |>
@@ -129,7 +129,7 @@ test_that("margins=TRUE for cond adds grand total row and full rows", {
 })
 
 test_that("margins=TRUE for tree produces correct domain subsets", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001) |>
@@ -158,7 +158,7 @@ test_that("margins=TRUE for tree produces correct domain subsets", {
 })
 
 test_that("marginal estimates match direct re-estimation with reduced domains", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler_both <- eval_handler(con, evalid = 1001) |>
@@ -192,7 +192,7 @@ test_that("marginal estimates match direct re-estimation with reduced domains", 
 })
 
 test_that("margins=TRUE with no domains returns a single grand total row", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001)
@@ -207,7 +207,7 @@ test_that("margins=TRUE with no domains returns a single grand total row", {
 })
 
 test_that("is_marginal column is absent when margins=FALSE", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001) |>
@@ -222,7 +222,7 @@ test_that("is_marginal column is absent when margins=FALSE", {
 })
 
 test_that("is_marginal correctly flags marginal vs full-domain rows", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001) |>
@@ -243,7 +243,7 @@ test_that("is_marginal correctly flags marginal vs full-domain rows", {
 })
 
 test_that("is_marginal correctly flags cond marginal rows", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001) |>
@@ -262,7 +262,7 @@ test_that("is_marginal correctly flags cond marginal rows", {
 })
 
 setup_grm_test_db <- function() {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
 
   DBI::dbWriteTable(con, "TREE_GRM_BEGIN", data.frame(
     TRE_CN = c(1, 2, 3, 4, 5, 6, 7, 8),
@@ -317,7 +317,7 @@ test_that("tree_history margins use cond and tree_history domains", {
 })
 
 test_that("tree_history estimates require GRMAnalysis handlers", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001)

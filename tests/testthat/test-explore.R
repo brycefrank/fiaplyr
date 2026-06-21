@@ -1,5 +1,5 @@
 test_that("explore_evals lists evaluations", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   # Add another evaluation

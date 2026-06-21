@@ -4,7 +4,7 @@
 \alias{aggregate_data,StatusAnalysis-method}
 \title{Aggregate Data for Status Analysis}
 \usage{
-\S4method{aggregate_data}{StatusAnalysis}(spec, handler, ...)
+\S4method{aggregate_data}{StatusAnalysis}(spec, handler, ..., expander)
 }
 \arguments{
 \item{spec}{A StatusAnalysis object.}
@@ -12,6 +12,9 @@
 \item{handler}{The EvalHandler object.}
 
 \item{...}{Arguments for aggregation (scoped target helper, sparse, etc.)}
+
+\item{expander}{Tree expansion column used when aggregating tree-level
+summaries (for example, \code{TPA_UNADJ}).}
 }
 \value{
 A lazy query with aggregates.

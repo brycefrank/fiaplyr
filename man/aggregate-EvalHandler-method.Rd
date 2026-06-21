@@ -4,13 +4,16 @@
 \alias{aggregate,EvalHandler-method}
 \title{Aggregate a Handler to the Plot Level}
 \usage{
-\S4method{aggregate}{EvalHandler}(handler, ...)
+\S4method{aggregate}{EvalHandler}(handler, ..., expander = TPA_UNADJ)
 }
 \arguments{
 \item{handler}{A EvalHandler object.}
 
 \item{...}{A scoped target helper such as \code{tree(VOLCFGRS)} or \code{cond()}, and
 optional arguments like \code{sparse}.}
+
+\item{expander}{Tree expansion column used when aggregating tree-level
+summaries (for example, \code{TPA_UNADJ}). Defaults to \code{TPA_UNADJ}.}
 }
 \value{
 A lazy query with plot-level summaries.

@@ -25,9 +25,11 @@ setGeneric("initialize_tables", function(spec, db, evalid, backend = NULL) {
 #' @param spec An AnalysisSpec object.
 #' @param handler The EvalHandler object.
 #' @param ... Arguments for aggregation.
+#' @param expander Tree expansion column used when aggregating tree-level
+#'   summaries (for example, `TPA_UNADJ`).
 #' @return A lazy query.
 #' @export
-setGeneric("aggregate_data", function(spec, handler, ...) {
+setGeneric("aggregate_data", function(spec, handler, ..., expander) {
   standardGeneric("aggregate_data")
 })
 
