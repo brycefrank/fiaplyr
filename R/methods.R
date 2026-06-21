@@ -15,20 +15,6 @@
 #'   aggregate(tree(VOLCFGRS))
 setGeneric("aggregate", function(handler, ...) standardGeneric("aggregate"))
 
-#' Aggregate Trees to Plot Level
-#'
-#' @param object A handler object.
-#' @param ... Additional arguments.
-#' @export
-setGeneric("aggregate_tree", function(object, ...) standardGeneric("aggregate_tree"))
-
-#' Aggregate Conditions to Plot Level
-#'
-#' @param object A handler object.
-#' @param ... Additional arguments.
-#' @export
-setGeneric("aggregate_cond", function(object, ...) standardGeneric("aggregate_cond"))
-
 #' @export
 #' @rdname mutate_tree
 #' @title Mutate Tree Table
@@ -44,38 +30,6 @@ setGeneric("mutate_tree", function(handler, ...) standardGeneric("mutate_tree"))
 #' @param handler A handler object.
 #' @param ... Additional arguments.
 setGeneric("mutate_cond", function(handler, ...) standardGeneric("mutate_cond"))
-
-#' @export
-#' @rdname filter_tree
-#' @title Filter Tree Table
-#' @description **Deprecated.** Use `subset(tree(...))` instead.
-#' @param handler A handler object.
-#' @param ... Additional arguments.
-setGeneric("filter_tree", function(handler, ...) standardGeneric("filter_tree"))
-
-#' @export
-#' @rdname filter_cond
-#' @title Filter Condition Table
-#' @description **Deprecated.** Use `subset(cond(...))` instead.
-#' @param handler A handler object.
-#' @param ... Additional arguments.
-setGeneric("filter_cond", function(handler, ...) standardGeneric("filter_cond"))
-
-#' @export
-#' @rdname set_tree_domains
-#' @title Set Tree Domain Variables
-#' @description **Deprecated.** Use `partition(tree(...))` instead.
-#' @param handler A handler object.
-#' @param ... Additional arguments.
-setGeneric("set_tree_domains", function(handler, ...) standardGeneric("set_tree_domains"))
-
-#' @export
-#' @rdname set_cond_domains
-#' @title Set Condition Domain Variables
-#' @description **Deprecated.** Use `partition(cond(...))` instead.
-#' @param handler A handler object.
-#' @param ... Additional arguments.
-setGeneric("set_cond_domains", function(handler, ...) standardGeneric("set_cond_domains"))
 
 #' Add or Modify Columns of a Handler
 #'

@@ -84,7 +84,7 @@ used in tandem with the `tree_history()` helper. For example, if the user
 desires an estimate of the mortality volume over the period, then each tree is
 assigned a value of zero if it is alive at the end of the period, and the
 midpoint volume if it is dead at the end of the period. This can be done using
-the `grm_mortality()` gelper
+the `grm_mortality()` helper
 
 ```{r}
 handler |>
@@ -111,17 +111,20 @@ to use: either the beginning, middle, or ending trees per acre.
 mort_handler <- handler |>
   transform(
     tree_history(
-      mortality = grm_mortality(),
+      mortality = (STATUSCD_begin == 1L & STATUSCD == 2L) | (is.na(STATUSCD_begin) & STATUSCD == 2L),
       ingrowth = grm_ingrowth_live()
     )
   ) |>
   subset(
     tree_history(mortality == 1, DIA_begin >= 5, WOODLAND == 'N')
+  ) |>
+  transform(
+    tree_history(volcfsnd_annual = VOLCFSND_midpt / REMPER)
   )
 
 y_bar <- mort_handler |>
-  aggregate(tree_history(VOLCFGRS)) |>
-  pull(VOLCFGRS) |>
+  aggregate(tree_history(volcfsnd_annual)) |>
+  pull(volcfsnd_annual) |>
   mean()
 
 A <- mort_handler@tables$pop_estn_unit |>
@@ -132,7 +135,7 @@ A * y_bar
 
 mort_handler |>
   PostStratifiedEstimator() |>
-  estimate(tree_history(VOLCFGRS), output = "total")
+  estimate(tree_history(volcfsnd_annual), output = "total")
 ```
 
 

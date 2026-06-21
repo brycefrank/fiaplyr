@@ -97,6 +97,13 @@ setMethod("initialize_tables", "GRMAnalysis", function(spec, db, evalid, backend
   tree_history_qry <- tree_qry
 
   tree_history_qry <- tree_history_qry %>%
+    dplyr::left_join(
+      ptree_qry %>%
+        dplyr::transmute(PREV_TRE_CN = CN, TPA_UNADJ_begin = TPA_UNADJ),
+      by = "PREV_TRE_CN"
+    )
+
+  tree_history_qry <- tree_history_qry %>%
     dplyr::left_join(tree_grm_begin_qry, by = c("CN" = "TRE_CN"), suffix = c("", "_begin"))
 
   tree_history_qry <- tree_history_qry %>%

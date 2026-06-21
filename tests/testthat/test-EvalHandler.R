@@ -38,7 +38,7 @@ test_that("EvalHandler filters correctly by evalid", {
   expect_equal(desc, "Test Evaluation")
 })
 
-test_that("filter_tree can use WOODLAND after REF_SPECIES join", {
+test_that("subset(tree()) can use WOODLAND after REF_SPECIES join", {
   con <- setup_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
@@ -49,7 +49,7 @@ test_that("filter_tree can use WOODLAND after REF_SPECIES join", {
     dplyr::collect()
 
   woodland_filtered <- handler %>%
-    filter_tree(WOODLAND != "N") %>%
+    subset(tree(WOODLAND != "N")) %>%
     aggregate(tree(VOLCFGRS)) %>%
     dplyr::collect()
 
@@ -130,21 +130,13 @@ test_that("subset() with tree() helper adds filters", {
 
   handler <- eval_handler(con, evalid = 1001)
 
-  # New API: subset(tree(...)) - use SPCD which exists in TREE table
   result_new <- handler %>%
     subset(tree(SPCD == 1)) %>%
     aggregate(tree(VOLCFGRS)) %>%
     dplyr::collect()
 
-  # Old API (for comparison): filter_tree(...)
-  result_old <- eval_handler(con, evalid = 1001) %>%
-    filter_tree(SPCD == 1) %>%
-    aggregate(tree(VOLCFGRS)) %>%
-    dplyr::collect()
-
-  # Should produce identical results
-  expect_equal(nrow(result_new), nrow(result_old))
-  expect_equal(sum(result_new$VOLCFGRS, na.rm = TRUE), sum(result_old$VOLCFGRS, na.rm = TRUE))
+  expect_true(nrow(result_new) > 0)
+  expect_true(sum(result_new$VOLCFGRS, na.rm = TRUE) > 0)
 })
 
 test_that("partition() with tree() helper sets domains", {
@@ -161,16 +153,14 @@ test_that("partition() with tree() helper sets domains", {
     dplyr::distinct(SPCD) %>%
     nrow()
 
-  # Old API (for comparison): set_tree_domains(...)
-  result_old <- eval_handler(con, evalid = 1001) %>%
-    set_tree_domains(SPCD) %>%
+  result_repeat <- eval_handler(con, evalid = 1001) %>%
+    partition(tree(SPCD)) %>%
     aggregate(tree(VOLCFGRS)) %>%
     dplyr::collect() %>%
     dplyr::distinct(SPCD) %>%
     nrow()
 
-  # Should produce same number of domain levels
-  expect_equal(result_new, result_old)
+  expect_equal(result_new, result_repeat)
 })
 
 test_that("aggregate() accepts cond() helper targets", {
@@ -221,14 +211,13 @@ test_that("partition() accepts multiple scoped helpers in one call", {
     dplyr::collect() %>%
     dplyr::arrange(COND_STATUS_CD, SPCD, PLT_CN, PLOT)
 
-  result_old <- eval_handler(con, evalid = 1001) %>%
-    set_tree_domains(SPCD) %>%
-    set_cond_domains(COND_STATUS_CD) %>%
+  result_repeat <- eval_handler(con, evalid = 1001) %>%
+    partition(tree(SPCD), cond(COND_STATUS_CD)) %>%
     aggregate(tree(VOLCFGRS)) %>%
     dplyr::collect() %>%
     dplyr::arrange(COND_STATUS_CD, SPCD, PLT_CN, PLOT)
 
-  expect_equal(result_new, result_old)
+  expect_equal(result_new, result_repeat)
 })
 
 test_that("partition(plot(COUNTYCD)) works for tree and cond aggregation", {

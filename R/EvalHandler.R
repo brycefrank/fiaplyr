@@ -477,104 +477,6 @@ setMethod("mutate_cond", "EvalHandler", function(handler, ...) {
   return(handler)
 })
 
-#' Set Tree Domain Variables (Deprecated)
-#'
-#' **Deprecated.** Use `partition(tree(...))` instead.
-#'
-#' @param handler A EvalHandler object.
-#' @param ... Domain variable names (unquoted column names).
-#' @return A EvalHandler object with the tree domain variables set.
-#' @export
-setMethod("set_tree_domains", "EvalHandler", function(handler, ...) {
-  lifecycle::deprecate_warn(
-    "0.1.0",
-    "set_tree_domains()",
-    details = "Use `handler |> partition(tree(...))` instead of `handler |> set_tree_domains(...)` to set tree domain variables."
-  )
-
-  # Capture expressions as quosures and wrap them in tree()
-  new_groups <- dplyr::quos(...)
-  attr(new_groups, "target_table") <- "tree"
-
-  # Overwrite existing grouping
-  handler@tree_domains <- new_groups
-
-  return(handler)
-})
-
-#' Set Condition Domain Variables (Deprecated)
-#'
-#' **Deprecated.** Use `partition(cond(...))` instead.
-#'
-#' @param handler A EvalHandler object.
-#' @param ... Domain variable names (unquoted column names).
-#' @return A EvalHandler object with the condition domain variables set.
-#' @export
-setMethod("set_cond_domains", "EvalHandler", function(handler, ...) {
-  lifecycle::deprecate_warn(
-    "0.1.0",
-    "set_cond_domains()",
-    details = "Use `handler |> partition(cond(...))` instead of `handler |> set_cond_domains(...)` to set condition domain variables."
-  )
-
-  # Capture expressions as quosures and wrap them in cond()
-  new_groups <- dplyr::quos(...)
-  attr(new_groups, "target_table") <- "cond"
-
-  # Overwrite existing grouping
-  handler@cond_domains <- new_groups
-
-  return(handler)
-})
-
-#' Filter the Tree Table (Deprecated)
-#'
-#' **Deprecated.** Use `subset(tree(...))` instead.
-#'
-#' @param handler A EvalHandler object.
-#' @param ... Logical predicates defined in terms of the variables in the tree table.
-#' @return A EvalHandler object with pending filters.
-#' @export
-setMethod("filter_tree", "EvalHandler", function(handler, ...) {
-  lifecycle::deprecate_warn(
-    "0.1.0",
-    "filter_tree()",
-    details = "Use `handler |> subset(tree(...))` instead of `handler |> filter_tree(...)` to apply tree-level filters."
-  )
-
-  # Capture expressions as quosures and wrap them in tree()
-  new_filters <- dplyr::quos(...)
-  attr(new_filters, "target_table") <- "tree"
-
-  handler@tree_filters <- c(handler@tree_filters, new_filters)
-
-  return(handler)
-})
-
-#' Filter the Condition Table (Deprecated)
-#'
-#' **Deprecated.** Use `subset(cond(...))` instead.
-#'
-#' @param handler A EvalHandler object.
-#' @param ... Logical predicates defined in terms of the variables in the condition table.
-#' @return A EvalHandler object with pending filters.
-#' @export
-setMethod("filter_cond", "EvalHandler", function(handler, ...) {
-  lifecycle::deprecate_warn(
-    "0.1.0",
-    "filter_cond()",
-    details = "Use `handler |> subset(cond(...))` instead of `handler |> filter_cond(...)` to apply condition-level filters."
-  )
-
-  # Capture expressions as quosures and wrap them in cond()
-  new_filters <- dplyr::quos(...)
-  attr(new_filters, "target_table") <- "cond"
-
-  handler@cond_filters <- c(handler@cond_filters, new_filters)
-
-  return(handler)
-})
-
 #' Aggregate a Handler to the Plot Level
 #'
 #' Aggregation generates plot (or subplot) level summaries of inventory
@@ -589,28 +491,6 @@ setMethod("aggregate", "EvalHandler", function(handler, ...) {
   aggregate_data(handler@spec, handler, ...)
 })
 
-#' Aggregate Trees to Plot Level
-#'
-#' @param object A EvalHandler object.
-#' @param ... Variables to aggregate (tidy-select supported)
-#' @param sparse Logical. If TRUE, returns a sparse result (only observed combinations). Defaults to FALSE.
-#' @return A lazy query with plot-level summaries.
-#' @export
-setMethod("aggregate_tree", "EvalHandler", function(object, ..., sparse = FALSE) {
-  .Deprecated("aggregate")
-  .make_tree_aggregates(object, ..., sparse = sparse)
-})
-
-#' Aggregate Conditions to Plot Level
-#'
-#' @param object A EvalHandler object.
-#' @param sparse Logical. If TRUE, returns a sparse result (only observed combinations). Defaults to FALSE.
-#' @return A lazy query with plot-level summaries.
-#' @export
-setMethod("aggregate_cond", "EvalHandler", function(object, sparse = FALSE) {
-  .Deprecated("aggregate")
-  .make_cond_aggregates(object, sparse = sparse)
-})
 #' @describeIn get_strata_weights Get strata weights for EvalHandler
 setMethod("get_strata_weights", "EvalHandler", function(handler) {
   handler@tables$pop_stratum %>%
