@@ -72,14 +72,17 @@ setMethod("show", "PostStratifiedEstimator", function(object) {
 #'   strict subset of the active domain variables (including the grand total
 #'   with no domains). Dropped domain columns appear as `NA`. Defaults to
 #'   `FALSE`.
+#' @param expander Tree expansion column used when aggregating tree and
+#'   tree-history targets (for example, `TPA_UNADJ`). Defaults to `TPA_UNADJ`.
 #' @return A dataframe with estimates.
 #' @export
-setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = "mean", margins = FALSE) {
+setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = "mean", margins = FALSE, expander = TPA_UNADJ) {
   args <- list(...)
   if (length(args) != 1) {
     stop("Must provide exactly one scoped target helper, such as `tree(VOLCFGRS)` or `cond()`.")
   }
   output <- match.arg(output, c("mean", "total"))
+  expander_name <- rlang::as_name(rlang::ensym(expander))
 
   parsed <- .parse_target_spec(args[[1]], "estimate")
   slot_name <- parsed$slot
@@ -92,12 +95,12 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = 
     }
     return(.estimate_cond_internal(object, targets = targets, target_names = target_names, output = output, margins = margins))
   } else if (slot_name == "tree") {
-    return(.estimate_tree_internal(object, targets, output = output, margins = margins))
+    return(.estimate_tree_internal(object, targets, output = output, margins = margins, expander = expander_name))
   } else if (slot_name == "tree_history") {
     if (!inherits(object@handler@spec, "GRMAnalysis")) {
       stop("`estimate(tree_history(...))` requires a GRMAnalysis handler.")
     }
-    return(.estimate_tree_history_internal(object, targets, output = output, margins = margins))
+    return(.estimate_tree_history_internal(object, targets, output = output, margins = margins, expander = expander_name))
   } else {
     stop("Unsupported slot: ", slot_name)
   }
@@ -133,9 +136,9 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = 
   .ps_pop_stats(eu_stats, handler, targets, output)
 }
 
-.run_tree_history_estimation <- function(handler, targets, output = "mean") {
+.run_tree_history_estimation <- function(handler, targets, output = "mean", expander = "TPA_UNADJ") {
   syms <- rlang::syms(targets)
-  plot_data <- .make_tree_history_aggregates(handler, !!!syms, sparse = TRUE)
+  plot_data <- .make_tree_history_aggregates(handler, !!!syms, expander = expander, sparse = TRUE)
   strata_data <- .ps_join_strata(plot_data, handler)
   strata_stats <- .ps_strata_stats(strata_data, targets)
   eu_stats <- .ps_eu_stats(strata_stats, targets)
@@ -210,9 +213,9 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = 
 }
 
 # Internal helper for tree history estimation
-.estimate_tree_history_internal <- function(object, targets, output = "mean", margins = FALSE) {
+.estimate_tree_history_internal <- function(object, targets, output = "mean", margins = FALSE, expander = "TPA_UNADJ") {
   if (!margins) {
-    return(.run_tree_history_estimation(object@handler, targets, output = output))
+    return(.run_tree_history_estimation(object@handler, targets, output = output, expander = expander))
   }
 
   n_full_cond <- length(object@handler@cond_domains)
@@ -227,7 +230,7 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = 
       h <- object@handler
       h@cond_domains <- c
       h@tree_history_domains <- th
-      res <- .run_tree_history_estimation(h, targets, output = output)
+      res <- .run_tree_history_estimation(h, targets, output = output, expander = expander)
       res$is_marginal <- !(length(c) == n_full_cond && length(th) == n_full_tree_history)
       results[[length(results) + 1]] <- res
     }

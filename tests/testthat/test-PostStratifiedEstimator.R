@@ -100,6 +100,24 @@ test_that("estimate() preserves user-defined target names", {
   expect_equal(unique(cond_res$var), "my_prop")
 })
 
+test_that("PostStratifiedEstimator estimate exposes custom expander", {
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001) |>
+    transform(tree(TPA_HALF = TPA_UNADJ / 2))
+
+  pe <- PostStratifiedEstimator(handler)
+
+  res_default <- estimate(pe, tree(VOLCFGRS)) |>
+    dplyr::collect()
+  res_half <- estimate(pe, tree(VOLCFGRS), expander = TPA_HALF) |>
+    dplyr::collect()
+
+  expect_equal(res_half$estimate, res_default$estimate / 2, tolerance = 1e-10)
+  expect_equal(res_half$se, res_default$se / 2, tolerance = 1e-10)
+})
+
 test_that("margins=TRUE for cond adds grand total row and full rows", {
   con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))

@@ -129,7 +129,9 @@ setGeneric("get_strata_weights", function(handler) standardGeneric("get_strata_w
 #'   variables, including the grand total (no domains). Dropped domain columns
 #'   appear as `NA` in the output, indicating aggregation over all values of
 #'   that variable. Defaults to `FALSE`.
+#' @param expander Tree expansion column used when aggregating tree and
+#'   tree-history targets (for example, `TPA_UNADJ`). Defaults to `TPA_UNADJ`.
 #' @export
-setGeneric("estimate", function(object, ..., output = "mean", margins = FALSE) {
+setGeneric("estimate", function(object, ..., output = "mean", margins = FALSE, expander = TPA_UNADJ) {
 	standardGeneric("estimate")
 })
