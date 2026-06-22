@@ -217,10 +217,17 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
       .make_tree_aggregates(handler, adjusted = TRUE, sparse = TRUE)
     } else {
       syms <- rlang::syms(parsed$targets)
+      names(syms) <- parsed$target_names
       .make_tree_aggregates(handler, !!!syms, adjusted = TRUE, sparse = TRUE)
     }
   } else if (parsed$slot == "cond") {
-    .make_cond_aggregates(handler, adjusted = TRUE, sparse = TRUE)
+    cond_data <- .make_cond_aggregates(handler, adjusted = TRUE, sparse = TRUE)
+    has_named_prop <- length(parsed$targets) > 0 && all(parsed$targets == "1") &&
+      length(parsed$target_names) == 1 && nzchar(parsed$target_names[[1]])
+    if (has_named_prop) {
+      cond_data <- cond_data %>% dplyr::rename(!!parsed$target_names[[1]] := prop)
+    }
+    cond_data
   } else {
     stop("Unsupported slot: ", parsed$slot)
   }
@@ -230,9 +237,21 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
 #' @noRd
 .psr_val_cols <- function(parsed) {
   if (length(parsed$targets) == 0 || (length(parsed$targets) == 1 && parsed$targets == "1")) {
-    if (parsed$slot == "cond") "prop" else "tree_count"
+    if (parsed$slot == "cond") {
+      if (length(parsed$targets) == 1 && length(parsed$target_names) == 1 && nzchar(parsed$target_names[[1]])) {
+        parsed$target_names[[1]]
+      } else {
+        "prop"
+      }
+    } else {
+      "tree_count"
+    }
   } else {
-    parsed$targets
+    if (length(parsed$target_names) == length(parsed$targets)) {
+      ifelse(nzchar(parsed$target_names), parsed$target_names, parsed$targets)
+    } else {
+      parsed$targets
+    }
   }
 }
 

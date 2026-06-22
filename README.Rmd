@@ -92,13 +92,12 @@ An essential step for nearly all FIA analyses is to aggregate inventory
 components, such as trees or conditions, to the plot level. This can be done
 explicitly with `aggregate`. Specify a slot (e.g., `tree` or `cond`) and one or
 more variables to aggregate. Here, we produce plot-level values for `VOLCFNET`
-and `VOLCFGRS`, separating with a `|` as we go.
+and `VOLCFGRS`
 
 ```{r}
 # Calculate Net Cubic Foot Volume per acre for each plot
-# The formula syntax is `slot ~ variable`
 plot_vol <- handler |>
-  aggregate(tree(VOLCFNET, VOLCFGRS))
+  aggregate(tree(net_vol = VOLCFNET, VOLCFGRS))
 
 head(plot_vol)
 ```
@@ -106,7 +105,20 @@ head(plot_vol)
 Plot-level values are often used in statistical models and other applications.
 However, some analyses do not explicitly an `aggregate` step, such as the
 estimation of state-wide means or totals, so it is not always necessary to call
-`aggregate`.
+`aggregate`. Note that columns can be dynamically named, otherwise the stated
+value is used.
+
+Implicitly, `aggregate` uses a weighted sum based on trees per acre (i.e., the
+`TPA_UNADJ` column), but users can specify arbitrary functions. For example,
+the weighted mean of a variable can be used instead
+
+```{r}
+# Calculate Weighted Mean Volume per acre for each plot
+plot_vol_wm <- handler |>
+  aggregate(tree(wm_ht = sum(TPA_UNADJ * HT) / sum(TPA_UNADJ)))
+
+head(plot_vol_wm)
+```
 
 ### Transforms
 
@@ -195,7 +207,7 @@ Recall our desire to estimate basal area, this is now straightforward.
 estimator <- PostStratifiedEstimator(ba_handler)
 
 # Estimate total Basal Area
-ba_est <- estimate(estimator, tree(BA))
+ba_est <- estimate(estimator, tree(ba = BA))
 
 ba_est
 ```

@@ -94,32 +94,54 @@ An essential step for nearly all FIA analyses is to aggregate inventory
 components, such as trees or conditions, to the plot level. This can be
 done explicitly with `aggregate`. Specify a slot (e.g., `tree` or
 `cond`) and one or more variables to aggregate. Here, we produce
-plot-level values for `VOLCFNET` and `VOLCFGRS`, separating with a `|`
-as we go.
+plot-level values for `VOLCFNET` and `VOLCFGRS`
 
 ``` r
 # Calculate Net Cubic Foot Volume per acre for each plot
-# The formula syntax is `slot ~ variable`
 plot_vol <- handler |>
-  aggregate(tree(VOLCFNET, VOLCFGRS))
+  aggregate(tree(net_vol = VOLCFNET, VOLCFGRS))
 
 head(plot_vol)
 #> # Source:   SQL [?? x 7]
-#> # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/RtmpbSWfbJ/temp_libpath10b6f12344d59/fiaplyr/fiadb_vt_mini.duckdb]
-#>   PLT_CN         STATECD COUNTYCD INVYR  PLOT VOLCFNET VOLCFGRS
-#>   <chr>            <int>    <int> <int> <int>    <dbl>    <dbl>
-#> 1 55967629010538      50       19  2004   347    367.     401. 
-#> 2 55972019010538      50       23  2004   885    997.    1277. 
-#> 3 73590923010538      50       11  2006   182   1347.    1584. 
-#> 4 73591222010538      50       11  2006   162     78.3     89.2
-#> 5 55959852010538      50       27  2003   740   1684.    1915. 
-#> 6 73599875010538      50       21  2006  1032   1192.    1626.
+#> # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/Rtmpwec4y9/temp_libpath429c31d1bc8f/fiaplyr/fiadb_vt_mini.duckdb]
+#>   PLT_CN         STATECD COUNTYCD INVYR  PLOT net_vol VOLCFGRS
+#>   <chr>            <int>    <int> <int> <int>   <dbl>    <dbl>
+#> 1 73597381010538      50       21  2006  1491   4027.    4573.
+#> 2 73599875010538      50       21  2006  1032   1192.    1626.
+#> 3 55967629010538      50       19  2004   347    367.     401.
+#> 4 73599444010538      50       21  2006  1212   3154.    3574.
+#> 5 73597861010538      50       21  2006  1324   3306.    3665.
+#> 6 55972019010538      50       23  2004   885    997.    1277.
 ```
 
 Plot-level values are often used in statistical models and other
 applications. However, some analyses do not explicitly an `aggregate`
 step, such as the estimation of state-wide means or totals, so it is not
-always necessary to call `aggregate`.
+always necessary to call `aggregate`. Note that columns can be
+dynamically named, otherwise the stated value is used.
+
+Implicitly, `aggregate` uses a weighted sum based on trees per acre
+(i.e., the `TPA_UNADJ` column), but users can specify arbitrary
+functions. For example, the weighted mean of a variable can be used
+instead
+
+``` r
+# Calculate Weighted Mean Volume per acre for each plot
+plot_vol_wm <- handler |>
+  aggregate(tree(wm_ht = sum(TPA_UNADJ * HT) / sum(TPA_UNADJ)))
+
+head(plot_vol_wm)
+#> # Source:   SQL [?? x 6]
+#> # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/Rtmpwec4y9/temp_libpath429c31d1bc8f/fiaplyr/fiadb_vt_mini.duckdb]
+#>   PLT_CN         STATECD COUNTYCD INVYR  PLOT wm_ht
+#>   <chr>            <int>    <int> <int> <int> <dbl>
+#> 1 73608030010538      50        1  2006   627  34.4
+#> 2 73604172010538      50       25  2006   780  40.6
+#> 3 62272249010538      50        1  2005    11  24.9
+#> 4 62278970010538      50       17  2005  1206  25.9
+#> 5 55949653010538      50        5  2003   122  40.7
+#> 6 55957128010538      50       23  2003  1388  26.9
+```
 
 ### Transforms
 
@@ -140,15 +162,15 @@ plot_ba <- ba_handler |>
 # Verify the output
 head(plot_ba)
 #> # Source:   SQL [?? x 6]
-#> # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/RtmpbSWfbJ/temp_libpath10b6f12344d59/fiaplyr/fiadb_vt_mini.duckdb]
+#> # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/Rtmpwec4y9/temp_libpath429c31d1bc8f/fiaplyr/fiadb_vt_mini.duckdb]
 #>   PLT_CN         STATECD COUNTYCD INVYR  PLOT    BA
 #>   <chr>            <int>    <int> <int> <int> <dbl>
-#> 1 55968984010538      50       19  2004   452 107. 
-#> 2 55972905010538      50       25  2004    22 182. 
-#> 3 62281065010538      50       21  2005   184  92.3
-#> 4 55963513010538      50        7  2004  1313 112. 
-#> 5 55969782010538      50       21  2004  1276 138. 
-#> 6 62282379010538      50       23  2005   406 147.
+#> 1 73610500010538      50        3  2006  1443 163. 
+#> 2 73607961010538      50        1  2006  1492  48.8
+#> 3 73594629010538      50       17  2006   128  68.1
+#> 4 73610611010538      50        3  2006   693  77.4
+#> 5 55958436010538      50       25  2003  1130 159. 
+#> 6 62279824010538      50       19  2005  1100  45.0
 ```
 
 ### Partitions
@@ -167,7 +189,7 @@ plot_ba_by_sp <- ba_handler |>
 
 head(plot_ba_by_sp)
 #> # Source:     SQL [?? x 7]
-#> # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/RtmpbSWfbJ/temp_libpath10b6f12344d59/fiaplyr/fiadb_vt_mini.duckdb]
+#> # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/Rtmpwec4y9/temp_libpath429c31d1bc8f/fiaplyr/fiadb_vt_mini.duckdb]
 #> # Ordered by: desc(BA)
 #>   PLT_CN         STATECD COUNTYCD INVYR  PLOT  SPCD    BA
 #>   <chr>            <int>    <int> <int> <int> <dbl> <dbl>
@@ -196,7 +218,7 @@ plot_ba_balsam <- ba_handler |>
 
 head(plot_ba_balsam)
 #> # Source:     SQL [?? x 6]
-#> # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/RtmpbSWfbJ/temp_libpath10b6f12344d59/fiaplyr/fiadb_vt_mini.duckdb]
+#> # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/Rtmpwec4y9/temp_libpath429c31d1bc8f/fiaplyr/fiadb_vt_mini.duckdb]
 #> # Ordered by: desc(BA)
 #>   PLT_CN         STATECD COUNTYCD INVYR  PLOT    BA
 #>   <chr>            <int>    <int> <int> <int> <dbl>
@@ -219,7 +241,7 @@ plot_ba_balsam <- ba_handler |>
 
 head(plot_ba_balsam)
 #> # Source:     SQL [?? x 7]
-#> # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/RtmpbSWfbJ/temp_libpath10b6f12344d59/fiaplyr/fiadb_vt_mini.duckdb]
+#> # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/Rtmpwec4y9/temp_libpath429c31d1bc8f/fiaplyr/fiadb_vt_mini.duckdb]
 #> # Ordered by: desc(BA)
 #>   PLT_CN         STATECD COUNTYCD INVYR  PLOT  SPCD    BA
 #>   <chr>            <int>    <int> <int> <int> <dbl> <dbl>
@@ -255,13 +277,13 @@ Recall our desire to estimate basal area, this is now straightforward.
 estimator <- PostStratifiedEstimator(ba_handler)
 
 # Estimate total Basal Area
-ba_est <- estimate(estimator, tree(BA))
+ba_est <- estimate(estimator, tree(ba = BA))
 
 ba_est
 #> # A tibble: 1 × 3
 #>   var   estimate    se
 #>   <chr>    <dbl> <dbl>
-#> 1 BA        97.5  1.71
+#> 1 ba        97.5  1.71
 ```
 
 By default, outputs are means, typically representing areal densities.
@@ -293,12 +315,12 @@ ba_by_sp_est <- estimate(estimator_by_sp, tree(BA))
 
 head(ba_by_sp_est)
 #> # A tibble: 6 × 4
-#>    SPCD var   estimate      se
-#>   <dbl> <chr>    <dbl>   <dbl>
-#> 1   743 BA     0.428   0.133  
-#> 2   837 BA     0.00839 0.00823
-#> 3   998 BA     0.0184  0.0165 
-#> 4   407 BA     0.0918  0.0366 
-#> 5   823 BA     0.00581 0.00637
-#> 6   317 BA     0.0492  0.0504
+#>    SPCD var   estimate     se
+#>   <dbl> <chr>    <dbl>  <dbl>
+#> 1   832 BA      0.0687 0.0492
+#> 2   660 BA      0.182  0.0431
+#> 3   318 BA     18.6    0.957 
+#> 4   951 BA      0.271  0.0794
+#> 5   125 BA      0.132  0.0998
+#> 6   500 BA      0.0528 0.0272
 ```
