@@ -1,5 +1,5 @@
 ---
-title: "Growth, Removals, and Mortality"
+title: "Basic Growth, Removals, and Mortality Analysis"
 knitr:
   opts_chunk:
     echo: true
@@ -11,14 +11,14 @@ Growth, removals, and mortality (GRM) refers to a set of estimation procedures
 used by the FIA to quantify forest change. Broadly, trees are assigned to change
 classes, which we refer to as transitions. Then, estimates are constructed based
 on the transition and desired output of the user. Typical outputs include
-estimates of mortality volume, removals, and others. `fiaplyr` provides both
-high-level and low-level access to the GRM paradigm. This vignette focuses on
-high-level access suitable for most basic use cases and focuses on three
-tree bases: all live trees, growing stock trees, and sawtimber trees, and
-two land bases: forest land and timberland. The user selects the GRM
-configuration by specifying the tree and land bases, and proceeding within
-those constraints. More granular analyses can be done with `fiaplyr`, but we
-focus first on these basic cases.
+estimates of mortality volume, removals, and others. Transitions are dependent
+on a pre-specified `tree_basis` and `land_basis`. For example, ingrowth with
+respect to growing stock is more stringent than ingrowth with respect to all
+live trees, because growing stock requires a larger minimum diameter and more
+strict defect constraints. Thus, users must specify the tree and land bases,
+which will facilitate `fiaplyr` in correctly applying the appropriate transition
+rules. Of course, users can entertain custom transitions as well, and such
+advanced use cases are covered in [Advanced Growth, Removals, and Mortality](growth_removals_mortality_advanced.qmd).
 
 ## Specifying a Handler
 
@@ -42,7 +42,14 @@ Here, we see the handler is initialized with a GRM evaluation, and the summary
 statement gives particulars. The specification defaults to a tree basis of
 `all_live` and a land basis of `forest_land`, but these can be changed by
 setting the `tree_basis` and `land_basis` arguments in the `grm_analysis()`
-function.
+function. Options for the tree basis include `all_live`, `growing_stock`, and
+`sawtimber` and options for the land basis include `forest_land` and
+`timberland`.
+
+The core table involved with GRM analyses is the `tree_history` table, which
+contains the tree-level histories for each tree in the remeasurement period, and
+relies on the GRM paradigm of beginning, midpoint, and end values. Users can
+view the lazy query for the `tree_history` table with
 
 ```{r}
 handler@tables$tree_history |>
@@ -58,98 +65,35 @@ not. This complies with typical FIA conventions.
 In the GRM paradigm, trees undergo transitions, primarily based on their life
 history. For example, a tree that is measured and alive at the beginning of the
 period may survive to the endpoint, wherein it is classified as a survivor tree.
-These transition values can be written directly with `tree_history()`
-expressions against the `tree_history` columns.
+Tree transitions are applied when the handler is initialized, using transition
+rules that comply with the selected tree and land bases. Users should interpret
+transitions as a column in the `tree_history` table that contains the transition
+type, for which we use the conventional names from the FIA database, and are
+stored in the `transition` column.
 
 ```{r}
 handler@tables$tree_history |>
-  mutate(
-    survivor = dplyr::if_else(STATUSCD_begin == 1L & STATUSCD == 1L, 1L, 0L, missing = 0L),
-    mortality = dplyr::if_else(STATUSCD_begin == 1L & STATUSCD == 2L & AGENTCD != 80L, 1L, 0L, missing = 0L),
-    ingrowth_live = dplyr::if_else(is.na(PREVDIA) & STATUSCD == 1L, 1L, 0L, missing = 0L)
-  ) |>
-  select(survivor, mortality, ingrowth_live) |>
+  select(transition) |>
   head()
 ```
 
-## GRM Transformations
+## Aggregation and Estimation of Change Components
 
-Roughly, GRM analyses involve sophisticated transformations of columns in the
-`tree_history` slot, and these transformations depend upon the objectives of the
-user. To create these transformations, users rely on the `transform` function,
-used in tandem with the `tree_history()` helper. For example, if the user
-desires an estimate of the mortality volume over the period, then each tree is
-assigned a value of zero if it is alive at the end of the period, and the
-midpoint volume if it is dead at the end of the period.
+Change components refer to the various outputs that users may be interested in,
+such as mortality volume, removals, and others. For high level uses, users
+obtain change components using scoped helpers within the `tree_history`
+call, all of which have the `grm_` prefix. For example, to obtain net cubic
+foot mortality volume, use the following
 
 ```{r}
 handler |>
-  transform(
+  aggregate(
     tree_history(
-      survivor = STATUSCD_begin == 1L & STATUSCD == 1L
-    )
-  ) 
-```
-    This estimate path is available for `GRMAnalysis` handlers that include the
-    `tree_history` table.
-
-
-## Aggregation the the Plot Level
-
-When dealing with multiple plot visits, aggregation to the plot level is more
-complex than the single date case. This occurs because the core operation of
-making an aggregate is a weighted sum involving the expansion factor
-`TPA_UNADJ`, and one must engage with the question of which expansion factor
-to use: either the beginning, middle, or ending trees per acre. 
-
-
-```{r}
-mort_handler <- handler |>
-  transform(
-    tree_history(
-      mortality = (STATUSCD_begin == 1L & STATUSCD == 2L) | (is.na(STATUSCD_begin) & STATUSCD == 2L),
-      ingrowth = is.na(PREVDIA) & STATUSCD == 1L
+      grm_mortality(VOLCFNET)
     )
   ) |>
-  subset(
-    tree_history(mortality == 1, DIA_begin >= 5, WOODLAND == 'N')
-  ) |>
-  transform(
-    tree_history(volcfsnd_annual = VOLCFSND_midpt / REMPER)
-  )
-
-y_bar <- mort_handler |>
-  aggregate(tree_history(volcfsnd_annual)) |>
-  pull(volcfsnd_annual) |>
-  mean()
-
-A <- mort_handler@tables$pop_estn_unit |>
-  pull(AREA_USED) |>
-  sum()
-
-A * y_bar
-
-mort_handler |>
-  PostStratifiedEstimator() |>
-  estimate(tree_history(volcfsnd_annual), output = "total")
+  head()
 ```
 
-
-
-A basic example is that of mortality. An initial volume
-(or other attribute) is observed at the beginning of the remeasurement period,
-and a final volume is observed at the end. If the tree died during the period,
-then the contribution of the tree to
-
-## Annual Net Growth of Merchantable Bole Wood Volume
-
-Following the GRM paradigm, net growth represents the amount of added woody
-material across the landscape after subtracting mortality (note that removals
-are not subtracted). Dividing this value by the number of years in the
-remeasurement period gives the annual net growth.
-
-```{r}
-handler |>
-
-```
-
+Other change components helpers include `grm_removals`, `grm_ingrowth`, and
+`grm_net_change`, `grm_net_growth`, `grm_accretion` and others.

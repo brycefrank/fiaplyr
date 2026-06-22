@@ -28,7 +28,7 @@ status_agg <- status_handler %>%
 # -----------------------------------------------------------------------------
 
 # Initialize handler with the ChangeAnalysis spec.
-# This would load change-specific tables (e.g., TREE_GRM_COMPONENT) in the future.
+# Change-specific table support belongs on the GRM path; this remains a future skeleton.
 change_handler <- eval_handler(db, evalid = 411703, spec = new("ChangeAnalysis"))
 
 # Perform change aggregation
