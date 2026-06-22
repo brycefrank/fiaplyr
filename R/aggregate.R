@@ -302,7 +302,12 @@
       dplyr::ungroup()
   } else {
     agg_exprs <- purrr::map(target_vars, function(var_quo) {
-      rlang::expr(sum(TPA_UNADJ * (!!var_quo), na.rm = TRUE))
+      expr <- rlang::quo_get_expr(var_quo)
+      if (rlang::is_symbol(expr)) {
+        rlang::expr(sum(TPA_UNADJ * (!!var_quo), na.rm = TRUE))
+      } else {
+        var_quo
+      }
     })
     names(agg_exprs) <- .resolve_tree_target_names(target_vars)
 

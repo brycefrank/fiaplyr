@@ -199,9 +199,14 @@ setMethod("aggregate_data", "StatusAnalysis", function(schema, handler, ...) {
     if (length(targets) == 0 || (length(targets) == 1 && targets == "1")) {
       return(.make_tree_aggregates(handler, sparse = sparse))
     }
-    syms <- rlang::syms(targets)
-    names(syms) <- target_names
-    return(.make_tree_aggregates(handler, !!!syms, sparse = sparse))
+    quos <- if (!is.null(parsed$quosures)) {
+      parsed$quosures
+    } else {
+      qs <- rlang::syms(targets)
+      names(qs) <- target_names
+      qs
+    }
+    return(.make_tree_aggregates(handler, !!!quos, sparse = sparse))
   } else if (slot_name == "cond") {
     if (length(targets) > 0 && !all(targets == "1")) {
       stop("Only `aggregate(cond())` or `aggregate(cond(1))` is currently supported for condition aggregation.")

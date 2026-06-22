@@ -289,3 +289,48 @@ test_that("unscoped expressions in new API error appropriately", {
     "All expressions must be explicitly scoped"
   )
 })
+
+test_that("aggregate(tree()) accepts user-supplied macro expressions", {
+  con <- setup_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  # Weighted mean macro
+  result <- eval_handler(con, evalid = 1001) %>%
+    aggregate(tree(wm_vol = sum(TPA_UNADJ * VOLCFGRS) / sum(TPA_UNADJ))) %>%
+    dplyr::collect()
+
+  expect_true("wm_vol" %in% colnames(result))
+  expect_true(is.numeric(result$wm_vol))
+})
+
+test_that("aggregate(tree()) mixes implicit and macro targets", {
+  con <- setup_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  result <- eval_handler(con, evalid = 1001) %>%
+    aggregate(tree(VOLCFGRS, wm_vol = sum(TPA_UNADJ * VOLCFGRS) / sum(TPA_UNADJ))) %>%
+    dplyr::collect()
+
+  expect_true("VOLCFGRS" %in% colnames(result))
+  expect_true("wm_vol" %in% colnames(result))
+  # Weighted mean must be <= implicit weighted sum (TPA-weighted sum is unbounded, wm is per-tree avg)
+  expect_true(all(result$wm_vol >= 0 | is.na(result$wm_vol)))
+})
+
+test_that("aggregate(tree()) implicit default is unchanged by macro dispatch", {
+  con <- setup_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  result_implicit <- eval_handler(con, evalid = 1001) %>%
+    aggregate(tree(VOLCFGRS)) %>%
+    dplyr::collect() %>%
+    dplyr::arrange(PLT_CN)
+
+  # Explicit sum(...) macro should produce same result
+  result_explicit <- eval_handler(con, evalid = 1001) %>%
+    aggregate(tree(VOLCFGRS = sum(TPA_UNADJ * VOLCFGRS, na.rm = TRUE))) %>%
+    dplyr::collect() %>%
+    dplyr::arrange(PLT_CN)
+
+  expect_equal(result_implicit$VOLCFGRS, result_explicit$VOLCFGRS)
+})

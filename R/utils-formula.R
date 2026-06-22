@@ -45,7 +45,8 @@ parse_formula <- function(f) {
   list(
     slot = slot_name,
     targets = targets,
-    target_names = rep("", length(targets))
+    target_names = rep("", length(targets)),
+    quosures = NULL
   )
 }
 
@@ -66,7 +67,8 @@ parse_formula <- function(f) {
   list(
     slot = target_table,
     targets = targets,
-    target_names = target_names
+    target_names = target_names,
+    quosures = spec
   )
 }
 
