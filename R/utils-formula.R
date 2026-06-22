@@ -44,7 +44,8 @@ parse_formula <- function(f) {
 
   list(
     slot = slot_name,
-    targets = targets
+    targets = targets,
+    target_names = rep("", length(targets))
   )
 }
 
@@ -56,10 +57,16 @@ parse_formula <- function(f) {
   }
 
   targets <- vapply(spec, rlang::as_label, character(1))
+  target_names <- names(spec)
+  if (is.null(target_names)) {
+    target_names <- rep("", length(targets))
+  }
+  target_names[is.na(target_names)] <- ""
 
   list(
     slot = target_table,
-    targets = targets
+    targets = targets,
+    target_names = target_names
   )
 }
 

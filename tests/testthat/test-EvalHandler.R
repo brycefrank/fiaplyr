@@ -175,6 +175,25 @@ test_that("aggregate() accepts cond() helper targets", {
   expect_equal(result_new, result_with_placeholder)
 })
 
+test_that("aggregate() preserves user-defined output names", {
+  con <- setup_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  tree_res <- eval_handler(con, evalid = 1001) %>%
+    aggregate(tree(my_vol = VOLCFNET)) %>%
+    dplyr::collect()
+
+  cond_res <- eval_handler(con, evalid = 1001) %>%
+    aggregate(cond(my_prop = 1)) %>%
+    dplyr::collect()
+
+  expect_true("my_vol" %in% colnames(tree_res))
+  expect_false("VOLCFNET" %in% colnames(tree_res))
+
+  expect_true("my_prop" %in% colnames(cond_res))
+  expect_false("prop" %in% colnames(cond_res))
+})
+
 test_that("partition() accepts multiple scoped helpers in one call", {
   con <- setup_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))

@@ -193,18 +193,27 @@ setMethod("aggregate_data", "StatusAnalysis", function(schema, handler, ...) {
   parsed <- .parse_target_spec(spec, "aggregate")
   slot_name <- parsed$slot
   targets <- parsed$targets
+  target_names <- parsed$target_names
 
   if (slot_name == "tree") {
     if (length(targets) == 0 || (length(targets) == 1 && targets == "1")) {
       return(.make_tree_aggregates(handler, sparse = sparse))
     }
     syms <- rlang::syms(targets)
+    names(syms) <- target_names
     return(.make_tree_aggregates(handler, !!!syms, sparse = sparse))
   } else if (slot_name == "cond") {
     if (length(targets) > 0 && !all(targets == "1")) {
       stop("Only `aggregate(cond())` or `aggregate(cond(1))` is currently supported for condition aggregation.")
     }
-    return(.make_cond_aggregates(handler, sparse = sparse))
+
+    res <- .make_cond_aggregates(handler, sparse = sparse)
+    has_named_prop <- length(targets) > 0 && all(targets == "1") && length(target_names) == 1 && nzchar(target_names[[1]])
+    if (has_named_prop) {
+      res <- res %>% dplyr::rename(!!target_names[[1]] := prop)
+    }
+
+    return(res)
   } else {
     stop("Unsupported slot: ", slot_name)
   }

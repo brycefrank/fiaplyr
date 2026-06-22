@@ -63,6 +63,20 @@ test_that("PostStratifiedRatioEstimator supports ratios without explicit domains
   expect_true(res$se >= 0)
 })
 
+test_that("estimate_ratio() preserves user-defined target names", {
+  con <- setup_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001)
+  ratio_est <- PostStratifiedRatioEstimator(handler, handler)
+
+  res <- estimate_ratio(ratio_est, tree(my_num = VOLCFNET), cond(my_den = 1)) |>
+    dplyr::collect()
+
+  expect_equal(unique(res$var_n), "my_num")
+  expect_equal(unique(res$var_d), "my_den")
+})
+
 test_that("PostStratifiedRatioEstimator supports shared domains on both sides", {
   con <- setup_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))

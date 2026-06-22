@@ -108,6 +108,36 @@
     dplyr::group_by(!!!rlang::syms(missing_vars), .add = TRUE)
 }
 
+.resolve_tree_target_names <- function(target_vars) {
+  user_names <- names(target_vars)
+  if (is.null(user_names) || length(user_names) == 0) {
+    user_names <- rep("", length(target_vars))
+  }
+
+  vapply(seq_along(target_vars), function(i) {
+    var_quo <- target_vars[[i]]
+
+    if (length(user_names) >= i && nzchar(user_names[[i]])) {
+      return(user_names[[i]])
+    }
+
+    expr <- rlang::quo_get_expr(var_quo)
+    if (rlang::is_symbol(expr)) {
+      return(rlang::as_string(expr))
+    }
+
+    if (rlang::is_call(expr)) {
+      fn <- rlang::call_name(expr)
+      arg <- expr[[2]]
+      if (!is.null(fn) && !is.null(arg) && rlang::is_symbol(arg)) {
+        return(paste0(fn, "_", rlang::as_string(arg)))
+      }
+    }
+
+    rlang::as_label(var_quo)
+  }, character(1))
+}
+
 
 #' Aggregate condition data to plot or subplot levels
 #'
@@ -271,9 +301,14 @@
       ) %>%
       dplyr::ungroup()
   } else {
+    agg_exprs <- purrr::map(target_vars, function(var_quo) {
+      rlang::expr(sum(TPA_UNADJ * (!!var_quo), na.rm = TRUE))
+    })
+    names(agg_exprs) <- .resolve_tree_target_names(target_vars)
+
     aggregated <- res %>%
       dplyr::summarise(
-        dplyr::across(c(!!!target_vars), function(x) sum(TPA_UNADJ * x, na.rm = TRUE))
+        !!!agg_exprs
       ) %>%
       dplyr::ungroup()
   }

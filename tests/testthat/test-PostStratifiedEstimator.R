@@ -80,6 +80,26 @@ test_that("PostStratifiedEstimator supports mean and total outputs", {
   expect_equal(joined$se_total, joined$se_mean * total_area)
 })
 
+test_that("estimate() preserves user-defined target names", {
+  con <- setup_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  tree_handler <- eval_handler(con, evalid = 1001)
+  tree_res <- tree_handler |>
+    PostStratifiedEstimator() |>
+    estimate(tree(my_vol = VOLCFGRS))
+
+  expect_equal(unique(tree_res$var), "my_vol")
+
+  cond_handler <- eval_handler(con, evalid = 1001) |>
+    partition(cond(COND_STATUS_CD))
+  cond_res <- cond_handler |>
+    PostStratifiedEstimator() |>
+    estimate(cond(my_prop = 1))
+
+  expect_equal(unique(cond_res$var), "my_prop")
+})
+
 test_that("margins=TRUE for cond adds grand total row and full rows", {
   con <- setup_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))

@@ -84,14 +84,15 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = 
   parsed <- .parse_target_spec(args[[1]], "estimate")
   slot_name <- parsed$slot
   targets <- parsed$targets
+  target_names <- parsed$target_names
 
   if (slot_name == "cond") {
     if (length(targets) > 0 && !all(targets == "1")) {
       stop("Only `estimate(cond())` or `estimate(cond(1))` is currently supported for condition estimates.")
     }
-    return(.estimate_cond_internal(object, output = output, margins = margins))
+    return(.estimate_cond_internal(object, targets = targets, target_names = target_names, output = output, margins = margins))
   } else if (slot_name == "tree") {
-    return(.estimate_tree_internal(object, targets, output = output, margins = margins))
+    return(.estimate_tree_internal(object, targets, target_names = target_names, output = output, margins = margins))
   } else {
     stop("Unsupported slot: ", slot_name)
   }
@@ -109,27 +110,48 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = 
 
 # Run the full post-stratification pipeline for the given handler.
 # The handler's tree_domains and cond_domains determine grouping.
-.run_tree_estimation <- function(handler, targets, output = "mean") {
+.run_tree_estimation <- function(handler, targets, target_names = NULL, output = "mean") {
   syms <- rlang::syms(targets)
+  if (!is.null(target_names)) {
+    names(syms) <- target_names
+  }
+
+  resolved_targets <- targets
+  if (!is.null(target_names) && length(target_names) == length(targets)) {
+    resolved_targets <- ifelse(nzchar(target_names), target_names, targets)
+  }
+
   plot_data <- .make_tree_aggregates(handler, !!!syms, adjusted = TRUE, sparse = TRUE)
   strata_data <- .ps_join_strata(plot_data, handler)
-  strata_stats <- .ps_strata_stats(strata_data, targets)
-  eu_stats <- .ps_eu_stats(strata_stats, targets)
-  .ps_pop_stats(eu_stats, handler, targets, output = output)
+  strata_stats <- .ps_strata_stats(strata_data, resolved_targets)
+  eu_stats <- .ps_eu_stats(strata_stats, resolved_targets)
+  .ps_pop_stats(eu_stats, handler, resolved_targets, output = output)
 }
 
-.run_cond_estimation <- function(handler, output = "mean") {
+.run_cond_estimation <- function(handler, target_names = NULL, output = "mean") {
   plot_data <- .make_cond_aggregates(handler, adjusted = TRUE, sparse = TRUE)
+  if (!is.null(target_names) && length(target_names) == 1 && nzchar(target_names[[1]])) {
+    plot_data <- plot_data %>% dplyr::rename(!!target_names[[1]] := prop)
+    cond_target <- target_names[[1]]
+  } else {
+    cond_target <- "prop"
+  }
+
   strata_data <- .ps_join_strata(plot_data, handler)
-  strata_stats <- .ps_strata_stats(strata_data, "prop")
-  eu_stats <- .ps_eu_stats(strata_stats, "prop")
-  .ps_pop_stats(eu_stats, handler, "prop", output = output)
+  strata_stats <- .ps_strata_stats(strata_data, cond_target)
+  eu_stats <- .ps_eu_stats(strata_stats, cond_target)
+  .ps_pop_stats(eu_stats, handler, cond_target, output = output)
 }
 
 # Internal helper for condition estimation
-.estimate_cond_internal <- function(object, output = "mean", margins = FALSE) {
+.estimate_cond_internal <- function(object, targets = character(0), target_names = character(0), output = "mean", margins = FALSE) {
+  cond_target_names <- target_names
+  if (length(targets) == 0) {
+    cond_target_names <- character(0)
+  }
+
   if (!margins) {
-    return(.run_cond_estimation(object@handler, output = output))
+    return(.run_cond_estimation(object@handler, target_names = cond_target_names, output = output))
   }
 
   n_full <- length(object@handler@cond_domains)
@@ -138,7 +160,7 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = 
   results <- lapply(cond_subsets, function(dom) {
     h <- object@handler
     h@cond_domains <- dom
-    res <- .run_cond_estimation(h, output = output)
+    res <- .run_cond_estimation(h, target_names = cond_target_names, output = output)
     res$is_marginal <- length(dom) < n_full
     res
   })
@@ -146,9 +168,9 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = 
 }
 
 # Internal helper for tree estimation
-.estimate_tree_internal <- function(object, targets, output = "mean", margins = FALSE) {
+.estimate_tree_internal <- function(object, targets, target_names = NULL, output = "mean", margins = FALSE) {
   if (!margins) {
-    return(.run_tree_estimation(object@handler, targets, output = output))
+    return(.run_tree_estimation(object@handler, targets, target_names = target_names, output = output))
   }
 
   n_full_tree <- length(object@handler@tree_domains)
@@ -165,7 +187,7 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = 
       h <- object@handler
       h@tree_domains <- t
       h@cond_domains <- c
-      res <- .run_tree_estimation(h, targets, output = output)
+      res <- .run_tree_estimation(h, targets, target_names = target_names, output = output)
       res$is_marginal <- !(length(t) == n_full_tree && length(c) == n_full_cond)
       results[[length(results) + 1]] <- res
     }
