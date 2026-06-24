@@ -431,14 +431,10 @@ setMethod("mutate_cond", "EvalHandler", function(handler, ...) {
 #' @param handler A EvalHandler object.
 #' @param ... A scoped target helper such as `tree(VOLCFGRS)` or `cond()`, and
 #'   optional arguments like `sparse`.
-#' @param expander Tree expansion column used when aggregating tree-level
-#'   summaries (for example, `TPA_UNADJ`). Defaults to `TPA_UNADJ`.
 #' @return A lazy query with plot-level summaries.
 #' @export
-setMethod("aggregate", "EvalHandler", function(handler, ..., expander = TPA_UNADJ) {
-  expander_name <- rlang::as_name(rlang::ensym(expander))
+setMethod("aggregate", "EvalHandler", function(handler, ...) {
   args <- list(...)
-  args$expander <- expander_name
   do.call(aggregate_data, c(list(spec = handler@spec, handler = handler), args))
 })
 

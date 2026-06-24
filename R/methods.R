@@ -5,8 +5,6 @@
 #' aggregated data, useful for a variety of applications and diagnostics.
 #'
 #' @param handler A handler object.
-#' @param expander Tree expansion column used when summing tree-level values to
-#'   the plot level (for example, `TPA_UNADJ`). Defaults to `TPA_UNADJ`.
 #' @param ... A scoped target helper such as `tree(VOLCFGRS)` or `cond()`, plus
 #'   any method-specific options such as `sparse = TRUE`.
 #' @export
@@ -14,8 +12,8 @@
 #' @examples
 #' # Aggregate gross volume to the plot level
 #' handler |>
-#'   aggregate(tree(VOLCFGRS), expander = TPA_UNADJ)
-setGeneric("aggregate", function(handler, ..., expander = TPA_UNADJ) standardGeneric("aggregate"))
+#'   aggregate(tree(VOLCFGRS))
+setGeneric("aggregate", function(handler, ...) standardGeneric("aggregate"))
 
 #' @export
 #' @rdname mutate_tree
@@ -129,9 +127,7 @@ setGeneric("get_strata_weights", function(handler) standardGeneric("get_strata_w
 #'   variables, including the grand total (no domains). Dropped domain columns
 #'   appear as `NA` in the output, indicating aggregation over all values of
 #'   that variable. Defaults to `FALSE`.
-#' @param expander Tree expansion column used when aggregating tree and
-#'   tree-history targets (for example, `TPA_UNADJ`). Defaults to `TPA_UNADJ`.
 #' @export
-setGeneric("estimate", function(object, ..., output = "mean", margins = FALSE, expander = TPA_UNADJ) {
+setGeneric("estimate", function(object, ..., output = "mean", margins = FALSE) {
 	standardGeneric("estimate")
 })

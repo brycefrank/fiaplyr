@@ -14,7 +14,7 @@ handler <- eval_handler(con, 411001) |>
   partition(tree(SPCD))
 
 handler |>
-  aggregate(tree(VOLCFGRS, VOLCFNET), expander = TPA_UNADJ)
+  aggregate(tree(VOLCFGRS, VOLCFNET))
 
 psr <- PostStratifiedRatioEstimator(handler, handler)
 

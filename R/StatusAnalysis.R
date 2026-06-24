@@ -79,11 +79,9 @@ setMethod("initialize_tables", "StatusAnalysis", function(spec, db, evalid, back
 #' @param spec A StatusAnalysis object.
 #' @param handler The EvalHandler object.
 #' @param ... Arguments for aggregation (scoped target helper, sparse, etc.)
-#' @param expander Tree expansion column used when aggregating tree-level
-#'   summaries (for example, `TPA_UNADJ`).
 #' @return A lazy query with aggregates.
 #' @export
-setMethod("aggregate_data", "StatusAnalysis", function(spec, handler, ..., expander) {
+setMethod("aggregate_data", "StatusAnalysis", function(spec, handler, ...) {
   args <- list(...)
   arg_names <- names(args)
   unnamed <- if (is.null(arg_names)) rep(TRUE, length(args)) else arg_names == ""
@@ -104,23 +102,30 @@ setMethod("aggregate_data", "StatusAnalysis", function(spec, handler, ..., expan
 
   target_spec <- args[[which(unnamed)]]
   sparse <- if ("sparse" %in% names(args)) args[["sparse"]] else FALSE
-  expander_name <- rlang::as_name(rlang::ensym(expander))
 
   parsed <- .parse_target_spec(target_spec, "aggregate")
   slot_name <- parsed$slot
   targets <- parsed$targets
+  target_names <- parsed$target_names
+  target_quos <- parsed$quosures
 
   if (slot_name == "tree") {
     if (length(targets) == 0 || (length(targets) == 1 && targets == "1")) {
-      return(.make_tree_aggregates(handler, sparse = sparse, expander = expander_name))
+      return(.make_tree_aggregates(handler, sparse = sparse))
     }
-    syms <- rlang::syms(targets)
-    return(.make_tree_aggregates(handler, !!!syms, sparse = sparse, expander = expander_name))
+    if (is.null(target_quos)) {
+      target_quos <- rlang::syms(targets)
+    }
+    return(.make_tree_aggregates(handler, !!!target_quos, sparse = sparse))
   } else if (slot_name == "cond") {
     if (length(targets) > 0 && !all(targets == "1")) {
       stop("Only `aggregate(cond())` or `aggregate(cond(1))` is currently supported for condition aggregation.")
     }
-    return(.make_cond_aggregates(handler, sparse = sparse))
+    res <- .make_cond_aggregates(handler, sparse = sparse)
+    if (length(target_names) == 1 && nzchar(target_names[[1]])) {
+      res <- res %>% dplyr::rename(!!target_names[[1]] := prop)
+    }
+    return(res)
   } else {
     stop("Unsupported slot: ", slot_name)
   }

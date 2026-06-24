@@ -64,7 +64,7 @@ test_that("PostStratifiedRatioEstimator supports ratios without explicit domains
 })
 
 test_that("estimate_ratio() preserves user-defined target names", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001)

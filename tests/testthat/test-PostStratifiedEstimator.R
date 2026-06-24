@@ -32,7 +32,7 @@ test_that("PostStratifiedEstimator estimates correct forested area", {
 })
 
 test_that("condition estimates support MACRO condition proportion basis", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   DBI::dbExecute(con, "UPDATE COND SET PROP_BASIS = 'MACRO'")
@@ -81,7 +81,7 @@ test_that("PostStratifiedEstimator supports mean and total outputs", {
 })
 
 test_that("estimate() preserves user-defined target names", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   tree_handler <- eval_handler(con, evalid = 1001)
@@ -98,24 +98,6 @@ test_that("estimate() preserves user-defined target names", {
     estimate(cond(my_prop = 1))
 
   expect_equal(unique(cond_res$var), "my_prop")
-})
-
-test_that("PostStratifiedEstimator estimate exposes custom expander", {
-  con <- setup_status_test_db()
-  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
-
-  handler <- eval_handler(con, evalid = 1001) |>
-    transform(tree(TPA_HALF = TPA_UNADJ / 2))
-
-  pe <- PostStratifiedEstimator(handler)
-
-  res_default <- estimate(pe, tree(VOLCFGRS)) |>
-    dplyr::collect()
-  res_half <- estimate(pe, tree(VOLCFGRS), expander = TPA_HALF) |>
-    dplyr::collect()
-
-  expect_equal(res_half$estimate, res_default$estimate / 2, tolerance = 1e-10)
-  expect_equal(res_half$se, res_default$se / 2, tolerance = 1e-10)
 })
 
 test_that("margins=TRUE for cond adds grand total row and full rows", {
@@ -315,6 +297,20 @@ test_that("PostStratifiedEstimator supports tree_history estimates for GRM handl
   expect_true(nrow(res) > 0)
   expect_true(all(c("estimate", "se", "var") %in% colnames(res)))
   expect_false("is_marginal" %in% colnames(res))
+})
+
+test_that("tree_history estimates support call expressions as targets", {
+  con <- setup_grm_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001, spec = new("GRMAnalysis"))
+  pe <- PostStratifiedEstimator(handler)
+
+  res <- estimate(pe, tree_history(log_vol = log(VOLCFNET))) |>
+    dplyr::collect()
+
+  expect_true(nrow(res) > 0)
+  expect_true("log_vol" %in% unique(res$var))
 })
 
 test_that("tree_history margins use cond and tree_history domains", {

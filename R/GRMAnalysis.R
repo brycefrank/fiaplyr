@@ -32,13 +32,7 @@ grm_analysis <- function(
   tree_basis <- match.arg(tree_basis, c("all_live", "growing_stock", "sawtimber"))
   land_basis <- match.arg(land_basis, c("forest_land", "timberland"))
 
-  rules <- rlang::exprs(
-    STATUSCD == 1 & PREV_STATUSCD == 1 ~ "survivor",
-    STATUSCD == 2 & PREV_STATUSCD == 1 ~ "mortality",
-    STATUSCD == 3 & PREV_STATUSCD == 1 ~ "removal",
-    STATUSCD == 1 & is.na(PREV_STATUSCD) ~ "ingrowth",
-    TRUE ~ "other"
-  )
+  rules <- build_grm_component_rules(tree_basis, land_basis)
 
   new("GRMAnalysis",
     tree_basis = tree_basis,
@@ -148,6 +142,104 @@ setMethod("initialize_tables", "GRMAnalysis", function(spec, db, evalid, backend
   tree_history_qry <- tree_history_qry %>%
     dplyr::left_join(tree_grm_midpt_qry, by = c("CN" = "TRE_CN"), suffix = c("", "_midpt"))
 
+  tree_history_qry <- tree_history_qry %>%
+    dplyr::left_join(
+      plot_qry %>%
+        dplyr::transmute(PLT_CN = CN, PREV_PLT_CN),
+      by = "PLT_CN"
+    )
+
+  if (!"PREVCOND" %in% colnames(tree_history_qry)) {
+    tree_history_qry <- tree_history_qry %>%
+      dplyr::left_join(
+        ptree_qry %>% dplyr::transmute(PREV_TRE_CN = CN, PREVCOND = CONDID),
+        by = "PREV_TRE_CN"
+      )
+  }
+
+  cond_lookup_cols <- colnames(cond_qry)
+  cond_lookup_transmute <- list(
+    PLT_CN = rlang::sym("PLT_CN"),
+    CONDID = rlang::sym("CONDID")
+  )
+  if ("COND_STATUS_CD" %in% cond_lookup_cols) {
+    cond_lookup_transmute$COND_STATUS_CD_t2 <- rlang::sym("COND_STATUS_CD")
+  }
+  if ("SITECLCD" %in% cond_lookup_cols) {
+    cond_lookup_transmute$SITECLCD_t2 <- rlang::sym("SITECLCD")
+  }
+  if ("RESERVCD" %in% cond_lookup_cols) {
+    cond_lookup_transmute$RESERVCD_t2 <- rlang::sym("RESERVCD")
+  }
+  cond_lookup_qry <- cond_qry %>% dplyr::transmute(!!!cond_lookup_transmute)
+
+  pcond_lookup_cols <- colnames(pcond_qry)
+  pcond_lookup_transmute <- list(
+    PREV_PLT_CN = rlang::sym("PLT_CN"),
+    PREVCOND = rlang::sym("CONDID")
+  )
+  if ("COND_STATUS_CD" %in% pcond_lookup_cols) {
+    pcond_lookup_transmute$PREV_COND_STATUS_CD <- rlang::sym("COND_STATUS_CD")
+  }
+  if ("SITECLCD" %in% pcond_lookup_cols) {
+    pcond_lookup_transmute$PREV_SITECLCD <- rlang::sym("SITECLCD")
+  }
+  if ("RESERVCD" %in% pcond_lookup_cols) {
+    pcond_lookup_transmute$PREV_RESERVCD <- rlang::sym("RESERVCD")
+  }
+  pcond_lookup_qry <- pcond_qry %>% dplyr::transmute(!!!pcond_lookup_transmute)
+
+  tree_history_qry <- tree_history_qry %>%
+    dplyr::left_join(cond_lookup_qry, by = c("PLT_CN", "CONDID")) %>%
+    dplyr::left_join(pcond_lookup_qry, by = c("PREV_PLT_CN", "PREVCOND"))
+
+  if (!"PREV_STATUS_CD" %in% colnames(tree_history_qry)) {
+    if ("PREV_STATUSCD" %in% colnames(tree_history_qry)) {
+      tree_history_qry <- tree_history_qry %>% dplyr::mutate(PREV_STATUS_CD = PREV_STATUSCD)
+    } else if ("STATUSCD_begin" %in% colnames(tree_history_qry)) {
+      tree_history_qry <- tree_history_qry %>% dplyr::mutate(PREV_STATUS_CD = STATUSCD_begin)
+    }
+  }
+
+  required_cols <- c(
+    "TREECLCD",
+    "SPCD",
+    "DIA_begin",
+    "STATUSCD",
+    "AGENTCD",
+    "PREV_STATUS_CD",
+    "COND_STATUS_CD_t2",
+    "SITECLCD_t2",
+    "RESERVCD_t2",
+    "PREV_COND_STATUS_CD",
+    "PREV_SITECLCD",
+    "PREV_RESERVCD"
+  )
+  missing_required <- setdiff(required_cols, colnames(tree_history_qry))
+  if (length(missing_required) > 0) {
+    tree_history_qry <- tree_history_qry %>%
+      dplyr::mutate(!!!stats::setNames(rep(list(NA_real_), length(missing_required)), missing_required))
+  }
+
+  component_rules <- spec@component_rules
+  if (length(component_rules) == 0) {
+    component_rules <- build_grm_component_rules(spec@tree_basis, spec@land_basis)
+  }
+
+  tree_basis_filters <- get_tree_basis_filters(spec@tree_basis)
+  land_basis_filters <- get_land_basis_filters(spec@land_basis)
+
+  tree_history_qry <- tree_history_qry %>%
+    dplyr::mutate(
+      is_tree_basis_t1 = dplyr::coalesce(!!tree_basis_filters$t1, FALSE),
+      is_tree_basis_t2 = dplyr::coalesce(!!tree_basis_filters$t2, FALSE),
+      is_land_basis_t1 = dplyr::coalesce(!!land_basis_filters$t1, FALSE),
+      is_land_basis_t2 = dplyr::coalesce(!!land_basis_filters$t2, FALSE),
+      in_pop_t1 = is_tree_basis_t1 & is_land_basis_t1,
+      in_pop_t2 = is_tree_basis_t2 & is_land_basis_t2,
+      transition = dplyr::case_when(!!!component_rules)
+    )
+
   list(
     pop_eval = pop_eval_qry,
     pop_estn_unit = pop_estn_unit_qry,
@@ -173,11 +265,9 @@ setMethod("initialize_tables", "GRMAnalysis", function(spec, db, evalid, backend
 #' @param spec A GRMAnalysis object.
 #' @param handler The EvalHandler object.
 #' @param ... Arguments for aggregation.
-#' @param expander Tree expansion column used when aggregating tree-level
-#'   summaries (for example, `TPA_UNADJ`).
 #' @return A lazy query with aggregates.
 #' @export
-setMethod("aggregate_data", "GRMAnalysis", function(spec, handler, ..., expander) {
+setMethod("aggregate_data", "GRMAnalysis", function(spec, handler, ...) {
   args <- list(...)
   arg_names <- names(args)
   unnamed <- if (is.null(arg_names)) rep(TRUE, length(args)) else arg_names == ""
@@ -198,29 +288,38 @@ setMethod("aggregate_data", "GRMAnalysis", function(spec, handler, ..., expander
 
   target_spec <- args[[which(unnamed)]]
   sparse <- if ("sparse" %in% names(args)) args[["sparse"]] else FALSE
-  expander_name <- rlang::as_name(rlang::ensym(expander))
 
   parsed <- .parse_target_spec(target_spec, "aggregate")
   slot_name <- parsed$slot
   targets <- parsed$targets
+  target_names <- parsed$target_names
+  target_quos <- parsed$quosures
 
   if (slot_name == "tree") {
     if (length(targets) == 0 || (length(targets) == 1 && targets == "1")) {
-      return(.make_tree_aggregates(handler, sparse = sparse, expander = expander_name))
+      return(.make_tree_aggregates(handler, sparse = sparse))
     }
-    syms <- rlang::syms(targets)
-    return(.make_tree_aggregates(handler, !!!syms, sparse = sparse, expander = expander_name))
+    if (is.null(target_quos)) {
+      target_quos <- rlang::syms(targets)
+    }
+    return(.make_tree_aggregates(handler, !!!target_quos, sparse = sparse))
   } else if (slot_name == "cond") {
     if (length(targets) > 0 && !all(targets == "1")) {
       stop("Only `aggregate(cond())` or `aggregate(cond(1))` is currently supported for condition aggregation.")
     }
-    return(.make_cond_aggregates(handler, sparse = sparse))
+    res <- .make_cond_aggregates(handler, sparse = sparse)
+    if (length(target_names) == 1 && nzchar(target_names[[1]])) {
+      res <- res %>% dplyr::rename(!!target_names[[1]] := prop)
+    }
+    return(res)
   } else if (slot_name == "tree_history") {
     if (length(targets) == 0 || (length(targets) == 1 && targets == "1")) {
-      return(.make_tree_history_aggregates(handler, sparse = sparse, expander = expander_name))
+      return(.make_tree_history_aggregates(handler, sparse = sparse))
     }
-    syms <- rlang::syms(targets)
-    return(.make_tree_history_aggregates(handler, !!!syms, sparse = sparse, expander = expander_name))
+    if (is.null(target_quos)) {
+      target_quos <- rlang::syms(targets)
+    }
+    return(.make_tree_history_aggregates(handler, !!!target_quos, sparse = sparse))
   } else {
     stop("Unsupported slot: ", slot_name)
   }
@@ -236,21 +335,25 @@ setMethod("spec_summary_fields", "GRMAnalysis", function(spec, handler) {
   )
 })
 
-# internal function, not exported
 get_tree_basis_filters <- function(basis) {
   switch(basis,
-    "all_live" = rlang::exprs(
-      DIA >= 5.0 | DIA_begin >= 5.0 
+    "all_live" = list(
+      t1 = rlang::expr(DIA_begin >= 5.0)
     ),
-    "growing_stock" = rlang::exprs(
-      TREECLCD == 2,
-      DIA >= 5.0 | DIA_begin >= 5.0
+    "growing_stock" = list(
+      t1 = rlang::expr(TREECLCD == 2 & DIA_begin >= 5.0)
     ),
-    "sawtimber" = rlang::exprs(
-      TREECLCD == 2,
-      # Example of complex logic handled cleanly outside the core handler
-      (SPCD < 300 & (DIA >= 9.0 | DIA_begin >= 9.0)) | 
-      (SPCD >= 300 & (DIA >= 11.0 | DIA_begin >= 11.0))
+    "sawtimber" = list(
+      t1 = rlang::expr(
+        TREECLCD == 2 &
+          ((SPCD < 300 & DIA_begin >= 9.0) |
+             (SPCD >= 300 & DIA_begin >= 11.0))
+      ),
+      t2 = rlang::expr(
+        TREECLCD == 2 &
+          ((SPCD < 300 & DIA >= 9.0) |
+             (SPCD >= 300 & DIA >= 11.0))
+      )
     ),
     stop(sprintf("Unknown tree basis: '%s'", basis))
   )
@@ -259,14 +362,37 @@ get_tree_basis_filters <- function(basis) {
 # internal function, not exported
 get_land_basis_filters <- function(basis) {
   switch(basis,
-    "forest_land" = rlang::exprs(
-      COND_STATUS_CD == 1
+    "forest_land" = list(
+      t1 = rlang::expr(PREV_COND_STATUS_CD == 1),
+      t2 = rlang::expr(COND_STATUS_CD_t2 == 1)
     ),
-    "timberland" = rlang::exprs(
-      COND_STATUS_CD == 1,
-      SITECLCD %in% 1:6,
-      RESERVCD == 0
+    "timberland" = list(
+      t1 = rlang::expr(
+        PREV_COND_STATUS_CD == 1 &
+          PREV_SITECLCD %in% 1:6 &
+          PREV_RESERVCD == 0
+      ),
+      t2 = rlang::expr(
+        COND_STATUS_CD_t2 == 1 &
+          SITECLCD_t2 %in% 1:6 &
+          RESERVCD_t2 == 0
+      )
     ),
     stop(sprintf("Unknown land basis: '%s'", basis))
+  )
+}
+
+# internal function, not exported
+build_grm_component_rules <- function(tree_basis, land_basis) {
+  # Force basis validation where rules are constructed.
+  get_tree_basis_filters(tree_basis)
+  get_land_basis_filters(land_basis)
+
+  rlang::exprs(
+    in_pop_t1 & in_pop_t2 & PREV_STATUS_CD == 1 & STATUSCD == 1 ~ "survivor",
+    in_pop_t1 & PREV_STATUS_CD == 1 & STATUSCD == 2 & AGENTCD != 80 ~ "mortality",
+    in_pop_t1 & PREV_STATUS_CD == 1 & STATUSCD == 3 & AGENTCD == 80 ~ "removal",
+    !in_pop_t1 & in_pop_t2 & STATUSCD == 1 ~ "ingrowth",
+    TRUE ~ "other"
   )
 }

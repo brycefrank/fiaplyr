@@ -139,34 +139,41 @@
   }, character(1))
 }
 
-.validate_expander_column <- function(.data, expander, target) {
-  if (!is.character(expander) || length(expander) != 1 || is.na(expander) || expander == "") {
-    stop("`expander` must resolve to exactly one column name.", call. = FALSE)
+.contains_aggregate_call <- function(expr) {
+  aggregate_fns <- c("sum", "mean", "min", "max", "median", "sd", "var", "n", "n_distinct", "first", "last", "any", "all")
+
+  if (!rlang::is_call(expr)) {
+    return(FALSE)
   }
 
-  if (!expander %in% colnames(.data)) {
-    stop(
-      "`expander` column `", expander, "` was not found in ", target, " aggregation data.",
-      call. = FALSE
-    )
+  fn <- rlang::call_name(expr)
+  if (!is.null(fn) && fn %in% aggregate_fns) {
+    return(TRUE)
   }
 
-  probe <- tryCatch(
-    .data %>%
-      dplyr::select(dplyr::all_of(expander)) %>%
-      dplyr::collect(n = 1),
-    error = function(e) {
-      stop("Unable to validate `expander` column `", expander, "`: ", conditionMessage(e), call. = FALSE)
-    }
-  )
-
-  if (ncol(probe) != 1 || !is.numeric(probe[[1]])) {
-    stop("`expander` column `", expander, "` must be numeric.", call. = FALSE)
+  args <- as.list(expr)[-1]
+  if (length(args) == 0) {
+    return(FALSE)
   }
 
-  invisible(expander)
+  any(vapply(args, .contains_aggregate_call, logical(1)))
 }
 
+.is_grm_macro_call <- function(expr) {
+  if (!rlang::is_call(expr)) {
+    return(FALSE)
+  }
+
+  fn <- rlang::call_name(expr)
+  !is.null(fn) && fn %in% c(
+    "grm_mortality",
+    "grm_removals",
+    "grm_ingrowth",
+    "grm_survivor",
+    "grm_reversion",
+    "grm_diversion"
+  )
+}
 
 #' Aggregate condition data to plot or subplot levels
 #'
@@ -286,14 +293,12 @@
 #'
 #' @param object A EvalHandler object.
 #' @param ... Variables to aggregate (tidy-select supported)
-#' @param expander Tree expansion column used for weighting tree-level sums.
 #' @param level The level to aggregate to. Can be "plot" or "subplot".
 #' @keywords internal
-.make_tree_aggregates <- function(object, ..., expander = "TPA_UNADJ", adjusted = FALSE, level = "plot", sparse = FALSE) {
+.make_tree_aggregates <- function(object, ..., adjusted = FALSE, level = "plot", sparse = FALSE) {
   res <- .build_tree_data(object)
-  .validate_expander_column(res, expander, "tree")
   res <- res %>%
-    dplyr::mutate(.expander_wt = .data[[expander]]) %>%
+    dplyr::mutate(.expander_wt = TPA_UNADJ) %>%
     dplyr::filter(!is.na(.expander_wt))
 
   plot_keys <- .plot_keys_raw
@@ -337,18 +342,23 @@
   } else {
     agg_exprs <- purrr::map(target_vars, function(var_quo) {
       expr <- rlang::quo_get_expr(var_quo)
-      if (rlang::is_symbol(expr)) {
-        rlang::expr(sum(TPA_UNADJ * (!!var_quo), na.rm = TRUE))
+      if (is.numeric(expr) && length(expr) == 1 && !is.na(expr) && expr == 1) {
+        rlang::expr(sum(.expander_wt, na.rm = TRUE))
+      } else if (rlang::is_symbol(expr)) {
+        rlang::expr(sum(.expander_wt * (!!var_quo), na.rm = TRUE))
+      } else if (.is_grm_macro_call(expr)) {
+        expanded_expr <- rlang::eval_tidy(var_quo)
+        rlang::expr(sum((!!expanded_expr), na.rm = TRUE))
+      } else if (.contains_aggregate_call(expr)) {
+        expr
       } else {
-        var_quo
+        rlang::expr(sum(.expander_wt * (!!var_quo), na.rm = TRUE))
       }
     })
     names(agg_exprs) <- .resolve_tree_target_names(target_vars)
 
     aggregated <- res %>%
-      dplyr::summarise(
-        dplyr::across(c(!!!target_vars), function(x) sum(.expander_wt * x, na.rm = TRUE))
-      ) %>%
+      dplyr::summarise(!!!agg_exprs) %>%
       dplyr::ungroup()
   }
 
@@ -377,14 +387,12 @@
 #'
 #' @param object A EvalHandler object.
 #' @param ... Additional arguments.
-#' @param expander Tree expansion column used for weighting tree-history sums.
 #' @param sparse Logical. If TRUE, returns a sparse result.
 #' @keywords internal
-.make_tree_history_aggregates <- function(object, ..., expander = "TPA_UNADJ", sparse = FALSE) {
+.make_tree_history_aggregates <- function(object, ..., sparse = FALSE) {
   res <- .build_tree_history_data(object)
-  .validate_expander_column(res, expander, "tree_history")
   res <- res %>%
-    dplyr::mutate(.expander_wt = .data[[expander]]) %>%
+    dplyr::mutate(.expander_wt = TPA_UNADJ) %>%
     dplyr::filter(!is.na(.expander_wt))
 
   plot_keys <- .plot_keys_raw
@@ -426,10 +434,25 @@
       ) %>%
       dplyr::ungroup()
   } else {
+    agg_exprs <- purrr::map(target_vars, function(var_quo) {
+      expr <- rlang::quo_get_expr(var_quo)
+      if (is.numeric(expr) && length(expr) == 1 && !is.na(expr) && expr == 1) {
+        rlang::expr(sum(.expander_wt, na.rm = TRUE))
+      } else if (rlang::is_symbol(expr)) {
+        rlang::expr(sum(.expander_wt * (!!var_quo), na.rm = TRUE))
+      } else if (.is_grm_macro_call(expr)) {
+        expanded_expr <- rlang::eval_tidy(var_quo)
+        rlang::expr(sum((!!expanded_expr), na.rm = TRUE))
+      } else if (.contains_aggregate_call(expr)) {
+        expr
+      } else {
+        rlang::expr(sum(.expander_wt * (!!var_quo), na.rm = TRUE))
+      }
+    })
+    names(agg_exprs) <- .resolve_tree_target_names(target_vars)
+
     aggregated <- res %>%
-      dplyr::summarise(
-        dplyr::across(c(!!!target_vars), function(x) sum(.expander_wt * x, na.rm = TRUE))
-      ) %>%
+      dplyr::summarise(!!!agg_exprs) %>%
       dplyr::ungroup()
   }
 

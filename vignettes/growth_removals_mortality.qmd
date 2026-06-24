@@ -18,7 +18,8 @@ live trees, because growing stock requires a larger minimum diameter and more
 strict defect constraints. Thus, users must specify the tree and land bases,
 which will facilitate `fiaplyr` in correctly applying the appropriate transition
 rules. Of course, users can entertain custom transitions as well, and such
-advanced use cases are covered in [Advanced Growth, Removals, and Mortality](growth_removals_mortality_advanced.qmd).
+advanced use cases are covered in [Advanced Growth, Removals, and Mortality]
+(growth_removals_mortality_advanced.qmd).
 
 ## Specifying a Handler
 
@@ -86,13 +87,21 @@ call, all of which have the `grm_` prefix. For example, to obtain net cubic
 foot mortality volume, use the following
 
 ```{r}
+ps <- PostStratifiedEstimator(handler |> partition(tree_history(transition)))
+
 handler |>
   aggregate(
     tree_history(
-      grm_mortality(VOLCFNET)
+      mort = grm_mortality(VOLCFSND)
     )
-  ) |>
-  head()
+  )
+
+ps |>
+  estimate(
+    tree_history(
+      mort = grm_mortality(VOLCFSND, annualize = TRUE)
+    ), output = "total"
+  )
 ```
 
 Other change components helpers include `grm_removals`, `grm_ingrowth`, and
