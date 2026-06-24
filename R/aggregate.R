@@ -175,6 +175,15 @@
   )
 }
 
+.uses_default_expander_filter <- function(target_vars) {
+  if (length(target_vars) == 0) {
+    return(TRUE)
+  }
+
+  exprs <- purrr::map(target_vars, rlang::quo_get_expr)
+  !any(vapply(exprs, .is_grm_macro_call, logical(1)))
+}
+
 #' Aggregate condition data to plot or subplot levels
 #'
 #' @param object A EvalHandler object.
@@ -298,8 +307,7 @@
 .make_tree_aggregates <- function(object, ..., adjusted = FALSE, level = "plot", sparse = FALSE) {
   res <- .build_tree_data(object)
   res <- res %>%
-    dplyr::mutate(.expander_wt = TPA_UNADJ) %>%
-    dplyr::filter(!is.na(.expander_wt))
+    dplyr::mutate(.expander_wt = TPA_UNADJ)
 
   plot_keys <- .plot_keys_raw
   plot_domains <- .resolve_partition_domains(object@plot_domains, "plot", colnames(res))
@@ -308,6 +316,10 @@
 
   # Determine target variables for aggregation
   target_vars <- dplyr::quos(...)
+
+  if (.uses_default_expander_filter(target_vars)) {
+    res <- res %>% dplyr::filter(!is.na(.expander_wt))
+  }
 
   # Check if "1" is in the targets (implicit stem density)
   vars_as_strings <- vapply(target_vars, rlang::as_label, character(1))
@@ -392,8 +404,7 @@
 .make_tree_history_aggregates <- function(object, ..., sparse = FALSE) {
   res <- .build_tree_history_data(object)
   res <- res %>%
-    dplyr::mutate(.expander_wt = TPA_UNADJ) %>%
-    dplyr::filter(!is.na(.expander_wt))
+    dplyr::mutate(.expander_wt = TPA_UNADJ)
 
   plot_keys <- .plot_keys_raw
   plot_domains <- .resolve_partition_domains(object@plot_domains, "plot", colnames(res))
@@ -402,6 +413,10 @@
 
   # Determine target variables for aggregation
   target_vars <- dplyr::quos(...)
+
+  if (.uses_default_expander_filter(target_vars)) {
+    res <- res %>% dplyr::filter(!is.na(.expander_wt))
+  }
 
   # Check if "1" is in the targets (implicit stem density)
   vars_as_strings <- vapply(target_vars, rlang::as_label, character(1))

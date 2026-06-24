@@ -425,6 +425,24 @@ test_that("aggregate(tree_history()) supports GRM helper targets", {
   expect_true("mortality" %in% colnames(res))
 })
 
+test_that("GRM macro aggregates do not prefilter on the default expander weight", {
+  con <- setup_grm_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1003, spec = new("GRMAnalysis"))
+
+  generic_sql <- dbplyr::sql_render(
+    fiaplyr:::.make_tree_history_aggregates(handler, VOLCFNET, sparse = TRUE)
+  )
+  macro_sql <- dbplyr::sql_render(
+    fiaplyr:::.make_tree_history_aggregates(handler, mortality = grm_mortality(), sparse = TRUE)
+  )
+
+  expect_match(generic_sql, fixed('".expander_wt" IS NULL'))
+  expect_no_match(macro_sql, fixed('".expander_wt" IS NULL'))
+  expect_match(macro_sql, "TPA_UNADJ_begin")
+})
+
 test_that("materialize() rejects invalid slots and unsupported tree_history usage", {
   con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
