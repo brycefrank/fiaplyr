@@ -4,7 +4,7 @@
 \alias{aggregate_data}
 \title{Aggregate Data for an Analysis Spec}
 \usage{
-aggregate_data(spec, handler, ..., expander)
+aggregate_data(spec, handler, ...)
 }
 \arguments{
 \item{spec}{An AnalysisSpec object.}
@@ -12,9 +12,6 @@ aggregate_data(spec, handler, ..., expander)
 \item{handler}{The EvalHandler object.}
 
 \item{...}{Arguments for aggregation.}
-
-\item{expander}{Tree expansion column used when aggregating tree-level
-summaries (for example, \code{TPA_UNADJ}).}
 }
 \value{
 A lazy query.

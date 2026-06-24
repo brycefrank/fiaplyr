@@ -4,7 +4,7 @@
 \alias{estimate}
 \title{Estimate Population Parameters}
 \usage{
-estimate(object, ..., output = "mean", margins = FALSE, expander = TPA_UNADJ)
+estimate(object, ..., output = "mean", margins = FALSE)
 }
 \arguments{
 \item{object}{An estimator object.}
@@ -19,9 +19,6 @@ the estimation pipeline for every strict subset of the active domain
 variables, including the grand total (no domains). Dropped domain columns
 appear as \code{NA} in the output, indicating aggregation over all values of
 that variable. Defaults to \code{FALSE}.}
-
-\item{expander}{Tree expansion column used when aggregating tree and
-tree-history targets (for example, \code{TPA_UNADJ}). Defaults to \code{TPA_UNADJ}.}
 }
 \description{
 Estimate Population Parameters

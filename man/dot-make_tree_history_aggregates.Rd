@@ -4,19 +4,12 @@
 \alias{.make_tree_history_aggregates}
 \title{Aggregate tree history data to plot or subplot levels.}
 \usage{
-.make_tree_history_aggregates(
-  object,
-  ...,
-  expander = "TPA_UNADJ",
-  sparse = FALSE
-)
+.make_tree_history_aggregates(object, ..., sparse = FALSE)
 }
 \arguments{
 \item{object}{A EvalHandler object.}
 
 \item{...}{Additional arguments.}
-
-\item{expander}{Tree expansion column used for weighting tree-history sums.}
 
 \item{sparse}{Logical. If TRUE, returns a sparse result.}
 }

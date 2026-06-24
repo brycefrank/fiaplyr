@@ -163,13 +163,13 @@ setMethod("initialize_tables", "GRMAnalysis", function(spec, db, evalid, backend
     CONDID = rlang::sym("CONDID")
   )
   if ("COND_STATUS_CD" %in% cond_lookup_cols) {
-    cond_lookup_transmute$COND_STATUS_CD_t2 <- rlang::sym("COND_STATUS_CD")
+    cond_lookup_transmute$COND_STATUS_CD <- rlang::sym("COND_STATUS_CD")
   }
   if ("SITECLCD" %in% cond_lookup_cols) {
-    cond_lookup_transmute$SITECLCD_t2 <- rlang::sym("SITECLCD")
+    cond_lookup_transmute$SITECLCD <- rlang::sym("SITECLCD")
   }
   if ("RESERVCD" %in% cond_lookup_cols) {
-    cond_lookup_transmute$RESERVCD_t2 <- rlang::sym("RESERVCD")
+    cond_lookup_transmute$RESERVCD <- rlang::sym("RESERVCD")
   }
   cond_lookup_qry <- cond_qry %>% dplyr::transmute(!!!cond_lookup_transmute)
 
@@ -208,9 +208,9 @@ setMethod("initialize_tables", "GRMAnalysis", function(spec, db, evalid, backend
     "STATUSCD",
     "AGENTCD",
     "PREV_STATUS_CD",
-    "COND_STATUS_CD_t2",
-    "SITECLCD_t2",
-    "RESERVCD_t2",
+    "COND_STATUS_CD",
+    "SITECLCD",
+    "RESERVCD",
     "PREV_COND_STATUS_CD",
     "PREV_SITECLCD",
     "PREV_RESERVCD"
@@ -364,7 +364,7 @@ get_land_basis_filters <- function(basis) {
   switch(basis,
     "forest_land" = list(
       t1 = rlang::expr(PREV_COND_STATUS_CD == 1),
-      t2 = rlang::expr(COND_STATUS_CD_t2 == 1)
+      t2 = rlang::expr(COND_STATUS_CD == 1)
     ),
     "timberland" = list(
       t1 = rlang::expr(
@@ -373,9 +373,9 @@ get_land_basis_filters <- function(basis) {
           PREV_RESERVCD == 0
       ),
       t2 = rlang::expr(
-        COND_STATUS_CD_t2 == 1 &
-          SITECLCD_t2 %in% 1:6 &
-          RESERVCD_t2 == 0
+        COND_STATUS_CD == 1 &
+          SITECLCD %in% 1:6 &
+          RESERVCD == 0
       )
     ),
     stop(sprintf("Unknown land basis: '%s'", basis))
@@ -390,8 +390,9 @@ build_grm_component_rules <- function(tree_basis, land_basis) {
 
   rlang::exprs(
     in_pop_t1 & in_pop_t2 & PREV_STATUS_CD == 1 & STATUSCD == 1 ~ "survivor",
-    in_pop_t1 & PREV_STATUS_CD == 1 & STATUSCD == 2 & AGENTCD != 80 ~ "mortality",
-    in_pop_t1 & PREV_STATUS_CD == 1 & STATUSCD == 3 & AGENTCD == 80 ~ "removal",
+    in_pop_t1 & PREV_STATUS_CD == 1 & STATUSCD == 2 &
+      (is.na(AGENTCD) | AGENTCD != 80) ~ "mortality",
+    in_pop_t1 & PREV_STATUS_CD == 1 & STATUSCD == 2 & AGENTCD == 80 ~ "removal",
     !in_pop_t1 & in_pop_t2 & STATUSCD == 1 ~ "ingrowth",
     TRUE ~ "other"
   )
