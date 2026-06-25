@@ -127,6 +127,35 @@ setMethod("initialize_tables", "GRMAnalysis", function(spec, db, evalid, backend
     error = function(e) NULL
   )
 
+  if (is.null(tree_grm_component_qry)) {
+    stop("TREE_GRM_COMPONENT is required for GRMAnalysis tree_history estimation.", call. = FALSE)
+  }
+
+  component_suffix <- .get_grm_component_suffix(spec)
+  subptyp_col <- paste0("SUBP_SUBPTYP_GRM_", component_suffix)
+  component_col <- paste0("SUBP_COMPONENT_", component_suffix)
+
+  component_cols <- colnames(tree_grm_component_qry)
+  missing_component_cols <- setdiff(c("TRE_CN", subptyp_col, component_col), component_cols)
+  if (length(missing_component_cols) > 0) {
+    stop(
+      "TREE_GRM_COMPONENT is missing required column(s) for basis ",
+      component_suffix,
+      ": ",
+      paste(missing_component_cols, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  component_select <- list(
+    CN = rlang::sym("TRE_CN"),
+    SUBPTYP_GRM = rlang::sym(subptyp_col),
+    COMPONENT = rlang::sym(component_col)
+  )
+
+  tree_grm_component_selected_qry <- tree_grm_component_qry %>%
+    dplyr::transmute(!!!component_select)
+
   tree_history_qry <- tree_qry
 
   tree_history_qry <- tree_history_qry %>%
@@ -141,6 +170,9 @@ setMethod("initialize_tables", "GRMAnalysis", function(spec, db, evalid, backend
 
   tree_history_qry <- tree_history_qry %>%
     dplyr::left_join(tree_grm_midpt_qry, by = c("CN" = "TRE_CN"), suffix = c("", "_midpt"))
+
+  tree_history_qry <- tree_history_qry %>%
+    dplyr::left_join(tree_grm_component_selected_qry, by = "CN")
 
   tree_history_qry <- tree_history_qry %>%
     dplyr::left_join(
@@ -396,4 +428,22 @@ build_grm_component_rules <- function(tree_basis, land_basis) {
     !in_pop_t1 & in_pop_t2 & STATUSCD == 1 ~ "ingrowth",
     TRUE ~ "other"
   )
+}
+
+# internal function, not exported
+.get_grm_component_suffix <- function(spec) {
+  tree_code <- switch(spec@tree_basis,
+    all_live = "AL",
+    sawtimber = "SL",
+    growing_stock = "GS",
+    stop(sprintf("Unknown tree basis: '%s'", spec@tree_basis))
+  )
+
+  land_code <- switch(spec@land_basis,
+    forest_land = "FOREST",
+    timberland = "TIMBER",
+    stop(sprintf("Unknown land basis: '%s'", spec@land_basis))
+  )
+
+  paste(tree_code, land_code, sep = "_")
 }

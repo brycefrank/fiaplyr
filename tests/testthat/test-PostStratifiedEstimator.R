@@ -261,34 +261,11 @@ test_that("is_marginal correctly flags cond marginal rows", {
   expect_true(all(marginal_rows$is_marginal))
 })
 
-setup_grm_test_db <- function() {
-  con <- setup_status_test_db()
-
-  DBI::dbWriteTable(con, "TREE_GRM_BEGIN", data.frame(
-    TRE_CN = c(1, 2, 3, 4, 5, 6, 7, 8),
-    STATUSCD_begin = 1L,
-    PREVDIA = 10,
-    stringsAsFactors = FALSE
-  ))
-
-  DBI::dbWriteTable(con, "TREE_GRM_MIDPT", data.frame(
-    TRE_CN = c(1, 2, 3, 4, 5, 6, 7, 8),
-    stringsAsFactors = FALSE
-  ))
-
-  DBI::dbWriteTable(con, "TREE_GRM_COMPONENT", data.frame(
-    TRE_CN = c(1, 2, 3, 4, 5, 6, 7, 8),
-    stringsAsFactors = FALSE
-  ))
-
-  con
-}
-
 test_that("PostStratifiedEstimator supports tree_history estimates for GRM handlers", {
   con <- setup_grm_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
-  handler <- eval_handler(con, evalid = 1001, spec = new("GRMAnalysis"))
+  handler <- eval_handler(con, evalid = 1003, spec = new("GRMAnalysis"))
   pe <- PostStratifiedEstimator(handler)
 
   res <- estimate(pe, tree_history(VOLCFNET)) |>
@@ -303,7 +280,7 @@ test_that("tree_history estimates support call expressions as targets", {
   con <- setup_grm_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
-  handler <- eval_handler(con, evalid = 1001, spec = new("GRMAnalysis"))
+  handler <- eval_handler(con, evalid = 1003, spec = new("GRMAnalysis"))
   pe <- PostStratifiedEstimator(handler)
 
   res <- estimate(pe, tree_history(log_vol = sum(log(VOLCFNET), na.rm = TRUE))) |>
@@ -317,7 +294,7 @@ test_that("tree_history margins use cond and tree_history domains", {
   con <- setup_grm_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
-  handler <- eval_handler(con, evalid = 1001, spec = new("GRMAnalysis")) |>
+  handler <- eval_handler(con, evalid = 1003, spec = new("GRMAnalysis")) |>
     partition(cond(COND_STATUS_CD), tree_history(SPCD))
   pe <- PostStratifiedEstimator(handler)
 
@@ -328,6 +305,74 @@ test_that("tree_history margins use cond and tree_history domains", {
   expect_true(any(is.na(res$COND_STATUS_CD)))
   expect_true(any(is.na(res$SPCD)))
   expect_equal(sum(is.na(res$COND_STATUS_CD) & is.na(res$SPCD)), 1L)
+})
+
+test_that("tree_history estimates apply SUBPTYP adjustment factors", {
+  con <- setup_grm_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler_base <- eval_handler(con, evalid = 1003, spec = grm_analysis())
+  pe_base <- PostStratifiedEstimator(handler_base)
+
+  base_est <- estimate(pe_base, tree_history(1), output = "total") |>
+    dplyr::pull(estimate)
+
+  DBI::dbExecute(con, "UPDATE POP_STRATUM SET ADJ_FACTOR_SUBP = 2.0, ADJ_FACTOR_MICR = 0.5, ADJ_FACTOR_MACR = 1.5")
+
+  handler_adj <- eval_handler(con, evalid = 1003, spec = grm_analysis())
+  pe_adj <- PostStratifiedEstimator(handler_adj)
+
+  adj_est <- estimate(pe_adj, tree_history(1), output = "total") |>
+    dplyr::pull(estimate)
+
+  expect_false(isTRUE(all.equal(base_est, adj_est)))
+})
+
+test_that("GRM basis selects matching TREE_GRM_COMPONENT subtype columns", {
+  con <- setup_grm_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler_al <- eval_handler(con, evalid = 1003, spec = grm_analysis(tree_basis = "all_live", land_basis = "forest_land"))
+  handler_gs <- eval_handler(con, evalid = 1003, spec = grm_analysis(tree_basis = "growing_stock", land_basis = "timberland"))
+
+  al_subtypes <- materialize(handler_al, "tree_history") |>
+    dplyr::select(SUBPTYP_GRM) |>
+    dplyr::distinct() |>
+    dplyr::collect() |>
+    dplyr::pull(SUBPTYP_GRM)
+
+  gs_subtypes <- materialize(handler_gs, "tree_history") |>
+    dplyr::select(SUBPTYP_GRM) |>
+    dplyr::distinct() |>
+    dplyr::collect() |>
+    dplyr::pull(SUBPTYP_GRM)
+
+  expect_true(any(al_subtypes %in% c(1L, 2L, 3L, 9L)))
+  expect_true(any(gs_subtypes %in% c(2L, 3L)))
+  expect_false(setequal(sort(unique(al_subtypes)), sort(unique(gs_subtypes))))
+})
+
+test_that("unknown SUBPTYP_GRM codes do not create NA estimates", {
+  con <- setup_grm_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler_unknown <- eval_handler(con, evalid = 1003, spec = grm_analysis())
+  pe_unknown <- PostStratifiedEstimator(handler_unknown)
+
+  est_with_unknown <- estimate(pe_unknown, tree_history(1), output = "total") |>
+    dplyr::pull(estimate)
+
+  DBI::dbExecute(con, "UPDATE TREE_GRM_COMPONENT SET SUBP_SUBPTYP_GRM_AL_FOREST = 1 WHERE TRE_CN = 8")
+
+  handler_known <- eval_handler(con, evalid = 1003, spec = grm_analysis())
+  pe_known <- PostStratifiedEstimator(handler_known)
+
+  est_without_unknown <- estimate(pe_known, tree_history(1), output = "total") |>
+    dplyr::pull(estimate)
+
+  expect_false(any(is.na(est_with_unknown)))
+  expect_false(any(is.na(est_without_unknown)))
+  expect_true(est_without_unknown > est_with_unknown)
 })
 
 test_that("tree_history estimates require GRMAnalysis handlers", {

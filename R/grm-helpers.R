@@ -26,9 +26,37 @@
   expr
 }
 
+#' Shared GRM Macro Arguments
+#'
+#' Internal documentation anchor for shared GRM helper arguments.
+#'
+#' @param expr The variable to summarize. Use `1` for stem density.
+#' @param annualize Logical. If `TRUE`, divides the estimate by `REMPER`.
+#' @param adjust Adjustment behavior for macro-derived targets. One of
+#'   `"auto"`, `"none"`, or `"subptype"`.
+#' @param adjust_basis Basis used when `adjust = "subptype"`. Currently
+#'   supported: `"subptyp_grm"`.
+#' @param unknown_subptype Behavior when subtype cannot be mapped to an
+#'   adjustment factor. One of `"zero"`, `"drop"`, or `"warn"`.
+#' @name grm_macro_shared_args
+NULL
+
 #' Internal builder for GRM macros
+#' @inheritParams grm_macro_shared_args
 #' @noRd
-.build_grm_macro <- function(transition_type, expr, expander, suffix = "", annualize = FALSE) {
+.build_grm_macro <- function(
+    transition_type,
+    expr,
+    expander,
+    suffix = "",
+    annualize = FALSE,
+    adjust = "auto",
+    adjust_basis = "subptyp_grm",
+    unknown_subptype = "zero") {
+  adjust <- match.arg(adjust, c("auto", "none", "subptype"))
+  adjust_basis <- match.arg(adjust_basis, c("subptyp_grm"))
+  unknown_subptype <- match.arg(unknown_subptype, c("zero", "drop", "warn"))
+
   expr_sym <- rlang::enexpr(expr)
   expander_sym <- rlang::enexpr(expander)
   
@@ -49,7 +77,12 @@
   
   # Mask everything outside the target transition and return as a fiaplyr_macro
   structure(
-    list(expr = rlang::expr(ifelse(transition == !!transition_type, !!calc_expr, 0))),
+    list(
+      expr = rlang::expr(ifelse(transition == !!transition_type, !!calc_expr, 0)),
+      adjust = adjust,
+      adjust_basis = adjust_basis,
+      unknown_subptype = unknown_subptype
+    ),
     class = "fiaplyr_macro"
   )
 }
@@ -59,12 +92,26 @@
 #' Evaluates mortality variables at the midpoint, expanded by the initial
 #' trees per acre.
 #'
-#' @param expr The variable to summarize. Defaults to 1 (stem density).
+#' @inheritParams grm_macro_shared_args
 #' @param expander The expansion factor. Defaults to `TPA_UNADJ_begin`.
-#' @param annualize Logical. If `TRUE`, divides the result by `REMPER` to calculate an annual rate.
 #' @export
-grm_mortality <- function(expr = 1, expander = TPA_UNADJ_begin, annualize = FALSE) {
-  .build_grm_macro("mortality", !!rlang::enexpr(expr), !!rlang::enexpr(expander), suffix = "_midpt", annualize = annualize)
+grm_mortality <- function(
+    expr = 1,
+    expander = TPA_UNADJ_begin,
+    annualize = FALSE,
+    adjust = "auto",
+    adjust_basis = "subptyp_grm",
+    unknown_subptype = "zero") {
+  .build_grm_macro(
+    "mortality",
+    !!rlang::enexpr(expr),
+    !!rlang::enexpr(expander),
+    suffix = "_midpt",
+    annualize = annualize,
+    adjust = adjust,
+    adjust_basis = adjust_basis,
+    unknown_subptype = unknown_subptype
+  )
 }
 
 #' GRM Removals Estimator
@@ -72,12 +119,26 @@ grm_mortality <- function(expr = 1, expander = TPA_UNADJ_begin, annualize = FALS
 #' Evaluates removal variables at the midpoint, expanded by the initial
 #' trees per acre.
 #' 
-#' @param expr The variable to summarize. Defaults to 1 (stem density).
+#' @inheritParams grm_macro_shared_args
 #' @param expander The expansion factor. Defaults to `TPA_UNADJ_begin`.
-#' @param annualize Logical. If `TRUE`, divides the result by `REMPER` to calculate an annual rate.
 #' @export
-grm_removals <- function(expr = 1, expander = TPA_UNADJ_begin, annualize = FALSE) {
-  .build_grm_macro("removal", !!rlang::enexpr(expr), !!rlang::enexpr(expander), suffix = "_midpt", annualize = annualize)
+grm_removals <- function(
+    expr = 1,
+    expander = TPA_UNADJ_begin,
+    annualize = FALSE,
+    adjust = "auto",
+    adjust_basis = "subptyp_grm",
+    unknown_subptype = "zero") {
+  .build_grm_macro(
+    "removal",
+    !!rlang::enexpr(expr),
+    !!rlang::enexpr(expander),
+    suffix = "_midpt",
+    annualize = annualize,
+    adjust = adjust,
+    adjust_basis = adjust_basis,
+    unknown_subptype = unknown_subptype
+  )
 }
 
 #' GRM Ingrowth Estimator
@@ -85,32 +146,74 @@ grm_removals <- function(expr = 1, expander = TPA_UNADJ_begin, annualize = FALSE
 #' Evaluates ingrowth variables at the measurement endpoint, expanded by the
 #' current trees per acre.
 #'
-#' @param expr The variable to summarize. Defaults to 1 (stem density).
+#' @inheritParams grm_macro_shared_args
 #' @param expander The expansion factor. Defaults to `TPA_UNADJ`.
-#' @param annualize Logical. If `TRUE`, divides the result by `REMPER` to calculate an annual rate.
 #' @export
-grm_ingrowth <- function(expr = 1, expander = TPA_UNADJ, annualize = FALSE) {
-  .build_grm_macro("ingrowth", !!rlang::enexpr(expr), !!rlang::enexpr(expander), suffix = "", annualize = annualize)
+grm_ingrowth <- function(
+    expr = 1,
+    expander = TPA_UNADJ,
+    annualize = FALSE,
+    adjust = "auto",
+    adjust_basis = "subptyp_grm",
+    unknown_subptype = "zero") {
+  .build_grm_macro(
+    "ingrowth",
+    !!rlang::enexpr(expr),
+    !!rlang::enexpr(expander),
+    suffix = "",
+    annualize = annualize,
+    adjust = adjust,
+    adjust_basis = adjust_basis,
+    unknown_subptype = unknown_subptype
+  )
 }
 
 #' GRM Survivor Estimator
 #'
-#' @param expr The variable to summarize. Defaults to 1 (stem density).
+#' @inheritParams grm_macro_shared_args
 #' @param expander The expansion factor. Defaults to `TPA_UNADJ`.
-#' @param annualize Logical. If `TRUE`, divides the result by `REMPER` to calculate an annual rate.
 #' @export
-grm_survivor <- function(expr = 1, expander = TPA_UNADJ, annualize = FALSE) {
-  .build_grm_macro("survivor", !!rlang::enexpr(expr), !!rlang::enexpr(expander), suffix = "", annualize = annualize)
+grm_survivor <- function(
+    expr = 1,
+    expander = TPA_UNADJ,
+    annualize = FALSE,
+    adjust = "auto",
+    adjust_basis = "subptyp_grm",
+    unknown_subptype = "zero") {
+  .build_grm_macro(
+    "survivor",
+    !!rlang::enexpr(expr),
+    !!rlang::enexpr(expander),
+    suffix = "",
+    annualize = annualize,
+    adjust = adjust,
+    adjust_basis = adjust_basis,
+    unknown_subptype = unknown_subptype
+  )
 }
 
 #' GRM Reversion Estimator
 #'
-#' @param expr The variable to summarize. Defaults to 1 (stem density).
+#' @inheritParams grm_macro_shared_args
 #' @param expander The expansion factor. Defaults to `TPA_UNADJ`.
-#' @param annualize Logical. If `TRUE`, divides the result by `REMPER` to calculate an annual rate.
 #' @export
-grm_reversion <- function(expr = 1, expander = TPA_UNADJ, annualize = FALSE) {
-  .build_grm_macro("reversion", !!rlang::enexpr(expr), !!rlang::enexpr(expander), suffix = "", annualize = annualize)
+grm_reversion <- function(
+    expr = 1,
+    expander = TPA_UNADJ,
+    annualize = FALSE,
+    adjust = "auto",
+    adjust_basis = "subptyp_grm",
+    unknown_subptype = "zero") {
+  .build_grm_macro(
+    "reversion",
+    !!rlang::enexpr(expr),
+    !!rlang::enexpr(expander),
+    suffix = "",
+    annualize = annualize,
+    adjust = adjust,
+    adjust_basis = adjust_basis,
+    unknown_subptype = unknown_subptype
+  )
 }
 
 #' GRM Diversion Estimator
@@ -118,10 +221,24 @@ grm_reversion <- function(expr = 1, expander = TPA_UNADJ, annualize = FALSE) {
 #' Evaluates diversion variables at the measurement beginning, expanded by the
 #' initial trees per acre.
 #'
-#' @param expr The variable to summarize. Defaults to 1 (stem density).
+#' @inheritParams grm_macro_shared_args
 #' @param expander The expansion factor. Defaults to `TPA_UNADJ_begin`.
-#' @param annualize Logical. If `TRUE`, divides the result by `REMPER` to calculate an annual rate.
 #' @export
-grm_diversion <- function(expr = 1, expander = TPA_UNADJ_begin, annualize = FALSE) {
-  .build_grm_macro("diversion", !!rlang::enexpr(expr), !!rlang::enexpr(expander), suffix = "_begin", annualize = annualize)
+grm_diversion <- function(
+    expr = 1,
+    expander = TPA_UNADJ_begin,
+    annualize = FALSE,
+    adjust = "auto",
+    adjust_basis = "subptyp_grm",
+    unknown_subptype = "zero") {
+  .build_grm_macro(
+    "diversion",
+    !!rlang::enexpr(expr),
+    !!rlang::enexpr(expander),
+    suffix = "_begin",
+    annualize = annualize,
+    adjust = adjust,
+    adjust_basis = adjust_basis,
+    unknown_subptype = unknown_subptype
+  )
 }

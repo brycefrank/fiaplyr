@@ -171,7 +171,7 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = 
 
   resolved_targets <- .resolve_estimation_targets(targets, target_names, target_quos)
 
-  plot_data <- .make_tree_history_aggregates(handler, !!!agg_targets, sparse = TRUE)
+  plot_data <- .make_tree_history_aggregates(handler, !!!agg_targets, adjusted = TRUE, sparse = TRUE)
   strata_data <- .ps_join_strata(plot_data, handler)
   strata_stats <- .ps_strata_stats(strata_data, resolved_targets)
   eu_stats <- .ps_eu_stats(strata_stats, resolved_targets)

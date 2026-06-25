@@ -4,10 +4,12 @@
 NULL
 
 utils::globalVariables(c(
+  ".expander_wt",
+  "ADJ_SUBPTYPE",
   "ADJ_FACTOR", "ADJ_FACTOR_MACR", "ADJ_FACTOR_MICR", "ADJ_FACTOR_SUBP",
-  "AREA_USED", "CN", "CONDPROP_UNADJ", "DIA", "ESTN_UNIT_CN", "EVALID",
+  "AREA_USED", "CN", "COMPONENT", "CONDPROP_UNADJ", "DIA", "ESTN_UNIT_CN", "EVALID",
   "EVAL_DESCR", "EXPNS", "INVYR", "MACRO_BREAKPOINT_DIA", "MEASYEAR", "P1PNTCNT_EU",
-  "P1POINTCNT", "P2POINTCNT", "PLT_CN", "STATECD", "STRATUM_CN", "TPA_UNADJ",
+  "P1POINTCNT", "P2POINTCNT", "PLT_CN", "REMPER", "STATECD", "STRATUM_CN", "SUBPTYP_GRM", "TPA_UNADJ", "TPA_UNADJ_begin", "transition",
   "VOLCFNET", "cov_col", "cov_val", "estimate_d", "estimate_n", "eu_area", "n",
   "n_h", "se", "se_d", "se_n", "var", "var_ratio", "var_raw", "var_val", "w_eu",
   "w_h"

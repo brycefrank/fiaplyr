@@ -149,6 +149,38 @@
   tryCatch(eval(expr, envir = asNamespace("fiaplyr")), error = function(e) NULL)
 }
 
+.macro_adjustment_factor_expr <- function(macro, adjusted) {
+  macro_adjust <- if (is.null(macro$adjust)) "auto" else macro$adjust
+  macro_basis <- if (is.null(macro$adjust_basis)) "subptyp_grm" else macro$adjust_basis
+  unknown_subptype <- if (is.null(macro$unknown_subptype)) "zero" else macro$unknown_subptype
+
+  if (macro_adjust == "none") {
+    return(rlang::expr(1))
+  }
+
+  if (!adjusted) {
+    return(rlang::expr(1))
+  }
+
+  if (!macro_adjust %in% c("auto", "subptype")) {
+    stop("Unsupported macro adjustment mode: ", macro_adjust, call. = FALSE)
+  }
+
+  if (!identical(macro_basis, "subptyp_grm")) {
+    stop("Unsupported macro adjustment basis: ", macro_basis, call. = FALSE)
+  }
+
+  if (identical(unknown_subptype, "drop")) {
+    return(rlang::expr(ADJ_FACTOR))
+  }
+
+  if (identical(unknown_subptype, "warn")) {
+    warning("Unknown GRM subtypes are being treated as zero-adjustment rows for this macro target.", call. = FALSE)
+  }
+
+  rlang::expr(dplyr::coalesce(ADJ_FACTOR, 0))
+}
+
 .uses_default_expander_filter <- function(target_vars) {
   if (length(target_vars) == 0) {
     return(TRUE)
@@ -350,7 +382,8 @@
         if (inherits(evaluated, "fiaplyr_macro")) {
           zero_fill_vars <<- c(zero_fill_vars, resolved_names[[i]])
           expanded_expr <- evaluated$expr
-          rlang::expr(sum((!!expanded_expr), na.rm = TRUE))
+          factor_expr <- .macro_adjustment_factor_expr(evaluated, adjusted = adjusted)
+          rlang::expr(sum((!!expanded_expr) * (!!factor_expr), na.rm = TRUE))
         } else {
           expr
         }
@@ -389,12 +422,43 @@
 #'
 #' @param object A EvalHandler object.
 #' @param ... Additional arguments.
+#' @param adjusted Logical. If TRUE, applies stratum subplot adjustment
+#'   factors based on GRM subtype code.
 #' @param sparse Logical. If TRUE, returns a sparse result.
 #' @keywords internal
-.make_tree_history_aggregates <- function(object, ..., sparse = FALSE) {
+.make_tree_history_aggregates <- function(object, ..., adjusted = FALSE, sparse = FALSE) {
   res <- .build_tree_history_data(object)
   res <- res %>%
     dplyr::mutate(.expander_wt = TPA_UNADJ)
+
+  if (adjusted) {
+    subptype_adj_factors <- .get_subptype_adjustment_factors(object)
+
+    res <- res %>%
+      dplyr::left_join(
+        object@tables$pop_plot_stratum_assgn %>% dplyr::select(PLT_CN, STRATUM_CN),
+        by = c("CN" = "PLT_CN")
+      ) %>%
+      dplyr::mutate(
+        ADJ_SUBPTYPE = dplyr::case_when(
+          SUBPTYP_GRM == 1 ~ "SUBP",
+          SUBPTYP_GRM == 2 ~ "MICR",
+          SUBPTYP_GRM == 3 ~ "MACR",
+          TRUE ~ NA_character_
+        )
+      ) %>%
+      dplyr::left_join(
+        subptype_adj_factors,
+        by = c("STRATUM_CN", "ADJ_SUBPTYPE" = "SUBPTYPE")
+      ) %>%
+      dplyr::mutate(
+        .expander_wt = dplyr::if_else(
+          is.na(.expander_wt),
+          NA_real_,
+          .expander_wt * dplyr::coalesce(ADJ_FACTOR, 0)
+        )
+      )
+  }
 
   plot_keys <- .plot_keys_raw
   plot_domains <- .resolve_partition_domains(object@plot_domains, "plot", colnames(res))

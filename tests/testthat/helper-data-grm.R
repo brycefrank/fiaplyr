@@ -118,5 +118,26 @@ setup_grm_test_db <- function() {
     stringsAsFactors = FALSE
   ))
 
+  # TREE_GRM_COMPONENT - basis-specific GRM component/subtype columns
+  write_table("TREE_GRM_COMPONENT", data.frame(
+    TRE_CN = c(1, 2, 3, 4, 5, 6, 7, 8),
+    SUBP_SUBPTYP_GRM_AL_FOREST = c(1L, 2L, 3L, 1L, 2L, 3L, 1L, 9L),
+    SUBP_COMPONENT_AL_FOREST = c(
+      "MORTALITY_TREE", "MORTALITY_TREE", "MORTALITY_TREE", "REMOVAL_TREE",
+      "MORTALITY_TREE", "MORTALITY_TREE", "REMOVAL_TREE", "MORTALITY_TREE"
+    ),
+    SUBP_SUBPTYP_GRM_GS_TIMBER = c(3L, 3L, 3L, 3L, 2L, 2L, 2L, 2L),
+    SUBP_COMPONENT_GS_TIMBER = c(
+      "REMOVAL_TREE", "REMOVAL_TREE", "REMOVAL_TREE", "REMOVAL_TREE",
+      "MORTALITY_TREE", "MORTALITY_TREE", "MORTALITY_TREE", "MORTALITY_TREE"
+    ),
+    SUBP_SUBPTYP_GRM_SL_TIMBER = c(2L, 2L, 2L, 2L, 1L, 1L, 1L, 1L),
+    SUBP_COMPONENT_SL_TIMBER = c(
+      "MORTALITY_TREE", "MORTALITY_TREE", "MORTALITY_TREE", "MORTALITY_TREE",
+      "REMOVAL_TREE", "REMOVAL_TREE", "REMOVAL_TREE", "REMOVAL_TREE"
+    ),
+    stringsAsFactors = FALSE
+  ))
+
   return(con)
 }
