@@ -47,9 +47,10 @@
     calc_expr <- rlang::expr((!!calc_expr) / REMPER)
   }
   
-  # Mask everything outside the target transition
-  rlang::expr(
-    ifelse(transition == !!transition_type, !!calc_expr, 0)
+  # Mask everything outside the target transition and return as a fiaplyr_macro
+  structure(
+    list(expr = rlang::expr(ifelse(transition == !!transition_type, !!calc_expr, 0))),
+    class = "fiaplyr_macro"
   )
 }
 

@@ -345,11 +345,13 @@ test_that("aggregate(tree()) implicit default is unchanged by macro dispatch", {
     dplyr::collect() %>%
     dplyr::arrange(PLT_CN)
 
-  # Explicit sum(...) macro should produce same result
+  # Explicit sum(...) is a passthrough expression: zero-fill is not applied,
+  # so missing plots yield NA rather than 0. Use coalesce to match implicit.
   result_explicit <- eval_handler(con, evalid = 1001) %>%
     aggregate(tree(VOLCFGRS = sum(TPA_UNADJ * VOLCFGRS, na.rm = TRUE))) %>%
     dplyr::collect() %>%
-    dplyr::arrange(PLT_CN)
+    dplyr::arrange(PLT_CN) %>%
+    dplyr::mutate(VOLCFGRS = dplyr::coalesce(VOLCFGRS, 0))
 
   expect_equal(result_implicit$VOLCFGRS, result_explicit$VOLCFGRS)
 })
@@ -438,8 +440,8 @@ test_that("GRM macro aggregates do not prefilter on the default expander weight"
     fiaplyr:::.make_tree_history_aggregates(handler, mortality = grm_mortality(), sparse = TRUE)
   )
 
-  expect_match(generic_sql, fixed('".expander_wt" IS NULL'))
-  expect_no_match(macro_sql, fixed('".expander_wt" IS NULL'))
+  expect_match(generic_sql, '".expander_wt" IS NULL', fixed = TRUE)
+  expect_no_match(macro_sql, '".expander_wt" IS NULL', fixed = TRUE)
   expect_match(macro_sql, "TPA_UNADJ_begin")
 })
 

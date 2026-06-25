@@ -306,7 +306,7 @@ test_that("tree_history estimates support call expressions as targets", {
   handler <- eval_handler(con, evalid = 1001, spec = new("GRMAnalysis"))
   pe <- PostStratifiedEstimator(handler)
 
-  res <- estimate(pe, tree_history(log_vol = log(VOLCFNET))) |>
+  res <- estimate(pe, tree_history(log_vol = sum(log(VOLCFNET), na.rm = TRUE))) |>
     dplyr::collect()
 
   expect_true(nrow(res) > 0)

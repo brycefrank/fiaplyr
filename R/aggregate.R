@@ -7,24 +7,26 @@
 #' @param plot_keys A character vector of columns that uniquely identify a plot.
 #' @param domain_vars A character vector of domain variables that form the scaffold with plot_keys.
 #' @param sparse Logical. If TRUE, returns a sparse result (only observed combinations) to optimize performance. Defaults to FALSE.
+#' @param zero_fill_vars Character vector of target column names that should be filled with 0 for missing plots.
+#'   Passthrough (user-supplied summarise) columns are left as NA. Defaults to all target variables.
 #'
 #' @return A lazy query with the full scaffold joined to the aggregated data.
 #' @noRd
-.complete_scaffold <- function(plot_qry, aggregated_qry, plot_keys, domain_vars, sparse = FALSE) {
-  # 1. Identify Target Variables (Response variables)
+.complete_scaffold <- function(plot_qry, aggregated_qry, plot_keys, domain_vars, sparse = FALSE, zero_fill_vars = NULL) {
   # Any column in the aggregated result that is NOT a plot key or a domain variable is a target variable.
-  # We assume these are numeric and should be filled with 0 where missing.
   agg_cols <- colnames(aggregated_qry)
   target_vars <- setdiff(agg_cols, c(plot_keys, domain_vars))
+
+  # Default: zero-fill all target vars (preserves existing behaviour for callers that don't pass zero_fill_vars)
+  if (is.null(zero_fill_vars)) {
+    zero_fill_vars <- target_vars
+  }
 
   # 2. Get all plots (Full Plot List)
   all_plots <- plot_qry %>%
     dplyr::select(dplyr::all_of(plot_keys))
 
   if (sparse && length(domain_vars) > 0) {
-    # Optimization: Densification with zeros is mathematically redundant for
-    # summation aggregation and causes exponential data growth.
-    # We return the aggregated data directly, ensuring it matches the plot list.
     return(
       aggregated_qry %>%
         dplyr::ungroup() %>%
@@ -33,32 +35,29 @@
   }
 
   if (length(domain_vars) > 0) {
-    # Extract distinct combinations of domain variables from the aggregated data
     observed_domains <- aggregated_qry %>%
       dplyr::ungroup() %>%
       dplyr::select(dplyr::all_of(domain_vars)) %>%
       dplyr::distinct()
 
-    # Cross join: All Plots x Observed Domains
     scaffold <- all_plots %>%
       dplyr::cross_join(observed_domains, copy = TRUE)
 
-    # Join key
     join_by <- c(plot_keys, domain_vars)
   } else {
     scaffold <- all_plots
     join_by <- plot_keys
   }
 
-  # Left join aggregated data onto the scaffold
   final_res <- scaffold %>%
     dplyr::left_join(aggregated_qry, by = join_by)
 
-  # Fill NAs with 0 for target variables
-  if (length(target_vars) > 0) {
+  # Only zero-fill columns that came from TPA expansion or macros
+  cols_to_zero <- intersect(zero_fill_vars, target_vars)
+  if (length(cols_to_zero) > 0) {
     final_res <- final_res %>%
       dplyr::mutate(
-        dplyr::across(dplyr::all_of(target_vars), ~ dplyr::coalesce(.x, 0))
+        dplyr::across(dplyr::all_of(cols_to_zero), ~ dplyr::coalesce(.x, 0))
       )
   }
 
@@ -139,40 +138,15 @@
   }, character(1))
 }
 
-.contains_aggregate_call <- function(expr) {
-  aggregate_fns <- c("sum", "mean", "min", "max", "median", "sd", "var", "n", "n_distinct", "first", "last", "any", "all")
-
-  if (!rlang::is_call(expr)) {
-    return(FALSE)
-  }
-
-  fn <- rlang::call_name(expr)
-  if (!is.null(fn) && fn %in% aggregate_fns) {
-    return(TRUE)
-  }
-
-  args <- as.list(expr)[-1]
-  if (length(args) == 0) {
-    return(FALSE)
-  }
-
-  any(vapply(args, .contains_aggregate_call, logical(1)))
-}
-
-.is_grm_macro_call <- function(expr) {
-  if (!rlang::is_call(expr)) {
-    return(FALSE)
-  }
-
-  fn <- rlang::call_name(expr)
-  !is.null(fn) && fn %in% c(
-    "grm_mortality",
-    "grm_removals",
-    "grm_ingrowth",
-    "grm_survivor",
-    "grm_reversion",
-    "grm_diversion"
-  )
+.eval_as_macro <- function(var_quo) {
+  # Try the quosure's captured environment first
+  result <- tryCatch(rlang::eval_tidy(var_quo), error = function(e) NULL)
+  if (inherits(result, "fiaplyr_macro")) return(result)
+  # Fall back to evaluating the expression in the fiaplyr namespace.
+  # This handles cases where the quosure's environment (e.g., inside an S4
+  # method body) doesn't have the package's exported symbols on its search path.
+  expr <- rlang::quo_get_expr(var_quo)
+  tryCatch(eval(expr, envir = asNamespace("fiaplyr")), error = function(e) NULL)
 }
 
 .uses_default_expander_filter <- function(target_vars) {
@@ -180,8 +154,14 @@
     return(TRUE)
   }
 
-  exprs <- purrr::map(target_vars, rlang::quo_get_expr)
-  !any(vapply(exprs, .is_grm_macro_call, logical(1)))
+  # Only apply the TPA_UNADJ IS NOT NULL filter when ALL targets use TPA expansion
+  # (bare symbols or the literal 1). Macros and passthrough expressions manage
+  # their own expansion logic and must not have rows silently dropped.
+  all(vapply(target_vars, function(var_quo) {
+    expr <- rlang::quo_get_expr(var_quo)
+    rlang::is_symbol(expr) ||
+      (is.numeric(expr) && length(expr) == 1 && !is.na(expr) && expr == 1)
+  }, logical(1)))
 }
 
 #' Aggregate condition data to plot or subplot levels
@@ -351,23 +331,32 @@
         tree_count = sum(.expander_wt, na.rm = TRUE)
       ) %>%
       dplyr::ungroup()
+    zero_fill_vars <- "tree_count"
   } else {
-    agg_exprs <- purrr::map(target_vars, function(var_quo) {
+    resolved_names <- .resolve_tree_target_names(target_vars)
+    zero_fill_vars <- character(0)
+
+    agg_exprs <- purrr::map(seq_along(target_vars), function(i) {
+      var_quo <- target_vars[[i]]
       expr <- rlang::quo_get_expr(var_quo)
       if (is.numeric(expr) && length(expr) == 1 && !is.na(expr) && expr == 1) {
+        zero_fill_vars <<- c(zero_fill_vars, resolved_names[[i]])
         rlang::expr(sum(.expander_wt, na.rm = TRUE))
       } else if (rlang::is_symbol(expr)) {
+        zero_fill_vars <<- c(zero_fill_vars, resolved_names[[i]])
         rlang::expr(sum(.expander_wt * (!!var_quo), na.rm = TRUE))
-      } else if (.is_grm_macro_call(expr)) {
-        expanded_expr <- rlang::eval_tidy(var_quo)
-        rlang::expr(sum((!!expanded_expr), na.rm = TRUE))
-      } else if (.contains_aggregate_call(expr)) {
-        expr
       } else {
-        rlang::expr(sum(.expander_wt * (!!var_quo), na.rm = TRUE))
+        evaluated <- .eval_as_macro(var_quo)
+        if (inherits(evaluated, "fiaplyr_macro")) {
+          zero_fill_vars <<- c(zero_fill_vars, resolved_names[[i]])
+          expanded_expr <- evaluated$expr
+          rlang::expr(sum((!!expanded_expr), na.rm = TRUE))
+        } else {
+          expr
+        }
       }
     })
-    names(agg_exprs) <- .resolve_tree_target_names(target_vars)
+    names(agg_exprs) <- resolved_names
 
     aggregated <- res %>%
       dplyr::summarise(!!!agg_exprs) %>%
@@ -384,7 +373,8 @@
     aggregated_qry = aggregated,
     plot_keys = plot_keys,
     domain_vars = domain_vars,
-    sparse = sparse
+    sparse = sparse,
+    zero_fill_vars = zero_fill_vars
   )
 
   final_res <- final_res %>%
@@ -448,23 +438,32 @@
         tree_count = sum(.expander_wt, na.rm = TRUE)
       ) %>%
       dplyr::ungroup()
+    zero_fill_vars <- "tree_count"
   } else {
-    agg_exprs <- purrr::map(target_vars, function(var_quo) {
+    resolved_names <- .resolve_tree_target_names(target_vars)
+    zero_fill_vars <- character(0)
+
+    agg_exprs <- purrr::map(seq_along(target_vars), function(i) {
+      var_quo <- target_vars[[i]]
       expr <- rlang::quo_get_expr(var_quo)
       if (is.numeric(expr) && length(expr) == 1 && !is.na(expr) && expr == 1) {
+        zero_fill_vars <<- c(zero_fill_vars, resolved_names[[i]])
         rlang::expr(sum(.expander_wt, na.rm = TRUE))
       } else if (rlang::is_symbol(expr)) {
+        zero_fill_vars <<- c(zero_fill_vars, resolved_names[[i]])
         rlang::expr(sum(.expander_wt * (!!var_quo), na.rm = TRUE))
-      } else if (.is_grm_macro_call(expr)) {
-        expanded_expr <- rlang::eval_tidy(var_quo)
-        rlang::expr(sum((!!expanded_expr), na.rm = TRUE))
-      } else if (.contains_aggregate_call(expr)) {
-        expr
       } else {
-        rlang::expr(sum(.expander_wt * (!!var_quo), na.rm = TRUE))
+        evaluated <- .eval_as_macro(var_quo)
+        if (inherits(evaluated, "fiaplyr_macro")) {
+          zero_fill_vars <<- c(zero_fill_vars, resolved_names[[i]])
+          expanded_expr <- evaluated$expr
+          rlang::expr(sum((!!expanded_expr), na.rm = TRUE))
+        } else {
+          expr
+        }
       }
     })
-    names(agg_exprs) <- .resolve_tree_target_names(target_vars)
+    names(agg_exprs) <- resolved_names
 
     aggregated <- res %>%
       dplyr::summarise(!!!agg_exprs) %>%
@@ -481,7 +480,8 @@
     aggregated_qry = aggregated,
     plot_keys = plot_keys,
     domain_vars = domain_vars,
-    sparse = sparse
+    sparse = sparse,
+    zero_fill_vars = zero_fill_vars
   )
 
   final_res <- final_res %>%

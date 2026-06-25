@@ -425,13 +425,38 @@ setMethod("mutate_cond", "EvalHandler", function(handler, ...) {
 
 #' Aggregate a Handler to the Plot Level
 #'
-#' Aggregation generates plot (or subplot) level summaries of inventory
-#' components
+#' Aggregates inventory data to the plot level. The behavior depends on how
+#' target variables are specified:
+#'
+#' - **Bare variables** (e.g., `tree(VOLCFGRS)`) are expanded using the
+#'   per-acre expansion factor (`TPA_UNADJ`), producing a TPA-weighted sum
+#'   per plot. This is the standard FIA expansion.
+#'
+#' - **Function calls** (e.g., `tree(mean(VOLCFGRS))`) are passed directly
+#'   into `dplyr::summarise()` using the active plot-level groupings.
+#'   This mirrors `dplyr::summarise()` semantics — you control the aggregation.
+#'
+#' Functions that return a `fiaplyr_macro` object (such as [grm_mortality()],
+#' [grm_ingrowth()], etc.) are also expanded correctly — the macro encodes
+#' both the variable and its expansion logic.
 #'
 #' @param handler A EvalHandler object.
-#' @param ... A scoped target helper such as `tree(VOLCFGRS)` or `cond()`, and
-#'   optional arguments like `sparse`.
+#' @param ... A scoped target helper such as `tree(VOLCFGRS)`,
+#'   `tree(mean(VOLCFGRS))`, or `tree(grm_mortality(VOLCFGRS))`, and optional
+#'   arguments like `sparse`.
 #' @return A lazy query with plot-level summaries.
+#'
+#' @examples
+#' \dontrun{
+#'   # Standard TPA expansion
+#'   handler |> aggregate(tree(VOLCFGRS))
+#'
+#'   # Raw summarise: mean volume per plot (no TPA expansion)
+#'   handler |> aggregate(tree(mean(VOLCFGRS)))
+#'
+#'   # GRM macro (fiaplyr_macro): encodes its own expansion logic
+#'   handler |> aggregate(tree_history(grm_mortality(VOLCFGRS)))
+#' }
 #' @export
 setMethod("aggregate", "EvalHandler", function(handler, ...) {
   args <- list(...)
