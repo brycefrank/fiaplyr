@@ -68,13 +68,13 @@ test_that("GRM spec summary fields are shown in handler summary and print output
   s <- summary(handler)
   expect_identical(s$tree_basis, "sawtimber")
   expect_identical(s$land_basis, "timberland")
-  expect_identical(s$n_component_rules, 5L)
+  expect_identical(s$n_component_rules, 7L)
 
   shown <- capture.output(show(handler))
   expect_true(any(grepl("GRM Spec", shown, fixed = TRUE)))
   expect_true(any(grepl("Tree basis:\\s+sawtimber", shown)))
   expect_true(any(grepl("Land basis:\\s+timberland", shown)))
-  expect_true(any(grepl("Rules:\\s+5", shown)))
+  expect_true(any(grepl("Rules:\\s+7", shown)))
 })
 
 test_that("EvalHandler filters correctly by evalid", {

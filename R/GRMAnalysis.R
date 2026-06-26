@@ -422,29 +422,21 @@ build_grm_component_rules <- function(tree_basis, land_basis) {
   get_land_basis_filters(land_basis)
 
   rules <- rlang::exprs(
+    # DIVERSION2: crossed the tree basis threshold, but land basis diverted by T2.
+    !is_tree_basis_t1 & is_tree_basis_t2 &
+      is_land_basis_t1 & !is_land_basis_t2 ~ "diversion",
+    # DIVERSION1: was in-population at T1, but land basis diverted by T2.
+    in_pop_t1 & is_land_basis_t1 & !is_land_basis_t2 ~ "diversion",
     in_pop_t1 & in_pop_t2 & PREV_STATUS_CD == 1 & STATUSCD == 1 ~ "survivor",
     in_pop_t1 & PREV_STATUS_CD == 1 & STATUSCD == 2 &
+      is_land_basis_t2 &
       (is.na(AGENTCD) | AGENTCD != 80) ~ "mortality",
-    in_pop_t1 & PREV_STATUS_CD == 1 & STATUSCD == 2 & AGENTCD == 80 ~ "removal",
+    in_pop_t1 & PREV_STATUS_CD == 1 & STATUSCD == 2 &
+      is_land_basis_t2 &
+      AGENTCD == 80 ~ "removal",
     !in_pop_t1 & in_pop_t2 & STATUSCD == 1 ~ "ingrowth",
     TRUE ~ "other"
   )
-
-  # Trial basis-specific rule: count trees that cross into all-live threshold and die as mortality.
-  if (identical(tree_basis, "all_live") && identical(land_basis, "forest_land")) {
-    rules <- c(
-      rlang::exprs(
-        !in_pop_t1 &
-          is_land_basis_t1 &
-          PREV_STATUS_CD == 1 &
-          STATUSCD == 2 &
-          DIA_begin < 5.0 &
-          DIA >= 5.0 &
-          (is.na(AGENTCD) | AGENTCD != 80) ~ "mortality"
-      ),
-      rules
-    )
-  }
 
   rules
 }
