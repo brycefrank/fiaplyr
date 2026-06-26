@@ -236,6 +236,7 @@ setMethod("initialize_tables", "GRMAnalysis", function(spec, db, evalid, backend
   required_cols <- c(
     "TREECLCD",
     "SPCD",
+    "DIA",
     "DIA_begin",
     "STATUSCD",
     "AGENTCD",
@@ -420,7 +421,7 @@ build_grm_component_rules <- function(tree_basis, land_basis) {
   get_tree_basis_filters(tree_basis)
   get_land_basis_filters(land_basis)
 
-  rlang::exprs(
+  rules <- rlang::exprs(
     in_pop_t1 & in_pop_t2 & PREV_STATUS_CD == 1 & STATUSCD == 1 ~ "survivor",
     in_pop_t1 & PREV_STATUS_CD == 1 & STATUSCD == 2 &
       (is.na(AGENTCD) | AGENTCD != 80) ~ "mortality",
@@ -428,6 +429,24 @@ build_grm_component_rules <- function(tree_basis, land_basis) {
     !in_pop_t1 & in_pop_t2 & STATUSCD == 1 ~ "ingrowth",
     TRUE ~ "other"
   )
+
+  # Trial basis-specific rule: count trees that cross into all-live threshold and die as mortality.
+  if (identical(tree_basis, "all_live") && identical(land_basis, "forest_land")) {
+    rules <- c(
+      rlang::exprs(
+        !in_pop_t1 &
+          is_land_basis_t1 &
+          PREV_STATUS_CD == 1 &
+          STATUSCD == 2 &
+          DIA_begin < 5.0 &
+          DIA >= 5.0 &
+          (is.na(AGENTCD) | AGENTCD != 80) ~ "mortality"
+      ),
+      rules
+    )
+  }
+
+  rules
 }
 
 # internal function, not exported

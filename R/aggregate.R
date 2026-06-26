@@ -321,6 +321,28 @@
   res <- res %>%
     dplyr::mutate(.expander_wt = TPA_UNADJ)
 
+  if (adjusted) {
+    res <- res %>%
+      dplyr::left_join(
+        object@tables$pop_plot_stratum_assgn %>% dplyr::select(PLT_CN, STRATUM_CN),
+        by = c("CN" = "PLT_CN")
+      ) %>%
+      dplyr::left_join(
+        object@tables$pop_stratum %>%
+          dplyr::select(CN, ADJ_FACTOR_MACR, ADJ_FACTOR_MICR, ADJ_FACTOR_SUBP) %>%
+          dplyr::rename(STRATUM_CN = CN),
+        by = "STRATUM_CN"
+      )
+
+    if (!"MACRO_BREAKPOINT_DIA" %in% colnames(res)) {
+      res <- res %>% dplyr::mutate(MACRO_BREAKPOINT_DIA = NA_real_)
+    }
+
+    res <- res %>% dplyr::mutate(.adj_factor = !!get_adj_factor_expr())
+  } else {
+    res <- res %>% dplyr::mutate(.adj_factor = 1)
+  }
+
   plot_keys <- .plot_keys_raw
   plot_domains <- .resolve_partition_domains(object@plot_domains, "plot", colnames(res))
   cond_domains <- .resolve_partition_domains(object@cond_domains, "cond", colnames(res))
@@ -373,10 +395,10 @@
       expr <- rlang::quo_get_expr(var_quo)
       if (is.numeric(expr) && length(expr) == 1 && !is.na(expr) && expr == 1) {
         zero_fill_vars <<- c(zero_fill_vars, resolved_names[[i]])
-        rlang::expr(sum(.expander_wt, na.rm = TRUE))
+        rlang::expr(sum(.expander_wt * .adj_factor, na.rm = TRUE))
       } else if (rlang::is_symbol(expr)) {
         zero_fill_vars <<- c(zero_fill_vars, resolved_names[[i]])
-        rlang::expr(sum(.expander_wt * (!!var_quo), na.rm = TRUE))
+        rlang::expr(sum(.expander_wt * .adj_factor * (!!var_quo), na.rm = TRUE))
       } else {
         evaluated <- .eval_as_macro(var_quo)
         if (inherits(evaluated, "fiaplyr_macro")) {

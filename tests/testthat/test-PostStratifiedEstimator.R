@@ -100,6 +100,43 @@ test_that("estimate() preserves user-defined target names", {
   expect_equal(unique(cond_res$var), "my_prop")
 })
 
+test_that("status tree estimates apply DIA-based adjustment factors for bare targets", {
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  DBI::dbExecute(con, "ALTER TABLE PLOT ADD COLUMN MACRO_BREAKPOINT_DIA DOUBLE")
+  DBI::dbExecute(con, "UPDATE PLOT SET MACRO_BREAKPOINT_DIA = 11.0")
+
+  DBI::dbExecute(con, "UPDATE TREE SET TPA_UNADJ = 1.0, VOLCFNET = 1.0")
+  DBI::dbExecute(
+    con,
+    "UPDATE TREE SET DIA = CASE CN
+      WHEN 1 THEN 3.0
+      WHEN 2 THEN 10.0
+      WHEN 3 THEN 12.0
+      WHEN 4 THEN NULL
+      WHEN 5 THEN 3.0
+      WHEN 6 THEN 10.0
+      WHEN 7 THEN 12.0
+      WHEN 8 THEN NULL
+      ELSE DIA END"
+  )
+
+  handler_base <- eval_handler(con, evalid = 1001)
+  pe_base <- PostStratifiedEstimator(handler_base)
+  base_est <- estimate(pe_base, tree(VOLCFNET), output = "total") |>
+    dplyr::pull(estimate)
+
+  DBI::dbExecute(con, "UPDATE POP_STRATUM SET ADJ_FACTOR_SUBP = 2.0, ADJ_FACTOR_MICR = 3.0, ADJ_FACTOR_MACR = 5.0")
+
+  handler_adj <- eval_handler(con, evalid = 1001)
+  pe_adj <- PostStratifiedEstimator(handler_adj)
+  adj_est <- estimate(pe_adj, tree(VOLCFNET), output = "total") |>
+    dplyr::pull(estimate)
+
+  expect_true(adj_est > base_est)
+})
+
 test_that("margins=TRUE for cond adds grand total row and full rows", {
   con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))

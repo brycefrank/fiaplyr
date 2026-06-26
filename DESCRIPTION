@@ -23,7 +23,10 @@ Imports:
     lifecycle
 Suggests:
     duckdb,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    rvalidator
+Remotes:
+    brycefrank/rvalidator
 Config/testthat/edition: 3
 Collate:
     'methods.R'

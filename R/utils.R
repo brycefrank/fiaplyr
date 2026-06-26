@@ -4,6 +4,7 @@
 NULL
 
 utils::globalVariables(c(
+  ".adj_factor",
   ".expander_wt",
   "ADJ_SUBPTYPE",
   "ADJ_FACTOR", "ADJ_FACTOR_MACR", "ADJ_FACTOR_MICR", "ADJ_FACTOR_SUBP",
