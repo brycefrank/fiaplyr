@@ -543,7 +543,8 @@
         if (inherits(evaluated, "fiaplyr_macro")) {
           zero_fill_vars <<- c(zero_fill_vars, resolved_names[[i]])
           expanded_expr <- evaluated$expr
-          rlang::expr(sum((!!expanded_expr), na.rm = TRUE))
+          factor_expr <- .macro_adjustment_factor_expr(evaluated, adjusted = adjusted)
+          rlang::expr(sum((!!expanded_expr) * (!!factor_expr), na.rm = TRUE))
         } else {
           expr
         }

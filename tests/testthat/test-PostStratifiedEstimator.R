@@ -365,6 +365,27 @@ test_that("tree_history estimates apply SUBPTYP adjustment factors", {
   expect_false(isTRUE(all.equal(base_est, adj_est)))
 })
 
+test_that("tree_history GRM macros apply SUBPTYP adjustment factors", {
+  con <- setup_grm_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler_base <- eval_handler(con, evalid = 1003, spec = grm_analysis())
+  pe_base <- PostStratifiedEstimator(handler_base)
+
+  base_est <- estimate(pe_base, tree_history(grm_mortality(1)), output = "total") |>
+    dplyr::pull(estimate)
+
+  DBI::dbExecute(con, "UPDATE POP_STRATUM SET ADJ_FACTOR_SUBP = 2.0, ADJ_FACTOR_MICR = 2.0, ADJ_FACTOR_MACR = 2.0")
+
+  handler_adj <- eval_handler(con, evalid = 1003, spec = grm_analysis())
+  pe_adj <- PostStratifiedEstimator(handler_adj)
+
+  adj_est <- estimate(pe_adj, tree_history(grm_mortality(1)), output = "total") |>
+    dplyr::pull(estimate)
+
+  expect_true(adj_est > base_est)
+})
+
 test_that("GRM basis selects matching TREE_GRM_COMPONENT subtype columns", {
   con <- setup_grm_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
