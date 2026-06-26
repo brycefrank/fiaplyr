@@ -371,10 +371,12 @@ setMethod("spec_summary_fields", "GRMAnalysis", function(spec, handler) {
 get_tree_basis_filters <- function(basis) {
   switch(basis,
     "all_live" = list(
-      t1 = rlang::expr(DIA_begin >= 5.0)
+      t1 = rlang::expr(DIA_begin >= 5.0),
+      t2 = rlang::expr(DIA >= 5.0)
     ),
     "growing_stock" = list(
-      t1 = rlang::expr(TREECLCD == 2 & DIA_begin >= 5.0)
+      t1 = rlang::expr(TREECLCD == 2 & DIA_begin >= 5.0),
+      t2 = rlang::expr(TREECLCD == 2 & DIA >= 5.0)
     ),
     "sawtimber" = list(
       t1 = rlang::expr(
