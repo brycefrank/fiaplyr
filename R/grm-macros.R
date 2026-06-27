@@ -111,6 +111,7 @@ NULL
 .build_grm_growth_delta_macro <- function(
     transition_type,
     expr,
+  expander,
     start_suffix,
     end_suffix,
     annualize = FALSE,
@@ -122,10 +123,17 @@ NULL
   unknown_subptype <- match.arg(unknown_subptype, c("zero", "drop", "warn"))
 
   expr_sym <- rlang::enexpr(expr)
+  expander_sym <- rlang::enexpr(expander)
   start_expr <- if (is.null(start_suffix)) rlang::expr(0) else .append_suffix(expr_sym, start_suffix)
   end_expr <- .append_suffix(expr_sym, end_suffix)
 
-  delta_expr <- rlang::expr((!!end_expr) - (!!start_expr))
+  raw_delta_expr <- rlang::expr((!!end_expr) - (!!start_expr))
+
+  if (is.numeric(expr_sym) && length(expr_sym) == 1 && !is.na(expr_sym) && expr_sym == 1) {
+    delta_expr <- expander_sym
+  } else {
+    delta_expr <- rlang::expr((!!raw_delta_expr) * (!!expander_sym))
+  }
 
   if (annualize) {
     delta_expr <- rlang::expr((!!delta_expr) / REMPER)
@@ -256,6 +264,7 @@ grm_removals <- function(
 #' @export
 grm_growth_survivor <- function(
     expr = 1,
+    expander = TPA_UNADJ_begin,
     annualize = FALSE,
     adjust = "auto",
     adjust_basis = "subptyp_grm",
@@ -263,6 +272,7 @@ grm_growth_survivor <- function(
   .build_grm_growth_delta_macro(
     "survivor",
     !!rlang::enexpr(expr),
+    !!rlang::enexpr(expander),
     start_suffix = "_begin",
     end_suffix = "",
     annualize = annualize,
@@ -278,6 +288,7 @@ grm_growth_survivor <- function(
 #' @export
 grm_growth_ingrowth <- function(
     expr = 1,
+    expander = TPA_UNADJ,
     annualize = FALSE,
     adjust = "auto",
     adjust_basis = "subptyp_grm",
@@ -285,6 +296,7 @@ grm_growth_ingrowth <- function(
   .build_grm_growth_delta_macro(
     "ingrowth",
     !!rlang::enexpr(expr),
+    !!rlang::enexpr(expander),
     start_suffix = NULL,
     end_suffix = "",
     annualize = annualize,
@@ -300,6 +312,7 @@ grm_growth_ingrowth <- function(
 #' @export
 grm_growth_reversion <- function(
     expr = 1,
+    expander = TPA_UNADJ,
     annualize = FALSE,
     adjust = "auto",
     adjust_basis = "subptyp_grm",
@@ -307,6 +320,7 @@ grm_growth_reversion <- function(
   .build_grm_growth_delta_macro(
     "reversion",
     !!rlang::enexpr(expr),
+    !!rlang::enexpr(expander),
     start_suffix = "_midpt",
     end_suffix = "",
     annualize = annualize,
@@ -322,6 +336,7 @@ grm_growth_reversion <- function(
 #' @export
 grm_growth_mortality <- function(
     expr = 1,
+    expander = TPA_UNADJ_begin,
     annualize = FALSE,
     adjust = "auto",
     adjust_basis = "subptyp_grm",
@@ -329,6 +344,7 @@ grm_growth_mortality <- function(
   .build_grm_growth_delta_macro(
     "mortality",
     !!rlang::enexpr(expr),
+    !!rlang::enexpr(expander),
     start_suffix = "_begin",
     end_suffix = "_midpt",
     annualize = annualize,
@@ -344,6 +360,7 @@ grm_growth_mortality <- function(
 #' @export
 grm_growth_cut <- function(
     expr = 1,
+    expander = TPA_UNADJ_begin,
     annualize = FALSE,
     adjust = "auto",
     adjust_basis = "subptyp_grm",
@@ -351,6 +368,7 @@ grm_growth_cut <- function(
   .build_grm_growth_delta_macro(
     "cut",
     !!rlang::enexpr(expr),
+    !!rlang::enexpr(expander),
     start_suffix = "_begin",
     end_suffix = "_midpt",
     annualize = annualize,
@@ -366,6 +384,7 @@ grm_growth_cut <- function(
 #' @export
 grm_growth_diversion <- function(
     expr = 1,
+    expander = TPA_UNADJ_begin,
     annualize = FALSE,
     adjust = "auto",
     adjust_basis = "subptyp_grm",
@@ -373,6 +392,7 @@ grm_growth_diversion <- function(
   .build_grm_growth_delta_macro(
     "diversion",
     !!rlang::enexpr(expr),
+    !!rlang::enexpr(expander),
     start_suffix = "_begin",
     end_suffix = "_midpt",
     annualize = annualize,
@@ -396,7 +416,7 @@ grm_gross_ingrowth <- function(
     unknown_subptype = "zero") {
   expr_sym <- rlang::enexpr(expr)
 
-  ingrowth <- grm_growth_ingrowth(
+  ingrowth <- grm_ingrowth(
     !!expr_sym,
     annualize = annualize,
     adjust = adjust,
@@ -482,7 +502,8 @@ grm_accretion <- function(
 
 #' Specify a gross growth macro
 #'
-#' Gross growth is defined as gross ingrowth plus accretion.
+#' Gross growth is defined as survivor growth + mortality growth + cut growth +
+#' diversion growth + whole ingrowth volume + whole reversion volume.
 #'
 #' @inheritParams grm_macro_shared_args
 #' @export
@@ -494,7 +515,7 @@ grm_gross_growth <- function(
     unknown_subptype = "zero") {
   expr_sym <- rlang::enexpr(expr)
 
-  gross_ingrowth <- grm_gross_ingrowth(
+  survivor <- grm_growth_survivor(
     !!expr_sym,
     annualize = annualize,
     adjust = adjust,
@@ -502,7 +523,7 @@ grm_gross_growth <- function(
     unknown_subptype = unknown_subptype
   )
 
-  accretion <- grm_accretion(
+  ingrowth <- grm_ingrowth(
     !!expr_sym,
     annualize = annualize,
     adjust = adjust,
@@ -510,7 +531,39 @@ grm_gross_growth <- function(
     unknown_subptype = unknown_subptype
   )
 
-  .combine_grm_macros(list(gross_ingrowth, accretion))
+  reversion <- grm_reversion(
+    !!expr_sym,
+    annualize = annualize,
+    adjust = adjust,
+    adjust_basis = adjust_basis,
+    unknown_subptype = unknown_subptype
+  )
+
+  mortality <- grm_growth_mortality(
+    !!expr_sym,
+    annualize = annualize,
+    adjust = adjust,
+    adjust_basis = adjust_basis,
+    unknown_subptype = unknown_subptype
+  )
+
+  cut <- grm_growth_cut(
+    !!expr_sym,
+    annualize = annualize,
+    adjust = adjust,
+    adjust_basis = adjust_basis,
+    unknown_subptype = unknown_subptype
+  )
+
+  diversion <- grm_growth_diversion(
+    !!expr_sym,
+    annualize = annualize,
+    adjust = adjust,
+    adjust_basis = adjust_basis,
+    unknown_subptype = unknown_subptype
+  )
+
+  .combine_grm_macros(list(survivor, ingrowth, reversion, mortality, cut, diversion))
 }
 
 #' Specify a gross growth macro

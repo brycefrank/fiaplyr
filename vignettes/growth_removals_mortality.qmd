@@ -91,7 +91,7 @@ handler@tables$tree_history |>
   head()
 ```
 
-## Aggregation and Estimation of Change Components
+## Estimation of Change Components
 
 Change components refer to the various outputs that users may be interested in,
 such as mortality volume, removals, and others. For high level uses, users
@@ -100,21 +100,14 @@ call, all of which have the `grm_` prefix. For example, to obtain net cubic
 foot mortality volume, use the following
 
 ```{r}
-ps <- PostStratifiedEstimator(handler |> partition(tree_history(transition)))
-
-handler |>
-  aggregate(
-    tree_history(
-      mort = grm_mortality(VOLCFSND)
-    )
-  )
+ps <- PostStratifiedEstimator(handler)
 
 ps |>
   estimate(
-    tree_history(
-      mort = grm_mortality(VOLCFSND, annualize = TRUE)
-    ), output = "total"
+    tree_history(mort = grm_mortality(VOLCFSND, annualize = TRUE)),
+    output = "total"
   )
+
 ```
 
 Other change components helpers include `grm_removals`, `grm_ingrowth`, and
