@@ -94,3 +94,35 @@ test_that("fiaplyr agrees with FIADB API for a GRM ingrowth total", {
 
   expect_true(rel_diff < 0.001)
 })
+
+test_that("fiaplyr agrees with FIADB API for GRM annual removals of sound bole volume", {
+  skip_if_not_installed("rvalidator")
+
+  con <- DBI::dbConnect(duckdb::duckdb(), fiadb_vt_mini_path())
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, 501103, spec = grm_analysis())
+
+  ests <- handler |>
+    PostStratifiedEstimator() |>
+    estimate(
+      tree_history(grm_harvest_removals(VOLCFSND, annualize = TRUE)),
+      output = "total"
+    )
+
+  fiaplyr_total <- ests$estimate[[1]]
+
+  report <- rvalidator::fullreport(
+    list(
+      snum = 574161,
+      wc = 502011,
+      rselected = "Species",
+      cselected = "Land Use - Major"
+    )
+  )
+
+  api_total <- report$totals$ESTIMATE[[1]]
+  rel_diff <- abs(fiaplyr_total - api_total) / api_total
+
+  expect_true(rel_diff < 0.001)
+})
