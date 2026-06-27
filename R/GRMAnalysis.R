@@ -244,6 +244,7 @@ setMethod("initialize_tables", "GRMAnalysis", function(spec, db, evalid, backend
     "COND_STATUS_CD",
     "SITECLCD",
     "RESERVCD",
+    "RECONCILECD",
     "PREV_COND_STATUS_CD",
     "PREV_SITECLCD",
     "PREV_RESERVCD"
@@ -258,6 +259,7 @@ setMethod("initialize_tables", "GRMAnalysis", function(spec, db, evalid, backend
   if (length(component_rules) == 0) {
     component_rules <- build_grm_component_rules(spec@tree_basis, spec@land_basis)
   }
+  component_transition_expr <- .map_grm_component_transition_expr()
 
   tree_basis_filters <- get_tree_basis_filters(spec@tree_basis)
   land_basis_filters <- get_land_basis_filters(spec@land_basis)
@@ -270,7 +272,7 @@ setMethod("initialize_tables", "GRMAnalysis", function(spec, db, evalid, backend
       is_land_basis_t2 = dplyr::coalesce(!!land_basis_filters$t2, FALSE),
       in_pop_t1 = is_tree_basis_t1 & is_land_basis_t1,
       in_pop_t2 = is_tree_basis_t2 & is_land_basis_t2,
-      transition = dplyr::case_when(!!!component_rules)
+      transition = !!component_transition_expr
     )
 
   list(
@@ -424,6 +426,7 @@ build_grm_component_rules <- function(tree_basis, land_basis) {
   get_land_basis_filters(land_basis)
 
   rules <- rlang::exprs(
+    PREV_STATUS_CD %in% c(1, 2) & (is.na(STATUSCD) | !(STATUSCD %in% c(1, 2))) ~ "not_used",
     # DIVERSION2: crossed the tree basis threshold, but land basis diverted by T2.
     !is_tree_basis_t1 & is_tree_basis_t2 &
       is_land_basis_t1 & !is_land_basis_t2 ~ "diversion",
@@ -436,11 +439,49 @@ build_grm_component_rules <- function(tree_basis, land_basis) {
     in_pop_t1 & PREV_STATUS_CD == 1 & STATUSCD == 2 &
       is_land_basis_t2 &
       AGENTCD == 80 ~ "removal",
-    !in_pop_t1 & in_pop_t2 & STATUSCD == 1 ~ "ingrowth",
+    RECONCILECD == 1 & STATUSCD == 1 ~ "ingrowth",
     TRUE ~ "other"
   )
 
   rules
+}
+
+# internal function, not exported
+.map_grm_component_transition_expr <- function() {
+  component_norm <- rlang::expr(toupper(as.character(COMPONENT)))
+
+  rlang::expr(
+    dplyr::case_when(
+      is.na(COMPONENT) ~ "unknown",
+      !!component_norm == "SURVIVOR" ~ "survivor",
+      !!component_norm == "DIVERSION0" ~ "diversion0",
+      !!component_norm == "DIVERSION1" ~ "diversion1",
+      !!component_norm == "DIVERSION2" ~ "diversion2",
+      !!component_norm == "MORTALITY0" ~ "mortality0",
+      !!component_norm == "MORTALITY1" ~ "mortality1",
+      !!component_norm == "MORTALITY2" ~ "mortality2",
+      !!component_norm == "CUT1" ~ "cut1",
+      !!component_norm == "CUT2" ~ "cut2",
+      !!component_norm == "INGROWTH" ~ "ingrowth",
+      !!component_norm == "REVERSION1" ~ "reversion1",
+      !!component_norm == "REVERSION2" ~ "reversion2",
+      !!component_norm == "NOT USED" ~ "not_used",
+      !!component_norm == "NOT_USED" ~ "not_used",
+      !!component_norm == "NOTUSED" ~ "not_used",
+      !!component_norm == "UNKNOWN" ~ "unknown",
+      !!component_norm == "NA" ~ "na",
+      !!component_norm == "N/A" ~ "na",
+      !!component_norm == "N/A - A2A" ~ "na_a2a",
+      !!component_norm == "N/A - A2A SOON" ~ "na_a2a_soon",
+      !!component_norm == "N/A - MODELED" ~ "na_modeled",
+      !!component_norm == "N/A - P2A" ~ "na_p2a",
+      !!component_norm == "N/A - P2P" ~ "na_p2p",
+      !!component_norm == "N/A - PERIODIC" ~ "na_periodic",
+      !!component_norm == "CULLINCR" ~ "cullincr",
+      !!component_norm == "CULLDECR" ~ "culldecr",
+      TRUE ~ tolower(as.character(COMPONENT))
+    )
+  )
 }
 
 # internal function, not exported

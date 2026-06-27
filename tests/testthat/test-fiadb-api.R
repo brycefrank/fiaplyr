@@ -74,7 +74,7 @@ test_that("fiaplyr agrees with FIADB API for a GRM ingrowth total", {
   ests <- handler |>
     PostStratifiedEstimator() |>
     estimate(
-      tree_history(grm_ingrowth(VOLCFSND, annualize = TRUE)),
+      tree_history(grm_ingrowth(1, annualize = TRUE)),
       output = "total"
     )
 
