@@ -17,9 +17,22 @@ respect to growing stock is more stringent than ingrowth with respect to all
 live trees, because growing stock requires a larger minimum diameter and more
 strict defect constraints. Thus, users must specify the tree and land bases,
 which will facilitate `fiaplyr` in correctly applying the appropriate transition
-rules. Of course, users can entertain custom transitions as well, and such
-advanced use cases are covered in [Advanced Growth, Removals, and Mortality]
-(growth_removals_mortality_advanced.qmd).
+rules, which is done when the handler is initialized.
+
+Generally, users produce estimates using a series of facilitating functions
+called macros, which are called within `aggregate` and `estimate` contexts.
+The macro names should be familiar, and are all prefixed with `grm_`. Common
+examples include:
+
+- `grm_mortality`
+- `grm_removal`
+- `grm_ingrowth`
+- `grm_net_change`
+
+and others. Users supply the desired variable to the macro, whether or not to
+annualize the estimate, and any other relevant arguments. Aside from the macros,
+analysis of GRM data is largely similar to that of status analysis. We animate
+GRM analysis with an example from Vermont.
 
 ## Specifying a Handler
 

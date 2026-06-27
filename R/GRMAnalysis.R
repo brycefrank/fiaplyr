@@ -425,21 +425,40 @@ build_grm_component_rules <- function(tree_basis, land_basis) {
   get_tree_basis_filters(tree_basis)
   get_land_basis_filters(land_basis)
 
+  status_live <- 1
+  status_dead <- 2
+  removal_agent_cd <- 80
+
+  no_t2_status <- rlang::expr(is.na(STATUSCD) | !(STATUSCD %in% c(status_live, status_dead)))
+  natural_mortality <- rlang::expr(is.na(AGENTCD) | AGENTCD != removal_agent_cd)
+  harvest_removal <- rlang::expr(AGENTCD == removal_agent_cd)
+
   rules <- rlang::exprs(
-    PREV_STATUS_CD %in% c(1, 2) & (is.na(STATUSCD) | !(STATUSCD %in% c(1, 2))) ~ "not_used",
+    # Tree was live/dead at T1 but has no valid status at T2.
+    PREV_STATUS_CD %in% c(status_live, status_dead) & !!no_t2_status ~ "not_used",
+
     # DIVERSION2: crossed the tree basis threshold, but land basis diverted by T2.
     !is_tree_basis_t1 & is_tree_basis_t2 &
       is_land_basis_t1 & !is_land_basis_t2 ~ "diversion",
+
     # DIVERSION1: was in-population at T1, but land basis diverted by T2.
     in_pop_t1 & is_land_basis_t1 & !is_land_basis_t2 ~ "diversion",
-    in_pop_t1 & in_pop_t2 & PREV_STATUS_CD == 1 & STATUSCD == 1 ~ "survivor",
-    in_pop_t1 & PREV_STATUS_CD == 1 & STATUSCD == 2 &
+
+    in_pop_t1 & in_pop_t2 &
+      PREV_STATUS_CD == status_live & STATUSCD == status_live ~ "survivor",
+
+    in_pop_t1 &
+      PREV_STATUS_CD == status_live & STATUSCD == status_dead &
       is_land_basis_t2 &
-      (is.na(AGENTCD) | AGENTCD != 80) ~ "mortality",
-    in_pop_t1 & PREV_STATUS_CD == 1 & STATUSCD == 2 &
+      !!natural_mortality ~ "mortality",
+
+    in_pop_t1 &
+      PREV_STATUS_CD == status_live & STATUSCD == status_dead &
       is_land_basis_t2 &
-      AGENTCD == 80 ~ "removal",
-    RECONCILECD == 1 & STATUSCD == 1 ~ "ingrowth",
+      !!harvest_removal ~ "removal",
+
+    RECONCILECD == 1 & STATUSCD == status_live ~ "ingrowth",
+
     TRUE ~ "other"
   )
 
