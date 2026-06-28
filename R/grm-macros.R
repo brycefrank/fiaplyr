@@ -568,7 +568,7 @@ grm_gross_growth <- function(
 
 #' Specify a gross growth macro
 #'
-#' Compatibility alias for [grm_gross_growth()].
+#' Compatibility alias for grm_gross_growth().
 #'
 #' @inheritParams grm_gross_growth
 #' @export

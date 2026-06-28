@@ -434,10 +434,10 @@ setMethod("mutate_cond", "EvalHandler", function(handler, ...) {
 #'
 #' - **Function calls** (e.g., `tree(mean(VOLCFGRS))`) are passed directly
 #'   into `dplyr::summarise()` using the active plot-level groupings.
-#'   This mirrors `dplyr::summarise()` semantics — you control the aggregation.
+#'   This mirrors `dplyr::summarise()` semantics - you control the aggregation.
 #'
 #' Functions that return a `fiaplyr_macro` object (such as [grm_mortality()],
-#' [grm_ingrowth()], etc.) are also expanded correctly — the macro encodes
+#' [grm_ingrowth()], etc.) are also expanded correctly - the macro encodes
 #' both the variable and its expansion logic.
 #'
 #' @param handler A EvalHandler object.

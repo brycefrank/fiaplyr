@@ -9,13 +9,40 @@
 \arguments{
 \item{handler}{A EvalHandler object.}
 
-\item{...}{A scoped target helper such as \code{tree(VOLCFGRS)} or \code{cond()}, and
-optional arguments like \code{sparse}.}
+\item{...}{A scoped target helper such as \code{tree(VOLCFGRS)},
+\code{tree(mean(VOLCFGRS))}, or \code{tree(grm_mortality(VOLCFGRS))}, and optional
+arguments like \code{sparse}.}
 }
 \value{
 A lazy query with plot-level summaries.
 }
 \description{
-Aggregation generates plot (or subplot) level summaries of inventory
-components
+Aggregates inventory data to the plot level. The behavior depends on how
+target variables are specified:
+}
+\details{
+\itemize{
+\item \strong{Bare variables} (e.g., \code{tree(VOLCFGRS)}) are expanded using the
+per-acre expansion factor (\code{TPA_UNADJ}), producing a TPA-weighted sum
+per plot. This is the standard FIA expansion.
+\item \strong{Function calls} (e.g., \code{tree(mean(VOLCFGRS))}) are passed directly
+into \code{dplyr::summarise()} using the active plot-level groupings.
+This mirrors \code{dplyr::summarise()} semantics - you control the aggregation.
+}
+
+Functions that return a \code{fiaplyr_macro} object (such as \code{\link[=grm_mortality]{grm_mortality()}},
+\code{\link[=grm_ingrowth]{grm_ingrowth()}}, etc.) are also expanded correctly - the macro encodes
+both the variable and its expansion logic.
+}
+\examples{
+\dontrun{
+  # Standard TPA expansion
+  handler |> aggregate(tree(VOLCFGRS))
+
+  # Raw summarise: mean volume per plot (no TPA expansion)
+  handler |> aggregate(tree(mean(VOLCFGRS)))
+
+  # GRM macro (fiaplyr_macro): encodes its own expansion logic
+  handler |> aggregate(tree_history(grm_mortality(VOLCFGRS)))
+}
 }

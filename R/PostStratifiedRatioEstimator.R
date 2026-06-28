@@ -35,7 +35,8 @@ PostStratifiedRatioEstimator <- function(numerator, denominator = numerator) {
 #'
 #' @param object A PostStratifiedRatioEstimator object.
 #' @param ... Exactly two scoped target helpers specifying the numerator and
-#'   denominator targets, such as `tree(VOLCFNET)` and `cond()`.
+#'   denominator targets, such as `tree(VOLCFNET)`, `tree_history(...)`, and
+#'   `cond()`.
 #' @param domain_pairing Domain pairing strategy, either `"all"` (default) for
 #'   all numerator/denominator domain combinations or `"matched"` to only retain
 #'   rows where both sides share the same domain columns and values.
@@ -216,9 +217,23 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
     if (length(parsed$targets) == 0 || (length(parsed$targets) == 1 && parsed$targets == "1")) {
       .make_tree_aggregates(handler, adjusted = TRUE, sparse = TRUE)
     } else {
-      syms <- rlang::syms(parsed$targets)
-      names(syms) <- parsed$target_names
-      .make_tree_aggregates(handler, !!!syms, adjusted = TRUE, sparse = TRUE)
+      target_quos <- parsed$quosures
+      if (is.null(target_quos)) {
+        target_quos <- rlang::syms(parsed$targets)
+      }
+      names(target_quos) <- parsed$target_names
+      .make_tree_aggregates(handler, !!!target_quos, adjusted = TRUE, sparse = TRUE)
+    }
+  } else if (parsed$slot == "tree_history") {
+    if (length(parsed$targets) == 0 || (length(parsed$targets) == 1 && parsed$targets == "1")) {
+      .make_tree_history_aggregates(handler, adjusted = TRUE, sparse = TRUE)
+    } else {
+      target_quos <- parsed$quosures
+      if (is.null(target_quos)) {
+        target_quos <- rlang::syms(parsed$targets)
+      }
+      names(target_quos) <- parsed$target_names
+      .make_tree_history_aggregates(handler, !!!target_quos, adjusted = TRUE, sparse = TRUE)
     }
   } else if (parsed$slot == "cond") {
     cond_data <- .make_cond_aggregates(handler, adjusted = TRUE, sparse = TRUE)

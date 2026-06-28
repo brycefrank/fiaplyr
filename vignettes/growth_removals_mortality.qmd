@@ -1,5 +1,5 @@
 ---
-title: "Basic Growth, Removals, and Mortality Analysis"
+title: Growth, Removals, and Mortality"
 knitr:
   opts_chunk:
     echo: true
@@ -80,24 +80,33 @@ In the GRM paradigm, trees undergo transitions, primarily based on their life
 history. For example, a tree that is measured and alive at the beginning of the
 period may survive to the endpoint, wherein it is classified as a survivor tree.
 Tree transitions are applied when the handler is initialized, using transition
-rules that comply with the selected tree and land bases. Users should interpret
-transitions as a column in the `tree_history` table that contains the transition
-type, for which we use the conventional names from the FIA database, and are
-stored in the `transition` column.
+rules that comply with the selected tree and land bases specified in the 
+`grm_analysis()` function. Users should interpret transitions as a column in the
+`tree_history` table that contains the transition type, for which we use the
+conventional names from the FIA database, but in lower case to differentiate
+from the original values. While it is important to be aware of the transitions,
+they are typically abstracted away when using GRM macros. Still, some inspection
+is useful, such as a count of trees by transition
 
 ```{r}
 handler@tables$tree_history |>
-  select(transition) |>
-  head()
+  group_by(transition) |>
+  summarise(n = n()) |>
+  arrange(transition) |>
+  print(n = 10)
 ```
 
-## Estimation of Change Components
+## Estimation of Change Components with Macros
 
 Change components refer to the various outputs that users may be interested in,
-such as mortality volume, removals, and others. For high level uses, users
-obtain change components using scoped helpers within the `tree_history`
-call, all of which have the `grm_` prefix. For example, to obtain net cubic
-foot mortality volume, use the following
+such as mortality volume, removals, and others. For most use cases, it is
+sufficient to use the GRM macros to specify the desired change components, which
+abstract away complex transition rules and other accounting methods.
+
+Beginning with a simple example, let's assume we want to estimate the total
+mortality volume. The macro `grm_mortality` is used, which generates mortality
+for the specified variable. The `annualize` argument is used to produce annual
+mortality rates, as is done in most standard FIA estimates.
 
 ```{r}
 ps <- PostStratifiedEstimator(handler)
@@ -107,8 +116,48 @@ ps |>
     tree_history(mort = grm_mortality(VOLCFSND, annualize = TRUE)),
     output = "total"
   )
-
 ```
 
-Other change components helpers include `grm_removals`, `grm_ingrowth`, and
-`grm_net_change`, `grm_net_growth`, `grm_accretion` and others.
+Likewise, something like ingrowth can also be estimated with the `grm_ingrowth`
+macro
+
+```{r}
+ps |>
+  estimate(
+    tree_history(ingrowth = grm_ingrowth(VOLCFSND, annualize = TRUE)),
+    output = "total"
+  )
+```
+
+Higher order change components are `grm_net_change`, `grm_net_growth` and
+`grm_gross_growth`, all of which use convenient macros.
+
+```{r}
+ps |>
+  estimate(
+    tree_history(net_change = grm_net_change(VOLCFSND, annualize = TRUE)),
+    output = "total"
+  )
+```
+
+## Estimation of Ratios Involving Change
+
+Change estimates also need to be expressed as ratios in many settings,
+especially when normalizing to forested area. Estimates of this kind proceed
+along the same lines as [ratio estimates](ratio_estimates.qmd). The only
+modification, of course, is the specification of the GRM estimates themselves.
+
+```{r}
+mort_handler <- handler
+
+fa_handler <- handler |>
+  subset(cond(COND_STATUS_CD == 1))
+
+psr <- PostStratifiedRatioEstimator(mort_handler, fa_handler)
+
+psr |>
+  estimate_ratio(
+    tree_history(mort = grm_mortality(VOLCFSND, annualize = TRUE)),
+    cond()
+  )  
+```

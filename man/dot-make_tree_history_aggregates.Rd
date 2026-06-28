@@ -4,12 +4,15 @@
 \alias{.make_tree_history_aggregates}
 \title{Aggregate tree history data to plot or subplot levels.}
 \usage{
-.make_tree_history_aggregates(object, ..., sparse = FALSE)
+.make_tree_history_aggregates(object, ..., adjusted = FALSE, sparse = FALSE)
 }
 \arguments{
 \item{object}{A EvalHandler object.}
 
 \item{...}{Additional arguments.}
+
+\item{adjusted}{Logical. If TRUE, applies stratum subplot adjustment
+factors based on GRM subtype code.}
 
 \item{sparse}{Logical. If TRUE, returns a sparse result.}
 }

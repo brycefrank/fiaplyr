@@ -1,5 +1,5 @@
 ---
-title: "Basic Growth, Removals, and Mortality Analysis"
+title: "Growth, Removals, and Mortality"
 ---
 
 Growth, removals, and mortality (GRM) refers to a set of estimation procedures
@@ -75,24 +75,32 @@ In the GRM paradigm, trees undergo transitions, primarily based on their life
 history. For example, a tree that is measured and alive at the beginning of the
 period may survive to the endpoint, wherein it is classified as a survivor tree.
 Tree transitions are applied when the handler is initialized, using transition
-rules that comply with the selected tree and land bases. Users should interpret
-transitions as a column in the `tree_history` table that contains the transition
-type, for which we use the conventional names from the FIA database, and are
-stored in the `transition` column.
+rules that comply with the selected tree and land bases specified in the 
+`grm_analysis()` function. Users should interpret transitions as a column in the
+`tree_history` table that contains the transition type, for which we use the
+conventional names from the FIA database, but in lower case to differentiate
+from the original values. While it is important to be aware of the transitions,
+they are typically abstracted away when using GRM macros. Still, some inspection
+is useful, such as a count of trees by transition
 
 ```r
 handler@tables$tree_history |>
-  select(transition) |>
-  head()
+  group_by(transition) |>
+  summarise(n = n()) |>
+  print(n = 10)
 ```
 
-## Estimation of Change Components
+## Estimation of Change Components with Macros
 
 Change components refer to the various outputs that users may be interested in,
-such as mortality volume, removals, and others. For high level uses, users
-obtain change components using scoped helpers within the `tree_history`
-call, all of which have the `grm_` prefix. For example, to obtain net cubic
-foot mortality volume, use the following
+such as mortality volume, removals, and others. For most use cases, it is
+sufficient to use the GRM macros to specify the desired change components, which
+abstract away complex transition rules and other accounting methods.
+
+Beginning with a simple example, let's assume we want to estimate the total
+mortality volume. The macro `grm_mortality` is used, which generates mortality
+for the specified variable. The `annualize` argument is used to produce annual
+mortality rates, as is done in most standard FIA estimates.
 
 ```r
 ps <- PostStratifiedEstimator(handler)
