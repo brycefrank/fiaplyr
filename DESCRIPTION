@@ -38,7 +38,7 @@ Collate:
     'AnalysisSpec.R'
     'StatusAnalysis.R'
     'GRMAnalysis.R'
-    'grm-helpers.R'
+    'grm-macros.R'
     'EvalHandler.R'
     'Estimator.R'
     'post_stratification.R'

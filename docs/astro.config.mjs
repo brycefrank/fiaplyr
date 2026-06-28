@@ -27,6 +27,7 @@ export default defineConfig({
 						{ label: 'Getting Started', slug: 'guides/getting_started' },
 						{ label: 'Status Estimates', slug: 'guides/status_estimates' },
 						{ label: 'Ratio Estimates', slug: 'guides/ratio_estimates' },
+						{ label: 'Growth, Removals and Mortality', slug: 'guides/growth_removals_mortality' },
 					],
 				},
 				{

@@ -5,7 +5,7 @@ eval_macro_vec <- function(macro, data) {
 test_that("rvalidator snum metadata covers derivative GRM metrics", {
   skip_if_not_installed("rvalidator")
 
-  snum_defs <- unique(rvalidator::parameters("snum")[, c("ATTRIBUTE_NBR", "ATTRIBUTE_DESCR")])
+  snum_defs <- unique(get(".get_rvalidator_parameters", mode = "function")("snum")[, c("ATTRIBUTE_NBR", "ATTRIBUTE_DESCR")])
   desc <- snum_defs$ATTRIBUTE_DESCR
 
   expect_true(any(grepl("gross growth", desc, ignore.case = TRUE)))
