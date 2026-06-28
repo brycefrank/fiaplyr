@@ -65,7 +65,7 @@ explore_evals(con) |>
 #> 2 501103 VERMONT 2011: 2003-2007 to 2008-2011: AREA CHANGE, GROWTH, REMOVALS, M…
 ```
 
-Because we are using the mini Vermont database, we see just one record,
+Because we are using the mini Vermont database, we see just two records,
 but in a full FIA database there are many evaluations. For this
 tutorial, we will use `500601`, which covers Vermont (`50`) for
 2003-2006 (`06`), and can be used to estimate status variables (`01`).
@@ -104,15 +104,15 @@ plot_vol <- handler |>
 
 head(plot_vol)
 #> # Source:   SQL [?? x 7]
-#> # Database: DuckDB 1.4.3 [bfran@Windows 10 x64:R 4.5.0/C:\Users\bfran\AppData\Local\Temp\RtmpCUfASm\temp_libpath4ec461d5fd1\fiaplyr\fiadb_vt_mini.duckdb]
+#> # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/Rtmp7dbKq1/temp_libpath1c1e27793e0f/fiaplyr/fiadb_vt_mini.duckdb]
 #>   PLT_CN         STATECD COUNTYCD INVYR  PLOT net_vol VOLCFGRS
 #>   <chr>            <int>    <int> <int> <int>   <dbl>    <dbl>
 #> 1 55972019010538      50       23  2004   885   997.     1277.
-#> 2 73591450010538      50       11  2006  1096  3182.     3674.
-#> 3 62281346010538      50       21  2005   624  1851.     2256.
-#> 4 73592235010538      50       15  2006  1013  1382.     2570.
-#> 5 73589041010538      50        9  2006   915   891.     1399.
-#> 6 73596033010538      50       19  2006    49    98.7     132.
+#> 2 62281346010538      50       21  2005   624  1851.     2256.
+#> 3 55952698010538      50       11  2003  1490   677.      917.
+#> 4 62282048010538      50       21  2005   911  1600.     2238.
+#> 5 73596033010538      50       19  2006    49    98.7     132.
+#> 6 73598663010538      50       21  2006   623  2650.     3476.
 ```
 
 Plot-level values are often used in statistical models and other
@@ -133,15 +133,15 @@ plot_vol_wm <- handler |>
 
 head(plot_vol_wm)
 #> # Source:   SQL [?? x 6]
-#> # Database: DuckDB 1.4.3 [bfran@Windows 10 x64:R 4.5.0/C:\Users\bfran\AppData\Local\Temp\RtmpCUfASm\temp_libpath4ec461d5fd1\fiaplyr\fiadb_vt_mini.duckdb]
+#> # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/Rtmp7dbKq1/temp_libpath1c1e27793e0f/fiaplyr/fiadb_vt_mini.duckdb]
 #>   PLT_CN         STATECD COUNTYCD INVYR  PLOT wm_ht
 #>   <chr>            <int>    <int> <int> <int> <dbl>
-#> 1 55958357010538      50       25  2003  1320  49.2
-#> 2 55972628010538      50       25  2004  1009  27.6
-#> 3 73607738010538      50       27  2006  1226  28.3
-#> 4 73591222010538      50       11  2006   162  24.4
-#> 5 73604051010538      50       25  2006   895  43.5
-#> 6 62278970010538      50       17  2005  1206  25.9
+#> 1 55955474010538      50       21  2003  1301  64.3
+#> 2 73593740010538      50       17  2006   755  24.4
+#> 3 73605773010538      50       27  2006   372  27.6
+#> 4 73613945010538      50        5  2006  1402  17.9
+#> 5 55968356010538      50       19  2004  1188  30.5
+#> 6 73593053010538      50       15  2006   221  36.4
 ```
 
 ### Transforms
@@ -163,15 +163,15 @@ plot_ba <- ba_handler |>
 # Verify the output
 head(plot_ba)
 #> # Source:   SQL [?? x 6]
-#> # Database: DuckDB 1.4.3 [bfran@Windows 10 x64:R 4.5.0/C:\Users\bfran\AppData\Local\Temp\RtmpCUfASm\temp_libpath4ec461d5fd1\fiaplyr\fiadb_vt_mini.duckdb]
+#> # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/Rtmp7dbKq1/temp_libpath1c1e27793e0f/fiaplyr/fiadb_vt_mini.duckdb]
 #>   PLT_CN         STATECD COUNTYCD INVYR  PLOT    BA
 #>   <chr>            <int>    <int> <int> <int> <dbl>
-#> 1 55972019010538      50       23  2004   885  83.6
-#> 2 55961011010538      50        1  2004   146 151. 
-#> 3 55964004010538      50        9  2004  1014 115. 
-#> 4 55952698010538      50       11  2003  1490  50.9
-#> 5 73596033010538      50       19  2006    49  12.8
-#> 6 55959614010538      50       27  2003  1068  98.8
+#> 1 55958357010538      50       25  2003  1320  99.4
+#> 2 73591222010538      50       11  2006   162  10.5
+#> 3 73607738010538      50       27  2006  1226 153. 
+#> 4 73588636010538      50        9  2006  1162  60.2
+#> 5 73604051010538      50       25  2006   895 220. 
+#> 6 55967449010538      50       17  2004   136  74.5
 ```
 
 ### Partitions
@@ -190,7 +190,7 @@ plot_ba_by_sp <- ba_handler |>
 
 head(plot_ba_by_sp)
 #> # Source:     SQL [?? x 7]
-#> # Database:   DuckDB 1.4.3 [bfran@Windows 10 x64:R 4.5.0/C:\Users\bfran\AppData\Local\Temp\RtmpCUfASm\temp_libpath4ec461d5fd1\fiaplyr\fiadb_vt_mini.duckdb]
+#> # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/Rtmp7dbKq1/temp_libpath1c1e27793e0f/fiaplyr/fiadb_vt_mini.duckdb]
 #> # Ordered by: desc(BA)
 #>   PLT_CN         STATECD COUNTYCD INVYR  PLOT  SPCD    BA
 #>   <chr>            <int>    <int> <int> <int> <dbl> <dbl>
@@ -219,7 +219,7 @@ plot_ba_balsam <- ba_handler |>
 
 head(plot_ba_balsam)
 #> # Source:     SQL [?? x 6]
-#> # Database:   DuckDB 1.4.3 [bfran@Windows 10 x64:R 4.5.0/C:\Users\bfran\AppData\Local\Temp\RtmpCUfASm\temp_libpath4ec461d5fd1\fiaplyr\fiadb_vt_mini.duckdb]
+#> # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/Rtmp7dbKq1/temp_libpath1c1e27793e0f/fiaplyr/fiadb_vt_mini.duckdb]
 #> # Ordered by: desc(BA)
 #>   PLT_CN         STATECD COUNTYCD INVYR  PLOT    BA
 #>   <chr>            <int>    <int> <int> <int> <dbl>
@@ -242,7 +242,7 @@ plot_ba_balsam <- ba_handler |>
 
 head(plot_ba_balsam)
 #> # Source:     SQL [?? x 7]
-#> # Database:   DuckDB 1.4.3 [bfran@Windows 10 x64:R 4.5.0/C:\Users\bfran\AppData\Local\Temp\RtmpCUfASm\temp_libpath4ec461d5fd1\fiaplyr\fiadb_vt_mini.duckdb]
+#> # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/Rtmp7dbKq1/temp_libpath1c1e27793e0f/fiaplyr/fiadb_vt_mini.duckdb]
 #> # Ordered by: desc(BA)
 #>   PLT_CN         STATECD COUNTYCD INVYR  PLOT  SPCD    BA
 #>   <chr>            <int>    <int> <int> <int> <dbl> <dbl>
@@ -316,12 +316,12 @@ ba_by_sp_est <- estimate(estimator_by_sp, tree(BA))
 
 head(ba_by_sp_est)
 #> # A tibble: 6 × 4
-#>    SPCD var   estimate     se
-#>   <dbl> <chr>    <dbl>  <dbl>
-#> 1   761 BA      0.613  0.117 
-#> 2   356 BA      0.141  0.0335
-#> 3   375 BA      4.71   0.409 
-#> 4   316 BA     11.6    0.699 
-#> 5   130 BA      0.127  0.0811
-#> 6    43 BA      0.0132 0.0140
+#>    SPCD var   estimate      se
+#>   <dbl> <chr>    <dbl>   <dbl>
+#> 1   743 BA      0.428  0.133  
+#> 2   935 BA      0.0794 0.0285 
+#> 3   763 BA      0.0103 0.00610
+#> 4   802 BA      0.173  0.0745 
+#> 5    70 BA      0.0273 0.0276 
+#> 6   540 BA      0.0119 0.0122
 ```

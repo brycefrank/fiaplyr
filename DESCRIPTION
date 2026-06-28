@@ -1,12 +1,10 @@
 Package: fiaplyr
 Title: Interface to FIA Databases with 'dbplyr'
-Version: 0.1.0
+Version: 0.2.0
 Authors@R:
     person("Bryce", "Frank", , "bfrank70@gmail.com", role = c("aut", "cre"))
-Description: Provides an S4 interface for querying, transforming, and
-    aggregating Forest Inventory and Analysis (FIA) database tables with
-    'dbplyr'. The package supports plot-, condition-, and tree-level
-    workflows for building inventory summaries and post-stratified estimates.
+Description: Provides a dplyr-style interface for subsetting, transforming, and
+    aggregating Forest Inventory and Analysis (FIA) data.
 License: MIT + file LICENSE
 URL: https://github.com/brycefrank/fiaplyr
 BugReports: https://github.com/brycefrank/fiaplyr/issues
