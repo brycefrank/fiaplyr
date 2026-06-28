@@ -27,22 +27,30 @@ export default defineConfig({
 						{ label: 'Getting Started', slug: 'guides/getting_started' },
 						{ label: 'Status Estimates', slug: 'guides/status_estimates' },
 						{ label: 'Ratio Estimates', slug: 'guides/ratio_estimates' },
+						{ label: 'Growth, Removals and Mortality', slug: 'guides/growth_removals_mortality' },
 					],
 				},
 				{
 					label: 'Reference',
 					items: [
 						{ label: 'Full API Index', slug: 'reference' },
-						{ label: 'eval_handler', slug: 'reference/eval_handler' },
-						{ label: 'filter_tree', slug: 'reference/filter_tree' },
-						{ label: 'filter_cond', slug: 'reference/filter_cond' },
-						{ label: 'mutate_tree', slug: 'reference/mutate_tree' },
-						{ label: 'mutate_cond', slug: 'reference/mutate_cond' },
-						{ label: 'set_tree_domains', slug: 'reference/set_tree_domains' },
-						{ label: 'set_cond_domains', slug: 'reference/set_cond_domains' },
-						{ label: 'aggregate', slug: 'reference/aggregate' },
-						{ label: 'estimate', slug: 'reference/estimate' },
-						{ label: 'explore_evals', slug: 'reference/explore_evals' },
+            { 
+              label: 'Handlers',
+              items: [
+                {label: 'eval_handler', slug: 'reference/eval_handler' },
+                {label: 'transform', slug: 'reference/transform' },
+                {label: 'subset', slug: 'reference/subset' },
+                {label: 'partition', slug: 'reference/partition' },
+                { label: 'aggregate', slug: 'reference/aggregate' },
+              ]
+            },
+            {
+              label: 'Estimators',
+              items: [
+                {label: 'PostStratifiedEstimator', slug: 'reference/poststratifiedestimator' },
+                {label: 'PostStratifiedRatioEstimator', slug: 'reference/poststratifiedratioestimator' }
+              ]
+            }
 					],
 				},
 			],

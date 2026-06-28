@@ -4,10 +4,10 @@
 \alias{partition,EvalHandler-method}
 \title{Partition: Specify Domain Variables}
 \usage{
-\S4method{partition}{EvalHandler}(.data, ...)
+\S4method{partition}{EvalHandler}(handler, ...)
 }
 \arguments{
-\item{.data}{An EvalHandler object.}
+\item{handler}{An EvalHandler object.}
 
 \item{...}{Scoped domain variable names using \code{tree()}, \code{cond()}, or \code{plot()} helpers.}
 }

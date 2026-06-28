@@ -4,16 +4,17 @@
 \alias{eval_handler}
 \title{Connect to an Evaluation}
 \usage{
-eval_handler(db, evalid, schema = new("StatusAnalysis"), backend = NULL)
+eval_handler(db, evalid, spec = status_analysis(), backend = NULL)
 }
 \arguments{
 \item{db}{A DBIConnection object.}
 
 \item{evalid}{A numeric identifier for the evaluation.}
 
-\item{schema}{An \link[=AnalysisSchema-class]{AnalysisSchema} object. Defaults to \link[=StatusAnalysis-class]{StatusAnalysis}.}
+\item{spec}{An \link[=AnalysisSpec-class]{AnalysisSpec} object. Defaults to
+\code{\link[=status_analysis]{status_analysis()}}.}
 
-\item{backend}{Optional DatabaseBackend for custom schema/table names.}
+\item{backend}{Optional DatabaseMapping for custom schema/table names.}
 }
 \value{
 An object of class \link[=EvalHandler-class]{EvalHandler} connected to the specified evaluation.

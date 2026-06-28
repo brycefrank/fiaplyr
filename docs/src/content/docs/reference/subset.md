@@ -1,14 +1,14 @@
 ---
-title: "Subset a Inventory Components on a Handler"
+title: "Subset Inventory Components of a Handler"
 description: "Subsetting discards inventory components from the handler based on logical conditions. This is done in a hierarchical manner while preserving the integrity of the inventory structure. Subsetting is encouraged, as it increases the computation speed of the analysis."
 ---
 
 ## Description
 
-Subsetting discards inventory components from the handler based on logical conditions. This
-is done in a hierarchical manner while preserving the integrity of the
-inventory structure. Subsetting is encouraged, as it increases the
-computation speed of the analysis.
+Subsetting discards inventory components from the handler based on logical
+conditions. This is done in a hierarchical manner while preserving the
+integrity of the inventory structure. Subsetting is encouraged, as it
+increases the computation speed of the analysis.
 
 ## Details
 
@@ -22,14 +22,22 @@ data structure remains consistent (e.g., no trees without conditions, etc).
 ## Usage
 
 ```r
-subset(.data, ...)
+subset(handler, ...)
 ```
 
 ## Arguments
 
-- `.data`: A handler object.
+- `handler`: A handler object.
 - `...`: Scoped logical expressions using `tree()`, `cond()`, or `plot()` helpers.
 
 ## Value
 
 The handler with pending filters queued.
+
+## Examples
+
+```r
+# Retain only live trees
+handler |>
+ subset(tree(STATUSCD == 1))
+```

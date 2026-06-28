@@ -115,7 +115,7 @@ head(growing_stock_est)
     2             3 VOLCFGRS    137.  13.1 
     3             5 VOLCFGRS     87.3  8.22
     4             7 VOLCFGRS     72.4 10.4 
-    5             9 VOLCFGRS     87.6  8.13
+    5             9 VOLCFGRS     88.2  8.20
     6            11 VOLCFGRS     76.7  8.58
 
 The above results require a certain care of interpretation. Like any

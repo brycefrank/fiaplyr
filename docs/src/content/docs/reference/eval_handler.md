@@ -14,15 +14,15 @@ Refer to [Status Estimates](../../guides/status_estimates/) for an introduction.
 ## Usage
 
 ```r
-eval_handler(db, evalid, schema = new("StatusAnalysis"), backend = NULL)
+eval_handler(db, evalid, spec = new("StatusAnalysis"), backend = NULL)
 ```
 
 ## Arguments
 
 - `db`: A DBIConnection object.
 - `evalid`: A numeric identifier for the evaluation.
-- `schema`: An [`AnalysisSchema`](../analysisschema-class) object. Defaults to [`StatusAnalysis`](../statusanalysis-class).
-- `backend`: Optional DatabaseBackend for custom schema/table names.
+- `spec`: An [`AnalysisSpec`](../analysisspec-class) object. Defaults to `new("StatusAnalysis")`.
+- `backend`: Optional DatabaseMapping for custom schema/table names.
 
 ## Value
 

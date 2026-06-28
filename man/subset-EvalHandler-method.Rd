@@ -4,10 +4,10 @@
 \alias{subset,EvalHandler-method}
 \title{Subset: Apply Scoped Filters}
 \usage{
-\S4method{subset}{EvalHandler}(.data, ...)
+\S4method{subset}{EvalHandler}(handler, ...)
 }
 \arguments{
-\item{.data}{An EvalHandler object.}
+\item{handler}{An EvalHandler object.}
 
 \item{...}{Scoped logical expressions using \code{tree()}, \code{cond()}, or \code{plot()} helpers.}
 }

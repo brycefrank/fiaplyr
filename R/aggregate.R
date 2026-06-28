@@ -7,24 +7,26 @@
 #' @param plot_keys A character vector of columns that uniquely identify a plot.
 #' @param domain_vars A character vector of domain variables that form the scaffold with plot_keys.
 #' @param sparse Logical. If TRUE, returns a sparse result (only observed combinations) to optimize performance. Defaults to FALSE.
+#' @param zero_fill_vars Character vector of target column names that should be filled with 0 for missing plots.
+#'   Passthrough (user-supplied summarise) columns are left as NA. Defaults to all target variables.
 #'
 #' @return A lazy query with the full scaffold joined to the aggregated data.
 #' @noRd
-.complete_scaffold <- function(plot_qry, aggregated_qry, plot_keys, domain_vars, sparse = FALSE) {
-  # 1. Identify Target Variables (Response variables)
+.complete_scaffold <- function(plot_qry, aggregated_qry, plot_keys, domain_vars, sparse = FALSE, zero_fill_vars = NULL) {
   # Any column in the aggregated result that is NOT a plot key or a domain variable is a target variable.
-  # We assume these are numeric and should be filled with 0 where missing.
   agg_cols <- colnames(aggregated_qry)
   target_vars <- setdiff(agg_cols, c(plot_keys, domain_vars))
+
+  # Default: zero-fill all target vars (preserves existing behaviour for callers that don't pass zero_fill_vars)
+  if (is.null(zero_fill_vars)) {
+    zero_fill_vars <- target_vars
+  }
 
   # 2. Get all plots (Full Plot List)
   all_plots <- plot_qry %>%
     dplyr::select(dplyr::all_of(plot_keys))
 
   if (sparse && length(domain_vars) > 0) {
-    # Optimization: Densification with zeros is mathematically redundant for
-    # summation aggregation and causes exponential data growth.
-    # We return the aggregated data directly, ensuring it matches the plot list.
     return(
       aggregated_qry %>%
         dplyr::ungroup() %>%
@@ -33,32 +35,29 @@
   }
 
   if (length(domain_vars) > 0) {
-    # Extract distinct combinations of domain variables from the aggregated data
     observed_domains <- aggregated_qry %>%
       dplyr::ungroup() %>%
       dplyr::select(dplyr::all_of(domain_vars)) %>%
       dplyr::distinct()
 
-    # Cross join: All Plots x Observed Domains
     scaffold <- all_plots %>%
       dplyr::cross_join(observed_domains, copy = TRUE)
 
-    # Join key
     join_by <- c(plot_keys, domain_vars)
   } else {
     scaffold <- all_plots
     join_by <- plot_keys
   }
 
-  # Left join aggregated data onto the scaffold
   final_res <- scaffold %>%
     dplyr::left_join(aggregated_qry, by = join_by)
 
-  # Fill NAs with 0 for target variables
-  if (length(target_vars) > 0) {
+  # Only zero-fill columns that came from TPA expansion or macros
+  cols_to_zero <- intersect(zero_fill_vars, target_vars)
+  if (length(cols_to_zero) > 0) {
     final_res <- final_res %>%
       dplyr::mutate(
-        dplyr::across(dplyr::all_of(target_vars), ~ dplyr::coalesce(.x, 0))
+        dplyr::across(dplyr::all_of(cols_to_zero), ~ dplyr::coalesce(.x, 0))
       )
   }
 
@@ -75,6 +74,7 @@
     plot = "",
     cond = ".cond",
     tree = ".tree",
+    tree_history = ".tree_history",
     rlang::abort(sprintf("Unknown partition scope: '%s'.", scope))
   )
 
@@ -138,6 +138,63 @@
   }, character(1))
 }
 
+.eval_as_macro <- function(var_quo) {
+  # Try the quosure's captured environment first
+  result <- tryCatch(rlang::eval_tidy(var_quo), error = function(e) NULL)
+  if (inherits(result, "fiaplyr_macro")) return(result)
+  # Fall back to evaluating the expression in the fiaplyr namespace.
+  # This handles cases where the quosure's environment (e.g., inside an S4
+  # method body) doesn't have the package's exported symbols on its search path.
+  expr <- rlang::quo_get_expr(var_quo)
+  tryCatch(eval(expr, envir = asNamespace("fiaplyr")), error = function(e) NULL)
+}
+
+.macro_adjustment_factor_expr <- function(macro, adjusted) {
+  macro_adjust <- if (is.null(macro$adjust)) "auto" else macro$adjust
+  macro_basis <- if (is.null(macro$adjust_basis)) "subptyp_grm" else macro$adjust_basis
+  unknown_subptype <- if (is.null(macro$unknown_subptype)) "zero" else macro$unknown_subptype
+
+  if (macro_adjust == "none") {
+    return(rlang::expr(1))
+  }
+
+  if (!adjusted) {
+    return(rlang::expr(1))
+  }
+
+  if (!macro_adjust %in% c("auto", "subptype")) {
+    stop("Unsupported macro adjustment mode: ", macro_adjust, call. = FALSE)
+  }
+
+  if (!identical(macro_basis, "subptyp_grm")) {
+    stop("Unsupported macro adjustment basis: ", macro_basis, call. = FALSE)
+  }
+
+  if (identical(unknown_subptype, "drop")) {
+    return(rlang::expr(ADJ_FACTOR))
+  }
+
+  if (identical(unknown_subptype, "warn")) {
+    warning("Unknown GRM subtypes are being treated as zero-adjustment rows for this macro target.", call. = FALSE)
+  }
+
+  rlang::expr(dplyr::coalesce(ADJ_FACTOR, 0))
+}
+
+.uses_default_expander_filter <- function(target_vars) {
+  if (length(target_vars) == 0) {
+    return(TRUE)
+  }
+
+  # Only apply the TPA_UNADJ IS NOT NULL filter when ALL targets use TPA expansion
+  # (bare symbols or the literal 1). Macros and passthrough expressions manage
+  # their own expansion logic and must not have rows silently dropped.
+  all(vapply(target_vars, function(var_quo) {
+    expr <- rlang::quo_get_expr(var_quo)
+    rlang::is_symbol(expr) ||
+      (is.numeric(expr) && length(expr) == 1 && !is.na(expr) && expr == 1)
+  }, logical(1)))
+}
 
 #' Aggregate condition data to plot or subplot levels
 #'
@@ -261,6 +318,30 @@
 #' @keywords internal
 .make_tree_aggregates <- function(object, ..., adjusted = FALSE, level = "plot", sparse = FALSE) {
   res <- .build_tree_data(object)
+  res <- res %>%
+    dplyr::mutate(.expander_wt = TPA_UNADJ)
+
+  if (adjusted) {
+    res <- res %>%
+      dplyr::left_join(
+        object@tables$pop_plot_stratum_assgn %>% dplyr::select(PLT_CN, STRATUM_CN),
+        by = c("CN" = "PLT_CN")
+      ) %>%
+      dplyr::left_join(
+        object@tables$pop_stratum %>%
+          dplyr::select(CN, ADJ_FACTOR_MACR, ADJ_FACTOR_MICR, ADJ_FACTOR_SUBP) %>%
+          dplyr::rename(STRATUM_CN = CN),
+        by = "STRATUM_CN"
+      )
+
+    if (!"MACRO_BREAKPOINT_DIA" %in% colnames(res)) {
+      res <- res %>% dplyr::mutate(MACRO_BREAKPOINT_DIA = NA_real_)
+    }
+
+    res <- res %>% dplyr::mutate(.adj_factor = !!get_adj_factor_expr())
+  } else {
+    res <- res %>% dplyr::mutate(.adj_factor = 1)
+  }
 
   plot_keys <- .plot_keys_raw
   plot_domains <- .resolve_partition_domains(object@plot_domains, "plot", colnames(res))
@@ -269,6 +350,10 @@
 
   # Determine target variables for aggregation
   target_vars <- dplyr::quos(...)
+
+  if (.uses_default_expander_filter(target_vars)) {
+    res <- res %>% dplyr::filter(!is.na(.expander_wt))
+  }
 
   # Check if "1" is in the targets (implicit stem density)
   vars_as_strings <- vapply(target_vars, rlang::as_label, character(1))
@@ -297,24 +382,39 @@
   if (length(target_vars) == 0) {
     aggregated <- res %>%
       dplyr::summarise(
-        tree_count = sum(TPA_UNADJ, na.rm = TRUE)
+        tree_count = sum(.expander_wt, na.rm = TRUE)
       ) %>%
       dplyr::ungroup()
+    zero_fill_vars <- "tree_count"
   } else {
-    agg_exprs <- purrr::map(target_vars, function(var_quo) {
+    resolved_names <- .resolve_tree_target_names(target_vars)
+    zero_fill_vars <- character(0)
+
+    agg_exprs <- purrr::map(seq_along(target_vars), function(i) {
+      var_quo <- target_vars[[i]]
       expr <- rlang::quo_get_expr(var_quo)
-      if (rlang::is_symbol(expr)) {
-        rlang::expr(sum(TPA_UNADJ * (!!var_quo), na.rm = TRUE))
+      if (is.numeric(expr) && length(expr) == 1 && !is.na(expr) && expr == 1) {
+        zero_fill_vars <<- c(zero_fill_vars, resolved_names[[i]])
+        rlang::expr(sum(.expander_wt * .adj_factor, na.rm = TRUE))
+      } else if (rlang::is_symbol(expr)) {
+        zero_fill_vars <<- c(zero_fill_vars, resolved_names[[i]])
+        rlang::expr(sum(.expander_wt * .adj_factor * (!!var_quo), na.rm = TRUE))
       } else {
-        var_quo
+        evaluated <- .eval_as_macro(var_quo)
+        if (inherits(evaluated, "fiaplyr_macro")) {
+          zero_fill_vars <<- c(zero_fill_vars, resolved_names[[i]])
+          expanded_expr <- evaluated$expr
+          factor_expr <- .macro_adjustment_factor_expr(evaluated, adjusted = adjusted)
+          rlang::expr(sum((!!expanded_expr) * (!!factor_expr), na.rm = TRUE))
+        } else {
+          expr
+        }
       }
     })
-    names(agg_exprs) <- .resolve_tree_target_names(target_vars)
+    names(agg_exprs) <- resolved_names
 
     aggregated <- res %>%
-      dplyr::summarise(
-        !!!agg_exprs
-      ) %>%
+      dplyr::summarise(!!!agg_exprs) %>%
       dplyr::ungroup()
   }
 
@@ -328,7 +428,147 @@
     aggregated_qry = aggregated,
     plot_keys = plot_keys,
     domain_vars = domain_vars,
-    sparse = sparse
+    sparse = sparse,
+    zero_fill_vars = zero_fill_vars
+  )
+
+  final_res <- final_res %>%
+    dplyr::rename(PLT_CN = CN)
+
+  return(final_res)
+}
+
+#' Aggregate tree history data to plot or subplot levels.
+#'
+#' Reserved for GRM-specific aggregation of tree history records.
+#'
+#' @param object A EvalHandler object.
+#' @param ... Additional arguments.
+#' @param adjusted Logical. If TRUE, applies stratum subplot adjustment
+#'   factors based on GRM subtype code.
+#' @param sparse Logical. If TRUE, returns a sparse result.
+#' @keywords internal
+.make_tree_history_aggregates <- function(object, ..., adjusted = FALSE, sparse = FALSE) {
+  res <- .build_tree_history_data(object)
+  res <- res %>%
+    dplyr::mutate(.expander_wt = TPA_UNADJ)
+
+  if (adjusted) {
+    subptype_adj_factors <- .get_subptype_adjustment_factors(object)
+
+    res <- res %>%
+      dplyr::left_join(
+        object@tables$pop_plot_stratum_assgn %>% dplyr::select(PLT_CN, STRATUM_CN),
+        by = c("CN" = "PLT_CN")
+      ) %>%
+      dplyr::mutate(
+        ADJ_SUBPTYPE = dplyr::case_when(
+          SUBPTYP_GRM == 1 ~ "SUBP",
+          SUBPTYP_GRM == 2 ~ "MICR",
+          SUBPTYP_GRM == 3 ~ "MACR",
+          TRUE ~ NA_character_
+        )
+      ) %>%
+      dplyr::left_join(
+        subptype_adj_factors,
+        by = c("STRATUM_CN", "ADJ_SUBPTYPE" = "SUBPTYPE")
+      ) %>%
+      dplyr::mutate(
+        .expander_wt = dplyr::if_else(
+          is.na(.expander_wt),
+          NA_real_,
+          .expander_wt * dplyr::coalesce(ADJ_FACTOR, 0)
+        )
+      )
+  }
+
+  plot_keys <- .plot_keys_raw
+  plot_domains <- .resolve_partition_domains(object@plot_domains, "plot", colnames(res))
+  cond_domains <- .resolve_partition_domains(object@cond_domains, "cond", colnames(res))
+  tree_history_domains <- .resolve_partition_domains(object@tree_history_domains, "tree_history", colnames(res))
+
+  # Determine target variables for aggregation
+  target_vars <- dplyr::quos(...)
+
+  if (.uses_default_expander_filter(target_vars)) {
+    res <- res %>% dplyr::filter(!is.na(.expander_wt))
+  }
+
+  # Check if "1" is in the targets (implicit stem density)
+  vars_as_strings <- vapply(target_vars, rlang::as_label, character(1))
+  if ("1" %in% vars_as_strings) {
+    res <- res %>% dplyr::mutate(`1` = 1)
+  }
+
+  # Group by PLOT keys and user defined domains
+  # Order: plot domains, cond domains, tree_history domains (hierarchical)
+  if (length(plot_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!plot_domains)
+  }
+
+  if (length(cond_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!cond_domains, .add = TRUE)
+  }
+
+  if (length(tree_history_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!tree_history_domains, .add = TRUE)
+  }
+
+  # We also need to group by plot keys to ensure plot-level summary
+  res <- .group_by_missing_vars(res, plot_keys)
+
+  # Perform the aggregation (summing)
+  if (length(target_vars) == 0) {
+    aggregated <- res %>%
+      dplyr::summarise(
+        tree_count = sum(.expander_wt, na.rm = TRUE)
+      ) %>%
+      dplyr::ungroup()
+    zero_fill_vars <- "tree_count"
+  } else {
+    resolved_names <- .resolve_tree_target_names(target_vars)
+    zero_fill_vars <- character(0)
+
+    agg_exprs <- purrr::map(seq_along(target_vars), function(i) {
+      var_quo <- target_vars[[i]]
+      expr <- rlang::quo_get_expr(var_quo)
+      if (is.numeric(expr) && length(expr) == 1 && !is.na(expr) && expr == 1) {
+        zero_fill_vars <<- c(zero_fill_vars, resolved_names[[i]])
+        rlang::expr(sum(.expander_wt, na.rm = TRUE))
+      } else if (rlang::is_symbol(expr)) {
+        zero_fill_vars <<- c(zero_fill_vars, resolved_names[[i]])
+        rlang::expr(sum(.expander_wt * (!!var_quo), na.rm = TRUE))
+      } else {
+        evaluated <- .eval_as_macro(var_quo)
+        if (inherits(evaluated, "fiaplyr_macro")) {
+          zero_fill_vars <<- c(zero_fill_vars, resolved_names[[i]])
+          expanded_expr <- evaluated$expr
+          factor_expr <- .macro_adjustment_factor_expr(evaluated, adjusted = adjusted)
+          rlang::expr(sum((!!expanded_expr) * (!!factor_expr), na.rm = TRUE))
+        } else {
+          expr
+        }
+      }
+    })
+    names(agg_exprs) <- resolved_names
+
+    aggregated <- res %>%
+      dplyr::summarise(!!!agg_exprs) %>%
+      dplyr::ungroup()
+  }
+
+  # Identify Domain Variables
+  all_groups <- dplyr::group_vars(res)
+  domain_vars <- setdiff(all_groups, plot_keys)
+
+  # Use helper to build complete scaffold and merge
+  final_res <- .complete_scaffold(
+    plot_qry = object@tables$plot,
+    aggregated_qry = aggregated,
+    plot_keys = plot_keys,
+    domain_vars = domain_vars,
+    sparse = sparse,
+    zero_fill_vars = zero_fill_vars
   )
 
   final_res <- final_res %>%
@@ -355,10 +595,6 @@
     warning("REF_SPECIES table not available; continuing without species reference columns.", call. = FALSE)
   }
 
-  # Apply standard default filter for tree data
-  res <- res %>%
-    dplyr::filter(!is.na(TPA_UNADJ))
-
   # Apply condition-level mutations (these affect all trees in those conditions)
   if (length(object@cond_mutations) > 0) {
     res <- res %>% dplyr::mutate(!!!object@cond_mutations)
@@ -377,6 +613,47 @@
   # Apply tree-level filters (these remove individual tree records)
   if (length(object@tree_filters) > 0) {
     res <- res %>% dplyr::filter(!!!object@tree_filters)
+  }
+
+  return(res)
+}
+
+#' @keywords internal
+.build_tree_history_data <- function(object) {
+  # Start from prepared plot data (includes plot mutations/filters)
+  res <- .build_plot_data(object)
+
+  # Join to condition table, then tree_history table
+  res <- res %>%
+    dplyr::inner_join(object@tables$cond, by = c("CN" = "PLT_CN"), suffix = c("", ".cond")) %>%
+    dplyr::inner_join(object@tables$tree_history, by = c("CN" = "PLT_CN", "CONDID" = "CONDID"), suffix = c("", ".tree_history"))
+
+  # Join to reference species table if available
+  if (!is.null(object@tables$ref_species)) {
+    res <- res %>%
+      dplyr::left_join(object@tables$ref_species, by = "SPCD", suffix = c("", ".ref"))
+  } else {
+    warning("REF_SPECIES table not available; continuing without species reference columns.", call. = FALSE)
+  }
+
+  # Apply condition-level mutations (these affect all trees in those conditions)
+  if (length(object@cond_mutations) > 0) {
+    res <- res %>% dplyr::mutate(!!!object@cond_mutations)
+  }
+
+  # Apply tree-history-level mutations (these affect individual tree history records)
+  if (length(object@tree_history_mutations) > 0) {
+    res <- res %>% dplyr::mutate(!!!object@tree_history_mutations)
+  }
+
+  # Apply condition-level filters (these remove entire conditions and their trees)
+  if (length(object@cond_filters) > 0) {
+    res <- res %>% dplyr::filter(!!!object@cond_filters)
+  }
+
+  # Apply tree-history-level filters (these remove individual tree history records)
+  if (length(object@tree_history_filters) > 0) {
+    res <- res %>% dplyr::filter(!!!object@tree_history_filters)
   }
 
   return(res)

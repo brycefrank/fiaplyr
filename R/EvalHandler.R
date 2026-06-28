@@ -6,12 +6,15 @@
 #' @slot plot_domains Pending plot-level domain quosures.
 #' @slot tree_mutations Pending tree-level mutation quosures.
 #' @slot cond_mutations Pending condition-level mutation quosures.
+#' @slot tree_history_mutations Pending tree-history-level mutation quosures.
 #' @slot tree_domains Pending tree-level domain quosures.
 #' @slot cond_domains Pending condition-level domain quosures.
+#' @slot tree_history_domains Pending tree-history-level domain quosures.
 #' @slot tree_filters Pending tree-level filter quosures.
 #' @slot cond_filters Pending condition-level filter quosures.
+#' @slot tree_history_filters Pending tree-history-level filter quosures.
 #' @slot tables A list of lazy queries for the tables.
-#' @slot schema The AnalysisSchema used.
+#' @slot spec The AnalysisSpec used.
 #' @slot internal_cache Environment for caching intermediate results.
 #' @export
 setClass("EvalHandler",
@@ -19,17 +22,20 @@ setClass("EvalHandler",
   slots = list(
     evalid = "numeric",
     tables = "list",
-    schema = "AnalysisSchema",
+    spec = "AnalysisSpec",
     internal_cache = "environment",
     plot_mutations = "list",
     plot_filters = "list",
     plot_domains = "ANY",
     tree_mutations = "list",
     cond_mutations = "list",
+    tree_history_mutations = "list",
     tree_domains = "ANY",
     cond_domains = "ANY",
+    tree_history_domains = "ANY",
     tree_filters = "list",
-    cond_filters = "list"
+    cond_filters = "list",
+    tree_history_filters = "list"
   )
 )
 
@@ -43,8 +49,9 @@ setClass("EvalHandler",
 #' 
 #' @param db A DBIConnection object.
 #' @param evalid A numeric identifier for the evaluation.
-#' @param schema An [AnalysisSchema][AnalysisSchema-class] object. Defaults to [StatusAnalysis][StatusAnalysis-class].
-#' @param backend Optional DatabaseBackend for custom schema/table names.
+#' @param spec An [AnalysisSpec][AnalysisSpec-class] object. Defaults to
+#'   [status_analysis()].
+#' @param backend Optional DatabaseMapping for custom schema/table names.
 #'
 #' @return An object of class [EvalHandler][EvalHandler-class] connected to the specified evaluation.
 #' @export
@@ -55,8 +62,8 @@ setClass("EvalHandler",
 #'   handler <- eval_handler(con, evalid = 500601)
 #'   DBI::dbDisconnect(con, shutdown = TRUE)
 #' }
-eval_handler <- function(db, evalid, schema = new("StatusAnalysis"), backend = NULL) {
-  tables <- initialize_tables(schema, db, evalid, backend)
+eval_handler <- function(db, evalid, spec = status_analysis(), backend = NULL) {
+  tables <- initialize_tables(spec, db, evalid, backend)
 
   if (!is.null(tables$pop_eval)) {
     if (tables$pop_eval %>% dplyr::tally() %>% dplyr::collect() %>% dplyr::pull(n) == 0) {
@@ -68,17 +75,20 @@ eval_handler <- function(db, evalid, schema = new("StatusAnalysis"), backend = N
     db = db,
     evalid = evalid,
     tables = tables,
-    schema = schema,
+    spec = spec,
     internal_cache = new.env(parent = emptyenv()),
     plot_mutations = list(),
     plot_filters = list(),
     plot_domains = list(),
     tree_mutations = list(),
     cond_mutations = list(),
+    tree_history_mutations = list(),
     tree_domains = list(),
     cond_domains = list(),
+    tree_history_domains = list(),
     tree_filters = list(),
-    cond_filters = list()
+    cond_filters = list(),
+    tree_history_filters = list()
   )
 }
 
@@ -100,25 +110,17 @@ setMethod("summary", "EvalHandler", function(object) {
 
   if (length(eval_descr) == 0) eval_descr <- NA_character_
 
-  # Plot stats
-  plot_stats <- object@tables$plot %>%
-    dplyr::summarise(
-      n_plots = dplyr::n(),
-      min_invyr = min(INVYR, na.rm = TRUE),
-      max_invyr = max(INVYR, na.rm = TRUE),
-      min_meas = min(MEASYEAR, na.rm = TRUE),
-      max_meas = max(MEASYEAR, na.rm = TRUE)
-    ) %>%
-    dplyr::collect()
+  n_plots <- object@tables$plot %>%
+    dplyr::summarise(n_plots = dplyr::n()) %>%
+    dplyr::collect() %>%
+    dplyr::pull(n_plots)
 
-  res <- list(
+  spec_fields <- spec_summary_fields(object@spec, object)
+
+  res <- c(list(
     eval_descr = eval_descr,
-    n_plots = plot_stats$n_plots,
-    min_invyr = plot_stats$min_invyr,
-    max_invyr = plot_stats$max_invyr,
-    min_meas = plot_stats$min_meas,
-    max_meas = plot_stats$max_meas
-  )
+    n_plots = n_plots
+  ), spec_fields)
 
   # Populate cache
   object@internal_cache$summary <- res
@@ -153,8 +155,23 @@ setMethod("show", "EvalHandler", function(object) {
 
   cat("\n")
   cat("Plots:          ", s$n_plots, "\n")
-  cat("Inventory Years:", s$min_invyr, "-", s$max_invyr, "\n")
-  cat("Measure Years:  ", s$min_meas, "-", s$max_meas, "\n")
+
+  if (all(c("min_invyr", "max_invyr") %in% names(s))) {
+    cat("Inventory Years:", s$min_invyr, "-", s$max_invyr, "\n")
+  }
+  if (all(c("min_meas", "max_meas") %in% names(s))) {
+    cat("Measure Years:  ", s$min_meas, "-", s$max_meas, "\n")
+  }
+
+  if (all(c("tree_basis", "land_basis") %in% names(s))) {
+    cat("\n")
+    cat("GRM Spec\n")
+    cat("Tree basis:     ", s$tree_basis, "\n")
+    cat("Land basis:     ", s$land_basis, "\n")
+    if ("n_component_rules" %in% names(s)) {
+      cat("Rules:          ", s$n_component_rules, "\n")
+    }
+  }
 
   # Display domain variables if set
   plot_dom_labels <- vapply(object@plot_domains, rlang::as_label, character(1))
@@ -195,9 +212,9 @@ setMethod("show", "EvalHandler", function(object) {
   
   if (!is.null(list_target_table)) {
     # All expressions in this list share the same target
-    if (!list_target_table %in% c("tree", "cond", "plot")) {
+    if (!list_target_table %in% c("tree", "cond", "plot", "tree_history")) {
       rlang::abort(
-        sprintf("Invalid target table: '%s'. Must be 'tree', 'cond', or 'plot'.", list_target_table)
+        sprintf("Invalid target table: '%s'. Must be 'tree', 'cond', 'plot', or 'tree_history'.", list_target_table)
       )
     }
     
@@ -213,7 +230,7 @@ setMethod("show", "EvalHandler", function(object) {
       slot(handler, slot_domains) <- args
     }
   } else {
-    domain_updates <- list(tree = NULL, cond = NULL, plot = NULL)
+    domain_updates <- list(tree = NULL, cond = NULL, plot = NULL, tree_history = NULL)
 
     # Multiple expressions with potentially different targets
     for (arg in args) {
@@ -223,14 +240,14 @@ setMethod("show", "EvalHandler", function(object) {
 
       if (is.null(target_table)) {
         rlang::abort(
-          "All expressions must be explicitly scoped using `tree()`, `cond()`, or `plot()`.",
+          "All expressions must be explicitly scoped using `tree()`, `cond()`, `plot()`, or `tree_history()`.",
           class = "fiaplyr_unscoped_expr"
         )
       }
 
-      if (!target_table %in% c("tree", "cond", "plot")) {
+      if (!target_table %in% c("tree", "cond", "plot", "tree_history")) {
         rlang::abort(
-          sprintf("Invalid target table: '%s'. Must be 'tree', 'cond', or 'plot'.", target_table)
+          sprintf("Invalid target table: '%s'. Must be 'tree', 'cond', 'plot', or 'tree_history'.", target_table)
         )
       }
 
@@ -282,7 +299,7 @@ setMethod("show", "EvalHandler", function(object) {
 #' level. Expressions must be wrapped in the appropriate scoping helper:
 #' `tree()`, `cond()`, or `plot()`.
 #'
-#' @param .data An EvalHandler object.
+#' @param handler An EvalHandler object.
 #' @param ... Scoped expressions using `tree()`, `cond()`, or `plot()` helpers.
 #' @return The handler with pending mutations queued.
 #' @export
@@ -292,14 +309,14 @@ setMethod("show", "EvalHandler", function(object) {
 #'   handler |>
 #'     transform(tree(BA = 0.005454 * DIA^2))
 #' }
-setMethod("transform", "EvalHandler", function(.data, ...) {
+setMethod("transform", "EvalHandler", function(handler, ...) {
   # Get arguments as list - they may be tagged quosure lists from helpers
   # or raw expressions that need to be captured
   args_list <- list(...)
 
   args <- .normalize_scoped_args(args_list, rlang::enquos(...))
 
-  .route_scoped_expressions(.data, args, operation = "append_mutations")
+  .route_scoped_expressions(handler, args, operation = "append_mutations")
 })
 
 #' Subset: Apply Scoped Filters
@@ -309,7 +326,7 @@ setMethod("transform", "EvalHandler", function(.data, ...) {
 #' `tree()`, `cond()`, or `plot()`. Rows that do not satisfy conditions are
 #' excluded from all subsequent operations.
 #'
-#' @param .data An EvalHandler object.
+#' @param handler An EvalHandler object.
 #' @param ... Scoped logical expressions using `tree()`, `cond()`, or `plot()` helpers.
 #' @return The handler with pending filters queued.
 #' @export
@@ -319,14 +336,14 @@ setMethod("transform", "EvalHandler", function(.data, ...) {
 #'   handler |>
 #'     subset(tree(STATUSCD == 1))
 #' }
-setMethod("subset", "EvalHandler", function(.data, ...) {
+setMethod("subset", "EvalHandler", function(handler, ...) {
   # Get arguments as list - they may be tagged quosure lists from helpers
   # or raw expressions that need to be captured
   args_list <- list(...)
 
   args <- .normalize_scoped_args(args_list, rlang::enquos(...))
 
-  .route_scoped_expressions(.data, args, operation = "append_filters")
+  .route_scoped_expressions(handler, args, operation = "append_filters")
 })
 
 #' Partition: Specify Domain Variables
@@ -336,7 +353,7 @@ setMethod("subset", "EvalHandler", function(.data, ...) {
 #' Unlike `subset()`, partitions do not discard data. Expressions must be wrapped
 #' in the appropriate scoping helper: `tree()`, `cond()`, or `plot()`.
 #'
-#' @param .data An EvalHandler object.
+#' @param handler An EvalHandler object.
 #' @param ... Scoped domain variable names using `tree()`, `cond()`, or `plot()` helpers.
 #' @return The handler with domain variables set.
 #' @export
@@ -346,14 +363,14 @@ setMethod("subset", "EvalHandler", function(.data, ...) {
 #'   handler |>
 #'     partition(tree(SPCD), cond(OWNCD))
 #' }
-setMethod("partition", "EvalHandler", function(.data, ...) {
+setMethod("partition", "EvalHandler", function(handler, ...) {
   # Get arguments as list - they may be tagged quosure lists from helpers
   # or raw expressions that need to be captured
   args_list <- list(...)
 
   args <- .normalize_scoped_args(args_list, rlang::enquos(...))
 
-  .route_scoped_expressions(.data, args, operation = "set_domains")
+  .route_scoped_expressions(handler, args, operation = "set_domains")
 })
 
 #' Mutate Tree Table (Deprecated)
@@ -406,140 +423,46 @@ setMethod("mutate_cond", "EvalHandler", function(handler, ...) {
   return(handler)
 })
 
-#' Set Tree Domain Variables (Deprecated)
-#'
-#' **Deprecated.** Use `partition(tree(...))` instead.
-#'
-#' @param .data A EvalHandler object.
-#' @param ... Domain variable names (unquoted column names).
-#' @return A EvalHandler object with the tree domain variables set.
-#' @export
-setMethod("set_tree_domains", "EvalHandler", function(.data, ...) {
-  lifecycle::deprecate_warn(
-    "0.1.0",
-    "set_tree_domains()",
-    details = "Use `handler |> partition(tree(...))` instead of `handler |> set_tree_domains(...)` to set tree domain variables."
-  )
-
-  # Capture expressions as quosures and wrap them in tree()
-  new_groups <- dplyr::quos(...)
-  attr(new_groups, "target_table") <- "tree"
-
-  # Overwrite existing grouping
-  .data@tree_domains <- new_groups
-
-  return(.data)
-})
-
-#' Set Condition Domain Variables (Deprecated)
-#'
-#' **Deprecated.** Use `partition(cond(...))` instead.
-#'
-#' @param .data A EvalHandler object.
-#' @param ... Domain variable names (unquoted column names).
-#' @return A EvalHandler object with the condition domain variables set.
-#' @export
-setMethod("set_cond_domains", "EvalHandler", function(.data, ...) {
-  lifecycle::deprecate_warn(
-    "0.1.0",
-    "set_cond_domains()",
-    details = "Use `handler |> partition(cond(...))` instead of `handler |> set_cond_domains(...)` to set condition domain variables."
-  )
-
-  # Capture expressions as quosures and wrap them in cond()
-  new_groups <- dplyr::quos(...)
-  attr(new_groups, "target_table") <- "cond"
-
-  # Overwrite existing grouping
-  .data@cond_domains <- new_groups
-
-  return(.data)
-})
-
-#' Filter the Tree Table (Deprecated)
-#'
-#' **Deprecated.** Use `subset(tree(...))` instead.
-#'
-#' @param handler A EvalHandler object.
-#' @param ... Logical predicates defined in terms of the variables in the tree table.
-#' @return A EvalHandler object with pending filters.
-#' @export
-setMethod("filter_tree", "EvalHandler", function(handler, ...) {
-  lifecycle::deprecate_warn(
-    "0.1.0",
-    "filter_tree()",
-    details = "Use `handler |> subset(tree(...))` instead of `handler |> filter_tree(...)` to apply tree-level filters."
-  )
-
-  # Capture expressions as quosures and wrap them in tree()
-  new_filters <- dplyr::quos(...)
-  attr(new_filters, "target_table") <- "tree"
-
-  handler@tree_filters <- c(handler@tree_filters, new_filters)
-
-  return(handler)
-})
-
-#' Filter the Condition Table (Deprecated)
-#'
-#' **Deprecated.** Use `subset(cond(...))` instead.
-#'
-#' @param handler A EvalHandler object.
-#' @param ... Logical predicates defined in terms of the variables in the condition table.
-#' @return A EvalHandler object with pending filters.
-#' @export
-setMethod("filter_cond", "EvalHandler", function(handler, ...) {
-  lifecycle::deprecate_warn(
-    "0.1.0",
-    "filter_cond()",
-    details = "Use `handler |> subset(cond(...))` instead of `handler |> filter_cond(...)` to apply condition-level filters."
-  )
-
-  # Capture expressions as quosures and wrap them in cond()
-  new_filters <- dplyr::quos(...)
-  attr(new_filters, "target_table") <- "cond"
-
-  handler@cond_filters <- c(handler@cond_filters, new_filters)
-
-  return(handler)
-})
-
 #' Aggregate a Handler to the Plot Level
 #'
-#' Aggregation generates plot (or subplot) level summaries of inventory
-#' components
+#' Aggregates inventory data to the plot level. The behavior depends on how
+#' target variables are specified:
+#'
+#' - **Bare variables** (e.g., `tree(VOLCFGRS)`) are expanded using the
+#'   per-acre expansion factor (`TPA_UNADJ`), producing a TPA-weighted sum
+#'   per plot. This is the standard FIA expansion.
+#'
+#' - **Function calls** (e.g., `tree(mean(VOLCFGRS))`) are passed directly
+#'   into `dplyr::summarise()` using the active plot-level groupings.
+#'   This mirrors `dplyr::summarise()` semantics - you control the aggregation.
+#'
+#' Functions that return a `fiaplyr_macro` object (such as [grm_mortality()],
+#' [grm_ingrowth()], etc.) are also expanded correctly - the macro encodes
+#' both the variable and its expansion logic.
 #'
 #' @param handler A EvalHandler object.
-#' @param ... A scoped target helper such as `tree(VOLCFGRS)` or `cond()`, and
-#'   optional arguments like `sparse`.
+#' @param ... A scoped target helper such as `tree(VOLCFGRS)`,
+#'   `tree(mean(VOLCFGRS))`, or `tree(grm_mortality(VOLCFGRS))`, and optional
+#'   arguments like `sparse`.
 #' @return A lazy query with plot-level summaries.
+#'
+#' @examples
+#' \dontrun{
+#'   # Standard TPA expansion
+#'   handler |> aggregate(tree(VOLCFGRS))
+#'
+#'   # Raw summarise: mean volume per plot (no TPA expansion)
+#'   handler |> aggregate(tree(mean(VOLCFGRS)))
+#'
+#'   # GRM macro (fiaplyr_macro): encodes its own expansion logic
+#'   handler |> aggregate(tree_history(grm_mortality(VOLCFGRS)))
+#' }
 #' @export
 setMethod("aggregate", "EvalHandler", function(handler, ...) {
-  aggregate_data(handler@schema, handler, ...)
+  args <- list(...)
+  do.call(aggregate_data, c(list(spec = handler@spec, handler = handler), args))
 })
 
-#' Aggregate Trees to Plot Level
-#'
-#' @param object A EvalHandler object.
-#' @param ... Variables to aggregate (tidy-select supported)
-#' @param sparse Logical. If TRUE, returns a sparse result (only observed combinations). Defaults to FALSE.
-#' @return A lazy query with plot-level summaries.
-#' @export
-setMethod("aggregate_tree", "EvalHandler", function(object, ..., sparse = FALSE) {
-  .Deprecated("aggregate")
-  .make_tree_aggregates(object, ..., sparse = sparse)
-})
-
-#' Aggregate Conditions to Plot Level
-#'
-#' @param object A EvalHandler object.
-#' @param sparse Logical. If TRUE, returns a sparse result (only observed combinations). Defaults to FALSE.
-#' @return A lazy query with plot-level summaries.
-#' @export
-setMethod("aggregate_cond", "EvalHandler", function(object, sparse = FALSE) {
-  .Deprecated("aggregate")
-  .make_cond_aggregates(object, sparse = sparse)
-})
 #' @describeIn get_strata_weights Get strata weights for EvalHandler
 setMethod("get_strata_weights", "EvalHandler", function(handler) {
   handler@tables$pop_stratum %>%
@@ -554,6 +477,36 @@ setMethod("get_strata_weights", "EvalHandler", function(handler) {
     dplyr::select(
       STRATUM_CN = CN, ESTN_UNIT_CN, w_h, P2POINTCNT, AREA_USED
     )
+})
+
+#' @describeIn materialize Materialize a prepared table for EvalHandler
+setMethod("materialize", "EvalHandler", function(handler, slot) {
+  slot <- as.character(slot)
+
+  if (length(slot) != 1 || is.na(slot) || !nzchar(slot)) {
+    stop("`slot` must resolve to exactly one non-empty table name.", call. = FALSE)
+  }
+
+  if (!slot %in% c("plot", "cond", "tree", "tree_history")) {
+    stop("Unsupported slot: ", slot, call. = FALSE)
+  }
+
+  if (slot == "tree_history") {
+    if (is.null(handler@tables$tree_history)) {
+      stop("`tree_history` is not available for this analysis spec.", call. = FALSE)
+    }
+    return(.build_tree_history_data(handler))
+  }
+
+  if (slot == "tree") {
+    return(.build_tree_data(handler))
+  }
+
+  if (slot == "cond") {
+    return(.build_cond_data(handler))
+  }
+
+  .build_plot_data(handler)
 })
 
 #' Get Evaluation ID

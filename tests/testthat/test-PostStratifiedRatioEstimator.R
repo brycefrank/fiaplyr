@@ -1,5 +1,5 @@
 test_that("PostStratifiedRatioEstimator estimates correct ratios", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   # Create Handlers
@@ -45,7 +45,7 @@ test_that("PostStratifiedRatioEstimator estimates correct ratios", {
 })
 
 test_that("PostStratifiedRatioEstimator supports ratios without explicit domains", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001)
@@ -63,8 +63,30 @@ test_that("PostStratifiedRatioEstimator supports ratios without explicit domains
   expect_true(res$se >= 0)
 })
 
+test_that("PostStratifiedRatioEstimator supports tree_history targets for GRM handlers", {
+  con <- setup_grm_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1003, spec = new("GRMAnalysis"))
+  ratio_est <- PostStratifiedRatioEstimator(handler, handler)
+
+  res <- estimate_ratio(
+    ratio_est,
+    tree_history(mort = grm_mortality(VOLCFNET, annualize = TRUE)),
+    cond()
+  ) |>
+    dplyr::collect()
+
+  expect_true(nrow(res) > 0)
+  expect_true(all(c("estimate", "se", "var_n", "var_d") %in% colnames(res)))
+  expect_equal(unique(res$var_n), "mort")
+  expect_equal(unique(res$var_d), "prop")
+  expect_true(all(is.finite(res$estimate)))
+  expect_true(all(is.finite(res$se)))
+})
+
 test_that("estimate_ratio() preserves user-defined target names", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001)
@@ -78,7 +100,7 @@ test_that("estimate_ratio() preserves user-defined target names", {
 })
 
 test_that("PostStratifiedRatioEstimator supports shared domains on both sides", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001) |>
@@ -99,7 +121,7 @@ test_that("PostStratifiedRatioEstimator supports shared domains on both sides", 
 })
 
 test_that("PostStratifiedRatioEstimator can restrict ratios to matched domains", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001) |>
@@ -125,7 +147,7 @@ test_that("PostStratifiedRatioEstimator can restrict ratios to matched domains",
 })
 
 test_that("PostStratifiedRatioEstimator rejects matched domains with incompatible schemas", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler_num <- eval_handler(con, evalid = 1001) |>
@@ -148,7 +170,7 @@ test_that("PostStratifiedRatioEstimator rejects matched domains with incompatibl
 })
 
 test_that("PostStratifiedRatioEstimator can append numerator and denominator component stats", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001)

@@ -2,12 +2,12 @@
 % Please edit documentation in R/methods.R
 \name{transform}
 \alias{transform}
-\title{Transform Table with Scoped Mutations}
+\title{Add or Modify Columns of a Handler}
 \usage{
-transform(.data, ...)
+transform(handler, ...)
 }
 \arguments{
-\item{.data}{A handler object.}
+\item{handler}{A handler object.}
 
 \item{...}{Scoped expressions using \code{tree()}, \code{cond()}, or \code{plot()} helpers.}
 }
@@ -16,6 +16,11 @@ The handler with pending mutations queued.
 }
 \description{
 Add derived columns or modify existing ones on a specific table level
-(plot, condition, or tree). Expressions must be wrapped in scoping helpers
-(\code{tree()}, \code{cond()}, \code{plot()}) to specify their target table.
+Expressions must be wrapped in scoping helpers (\code{tree()}, \code{cond()}, etc) to
+specify their target table.
+}
+\examples{
+# Add a basal area column to the tree table
+handler |>
+  transform(tree(BA = 0.005454 * DIA^2))
 }

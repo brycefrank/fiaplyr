@@ -1,8 +1,8 @@
 ---
-title: "Change Analysis Schema"
-description: "Change Analysis Schema"
+title: "Change Analysis Spec"
+description: "Change Analysis Spec"
 ---
 
 ## Description
 
-Change Analysis Schema
+Change Analysis Spec

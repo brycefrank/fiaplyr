@@ -80,7 +80,7 @@ gstk_ests
     # A tibble: 1 × 4
       var_n    var_d estimate    se
       <chr>    <chr>    <dbl> <dbl>
-    1 VOLCFNET prop     1807.  41.8
+    1 VOLCFNET prop     1808.  41.9
 
 Here, we see the density of growing stock per acre on forested land,
 which is 1,807 cubic feet per acre. The table defines the numerator
@@ -98,7 +98,7 @@ estimate_ratio(psr, tree(VOLCFNET), cond(), include_components = TRUE)
     # A tibble: 1 × 8
       var_n    var_d estimate    se estimate_n  se_n estimate_d    se_d
       <chr>    <chr>    <dbl> <dbl>      <dbl> <dbl>      <dbl>   <dbl>
-    1 VOLCFNET prop     1807.  41.8      1396.  34.4      0.772 0.00909
+    1 VOLCFNET prop     1808.  41.9      1396.  34.5      0.772 0.00909
 
 The above output includes the numerator and denominator estimates, and
 their standard errors.

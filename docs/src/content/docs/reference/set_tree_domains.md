@@ -10,10 +10,10 @@ description: "**Deprecated.** Use `partition(tree(...))` instead."
 ## Usage
 
 ```r
-set_tree_domains(.data, ...)
+set_tree_domains(handler, ...)
 ```
 
 ## Arguments
 
-- `.data`: A handler object.
+- `handler`: A handler object.
 - `...`: Additional arguments.

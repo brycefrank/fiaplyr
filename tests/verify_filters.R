@@ -1,4 +1,4 @@
-# Verification script for filter_tree and filter_cond
+# Verification script for subset(tree()) and subset(cond())
 library(dplyr)
 library(DBI)
 library(duckdb)
@@ -21,8 +21,8 @@ base_est <- PostStratifiedEstimator(handler) %>%
 
 # 2. Filter Tree (STATUSCD == 1)
 handler_filtered <- eval_handler(con, evalid) %>%
-  filter_tree(STATUSCD == 1, SPCD == 202) %>%
-  set_cond_domains(FORTYPCD)
+  subset(tree(STATUSCD == 1, SPCD == 202)) %>%
+  partition(cond(FORTYPCD))
 
 filt_est <- PostStratifiedEstimator(handler_filtered) %>%
   estimate(tree(VOLCFGRS)) %>%
@@ -37,7 +37,7 @@ if (filt_tpa > base_tpa) {
 # 3. Mutate then Filter Tree
 handler_mut_filt <- eval_handler(con, evalid) %>%
   mutate_tree(is_live = ifelse(STATUSCD == 1, 1, 0)) %>%
-  filter_tree(is_live == 1)
+  subset(tree(is_live == 1))
 
 mut_filt_est <- PostStratifiedEstimator(handler_mut_filt) %>%
   estimate(tree(TPA_UNADJ)) %>%
@@ -51,8 +51,8 @@ if (abs(filt_tpa - mut_filt_tpa) > 0.001) {
 
 # 4. Filter Cond
 handler_cond <- eval_handler(con, evalid) %>%
-  filter_cond(COND_STATUS_CD == 1) %>%
-  set_cond_domains(FORTYPCD)
+  subset(cond(COND_STATUS_CD == 1)) %>%
+  partition(cond(FORTYPCD))
 
 cond_est <- PostStratifiedEstimator(handler_cond) %>%
   estimate(cond()) %>%

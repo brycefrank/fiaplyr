@@ -1,38 +1,24 @@
 ---
-title: "Aggregate Data"
-description: "Aggregate Data"
+title: "Aggregate Data for an Analysis Spec"
+description: "Aggregate Data for an Analysis Spec"
 ---
 
 ## Description
 
-Aggregate Data
+Aggregate Data for an Analysis Spec
 
 ## Usage
 
 ```r
-aggregate_data(schema, handler, ...)
-
-## S4 method for signature 'StatusAnalysis'
-aggregate_data(schema, handler, ...)
-
-## S4 method for signature 'ChangeAnalysis'
-aggregate_data(schema, handler, ...)
+aggregate_data(spec, handler, ...)
 ```
 
 ## Arguments
 
-- `schema`: An AnalysisSchema object.
+- `spec`: An AnalysisSpec object.
 - `handler`: The EvalHandler object.
-- `...`: Arguments for aggregation (scoped target helper, sparse, etc.)
+- `...`: Arguments for aggregation.
 
 ## Value
 
-A lazy query with aggregates.
-
-## Additional Details
-
-Methods (by class)
-
-`aggregate_data(StatusAnalysis)`: Aggregate data for Status Analysis
-
-`aggregate_data(ChangeAnalysis)`: Aggregate data for Change Analysis
+A lazy query.

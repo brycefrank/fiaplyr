@@ -4,10 +4,10 @@
 \alias{partition}
 \title{Partition a Handler into Domains}
 \usage{
-partition(.data, ...)
+partition(handler, ...)
 }
 \arguments{
-\item{.data}{A handler object.}
+\item{handler}{A handler object.}
 
 \item{...}{Scoped domain variable names using \code{tree()}, \code{cond()}, or \code{plot()} helpers.}
 }
@@ -28,4 +28,9 @@ Domains are specified for a table using the associated helper. For example,
 unique combinations of \code{SPCD} and \code{STATUSCD}. Columns added during
 \code{transform()} can be used as domain variables as well. Multiple helpers can
 be mixed in a single call, such as \code{partition(tree(SPCD), cond(OWNCD))}.
+}
+\examples{
+# Set tree-level domains to be unique combinations of species and status code
+handler |>
+  partition(tree(SPCD, STATUSCD))
 }

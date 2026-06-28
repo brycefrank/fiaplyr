@@ -12,13 +12,13 @@ Get Table Reference
 ```r
 get_table_ref(backend, standard_name)
 
-## S4 method for signature 'DatabaseBackend'
+## S4 method for signature 'DatabaseMapping'
 get_table_ref(backend, standard_name)
 ```
 
 ## Arguments
 
-- `backend`: A DatabaseBackend object
+- `backend`: A DatabaseMapping object
 - `standard_name`: The standard FIA table name
 
 ## Value
@@ -29,4 +29,4 @@ A table reference (string or in_schema object)
 
 Methods (by class)
 
-`get_table_ref(DatabaseBackend)`: Get table reference for DatabaseBackend
+`get_table_ref(DatabaseMapping)`: Get table reference for DatabaseMapping

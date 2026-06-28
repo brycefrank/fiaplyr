@@ -9,7 +9,7 @@ explore_evals(db, backend = NULL)
 \arguments{
 \item{db}{A DBIConnection object connected to an FIA database.}
 
-\item{backend}{Optional DatabaseBackend for custom schema/table names.}
+\item{backend}{Optional DatabaseMapping for custom schema/table names.}
 }
 \value{
 A tibble containing \code{EVALID} and \code{EVAL_DESCR}.

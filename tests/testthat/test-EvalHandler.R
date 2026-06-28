@@ -1,5 +1,5 @@
 test_that("EvalHandler initializes correctly", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001)
@@ -20,8 +20,65 @@ test_that("EvalHandler initializes correctly", {
   expect_equal(nrow(trees), 8) # 8 trees across both estimation units
 })
 
+test_that("status_analysis() returns a StatusAnalysis spec", {
+  spec <- status_analysis()
+
+  expect_s4_class(spec, "StatusAnalysis")
+  expect_s4_class(spec, "AnalysisSpec")
+})
+
+test_that("grm_analysis() returns a GRMAnalysis spec", {
+  spec <- grm_analysis()
+
+  expect_s4_class(spec, "GRMAnalysis")
+  expect_s4_class(spec, "AnalysisSpec")
+  expect_identical(spec@tree_basis, "all_live")
+  expect_identical(spec@land_basis, "forest_land")
+  expect_true(is.list(spec@component_rules))
+  expect_true(length(spec@component_rules) > 0)
+})
+
+test_that("grm_analysis() supports explicit bases and validates input", {
+  spec <- grm_analysis(tree_basis = "sawtimber", land_basis = "timberland")
+
+  expect_identical(spec@tree_basis, "sawtimber")
+  expect_identical(spec@land_basis, "timberland")
+
+  expect_error(
+    grm_analysis(tree_basis = "not_a_domain"),
+    "should be one of"
+  )
+
+  expect_error(
+    grm_analysis(land_basis = "not_a_domain"),
+    "should be one of"
+  )
+})
+
+test_that("GRM spec summary fields are shown in handler summary and print output", {
+  con <- setup_grm_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(
+    con,
+    evalid = 1003,
+    spec = grm_analysis(tree_basis = "sawtimber", land_basis = "timberland")
+  )
+
+  s <- summary(handler)
+  expect_identical(s$tree_basis, "sawtimber")
+  expect_identical(s$land_basis, "timberland")
+  expect_identical(s$n_component_rules, 7L)
+
+  shown <- capture.output(show(handler))
+  expect_true(any(grepl("GRM Spec", shown, fixed = TRUE)))
+  expect_true(any(grepl("Tree basis:\\s+sawtimber", shown)))
+  expect_true(any(grepl("Land basis:\\s+timberland", shown)))
+  expect_true(any(grepl("Rules:\\s+7", shown)))
+})
+
 test_that("EvalHandler filters correctly by evalid", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   # Add another evaluation dummy data to ensure we are filtering
@@ -38,8 +95,8 @@ test_that("EvalHandler filters correctly by evalid", {
   expect_equal(desc, "Test Evaluation")
 })
 
-test_that("filter_tree can use WOODLAND after REF_SPECIES join", {
-  con <- setup_test_db()
+test_that("subset(tree()) can use WOODLAND after REF_SPECIES join", {
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001)
@@ -49,7 +106,7 @@ test_that("filter_tree can use WOODLAND after REF_SPECIES join", {
     dplyr::collect()
 
   woodland_filtered <- handler %>%
-    filter_tree(WOODLAND != "N") %>%
+    subset(tree(WOODLAND != "N")) %>%
     aggregate(tree(VOLCFGRS)) %>%
     dplyr::collect()
 
@@ -57,7 +114,7 @@ test_that("filter_tree can use WOODLAND after REF_SPECIES join", {
 })
 
 test_that("missing REF_SPECIES warns and continues", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   DBI::dbRemoveTable(con, "REF_SPECIES")
@@ -75,6 +132,23 @@ test_that("missing REF_SPECIES warns and continues", {
   )
 })
 
+test_that("missing SUBP_COND is tolerated", {
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  DBI::dbRemoveTable(con, "SUBP_COND")
+
+  handler <- eval_handler(con, evalid = 1001)
+
+  expect_null(handler@tables$subp_cond)
+
+  res <- handler %>%
+    aggregate(cond()) %>%
+    dplyr::collect()
+
+  expect_true(nrow(res) > 0)
+})
+
 add_shared_countycd_columns <- function(con) {
   DBI::dbExecute(con, "ALTER TABLE COND ADD COLUMN COUNTYCD DOUBLE")
   DBI::dbExecute(con, "UPDATE COND SET COUNTYCD = CASE WHEN CONDID = 1 THEN 10 ELSE 20 END")
@@ -83,81 +157,8 @@ add_shared_countycd_columns <- function(con) {
   DBI::dbExecute(con, "UPDATE TREE SET COUNTYCD = CASE WHEN SPCD = 1 THEN 100 ELSE 200 END")
 }
 
-# Tests for new scoped API
-test_that("transform() with tree() helper adds mutations", {
-  con <- setup_test_db()
-  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
-
-  handler <- eval_handler(con, evalid = 1001)
-
-  # New API: transform(tree(...))
-  result <- handler %>%
-    transform(tree(BA = 0.005454 * DIA^2)) %>%
-    aggregate(tree(BA)) %>%
-    dplyr::collect()
-
-  # Old API (for comparison): mutate_tree(...)
-  result_old <- eval_handler(con, evalid = 1001) %>%
-    mutate_tree(BA = 0.005454 * DIA^2) %>%
-    aggregate(tree(BA)) %>%
-    dplyr::collect()
-
-  # Should produce identical results
-  expect_equal(nrow(result), nrow(result_old))
-  expect_equal(sum(result$BA, na.rm = TRUE), sum(result_old$BA, na.rm = TRUE))
-})
-
-test_that("subset() with tree() helper adds filters", {
-  con <- setup_test_db()
-  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
-
-  handler <- eval_handler(con, evalid = 1001)
-
-  # New API: subset(tree(...)) - use SPCD which exists in TREE table
-  result_new <- handler %>%
-    subset(tree(SPCD == 1)) %>%
-    aggregate(tree(VOLCFGRS)) %>%
-    dplyr::collect()
-
-  # Old API (for comparison): filter_tree(...)
-  result_old <- eval_handler(con, evalid = 1001) %>%
-    filter_tree(SPCD == 1) %>%
-    aggregate(tree(VOLCFGRS)) %>%
-    dplyr::collect()
-
-  # Should produce identical results
-  expect_equal(nrow(result_new), nrow(result_old))
-  expect_equal(sum(result_new$VOLCFGRS, na.rm = TRUE), sum(result_old$VOLCFGRS, na.rm = TRUE))
-})
-
-test_that("partition() with tree() helper sets domains", {
-  con <- setup_test_db()
-  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
-
-  handler <- eval_handler(con, evalid = 1001)
-
-  # New API: partition(tree(...))
-  result_new <- handler %>%
-    partition(tree(SPCD)) %>%
-    aggregate(tree(VOLCFGRS)) %>%
-    dplyr::collect() %>%
-    dplyr::distinct(SPCD) %>%
-    nrow()
-
-  # Old API (for comparison): set_tree_domains(...)
-  result_old <- eval_handler(con, evalid = 1001) %>%
-    set_tree_domains(SPCD) %>%
-    aggregate(tree(VOLCFGRS)) %>%
-    dplyr::collect() %>%
-    dplyr::distinct(SPCD) %>%
-    nrow()
-
-  # Should produce same number of domain levels
-  expect_equal(result_new, result_old)
-})
-
 test_that("aggregate() accepts cond() helper targets", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   result_new <- eval_handler(con, evalid = 1001) %>%
@@ -176,7 +177,7 @@ test_that("aggregate() accepts cond() helper targets", {
 })
 
 test_that("aggregate() preserves user-defined output names", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   tree_res <- eval_handler(con, evalid = 1001) %>%
@@ -195,7 +196,26 @@ test_that("aggregate() preserves user-defined output names", {
 })
 
 test_that("partition() accepts multiple scoped helpers in one call", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  tree_res <- eval_handler(con, evalid = 1001) %>%
+    aggregate(tree(my_vol = VOLCFNET)) %>%
+    dplyr::collect()
+
+  cond_res <- eval_handler(con, evalid = 1001) %>%
+    aggregate(cond(my_prop = 1)) %>%
+    dplyr::collect()
+
+  expect_true("my_vol" %in% colnames(tree_res))
+  expect_false("VOLCFNET" %in% colnames(tree_res))
+
+  expect_true("my_prop" %in% colnames(cond_res))
+  expect_false("prop" %in% colnames(cond_res))
+})
+
+test_that("partition() accepts multiple scoped helpers in one call", {
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   result_new <- eval_handler(con, evalid = 1001) %>%
@@ -204,18 +224,17 @@ test_that("partition() accepts multiple scoped helpers in one call", {
     dplyr::collect() %>%
     dplyr::arrange(COND_STATUS_CD, SPCD, PLT_CN, PLOT)
 
-  result_old <- eval_handler(con, evalid = 1001) %>%
-    set_tree_domains(SPCD) %>%
-    set_cond_domains(COND_STATUS_CD) %>%
+  result_repeat <- eval_handler(con, evalid = 1001) %>%
+    partition(tree(SPCD), cond(COND_STATUS_CD)) %>%
     aggregate(tree(VOLCFGRS)) %>%
     dplyr::collect() %>%
     dplyr::arrange(COND_STATUS_CD, SPCD, PLT_CN, PLOT)
 
-  expect_equal(result_new, result_old)
+  expect_equal(result_new, result_repeat)
 })
 
 test_that("partition(plot(COUNTYCD)) works for tree and cond aggregation", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   tree_result <- eval_handler(con, evalid = 1001) %>%
@@ -235,7 +254,7 @@ test_that("partition(plot(COUNTYCD)) works for tree and cond aggregation", {
 })
 
 test_that("partition() respects helper scope for shared column names", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
   add_shared_countycd_columns(con)
 
@@ -271,7 +290,7 @@ test_that("scoped helpers tag expressions correctly", {
 })
 
 test_that("unscoped expressions in new API error appropriately", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   handler <- eval_handler(con, evalid = 1001)
@@ -291,7 +310,7 @@ test_that("unscoped expressions in new API error appropriately", {
 })
 
 test_that("aggregate(tree()) accepts user-supplied macro expressions", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   # Weighted mean macro
@@ -304,7 +323,7 @@ test_that("aggregate(tree()) accepts user-supplied macro expressions", {
 })
 
 test_that("aggregate(tree()) mixes implicit and macro targets", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   result <- eval_handler(con, evalid = 1001) %>%
@@ -318,7 +337,7 @@ test_that("aggregate(tree()) mixes implicit and macro targets", {
 })
 
 test_that("aggregate(tree()) implicit default is unchanged by macro dispatch", {
-  con <- setup_test_db()
+  con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   result_implicit <- eval_handler(con, evalid = 1001) %>%
@@ -326,11 +345,119 @@ test_that("aggregate(tree()) implicit default is unchanged by macro dispatch", {
     dplyr::collect() %>%
     dplyr::arrange(PLT_CN)
 
-  # Explicit sum(...) macro should produce same result
+  # Explicit sum(...) is a passthrough expression: zero-fill is not applied,
+  # so missing plots yield NA rather than 0. Use coalesce to match implicit.
   result_explicit <- eval_handler(con, evalid = 1001) %>%
     aggregate(tree(VOLCFGRS = sum(TPA_UNADJ * VOLCFGRS, na.rm = TRUE))) %>%
     dplyr::collect() %>%
-    dplyr::arrange(PLT_CN)
+    dplyr::arrange(PLT_CN) %>%
+    dplyr::mutate(VOLCFGRS = dplyr::coalesce(VOLCFGRS, 0))
 
   expect_equal(result_implicit$VOLCFGRS, result_explicit$VOLCFGRS)
+})
+
+test_that("materialize() returns lazy prepared tables for status handlers", {
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001) %>%
+    transform(
+      plot(PLOT_BUCKET = PLOT * 10),
+      cond(COND_BUCKET = CONDID * 100),
+      tree(TREE_BUCKET = SPCD * 1000)
+    ) %>%
+    subset(
+      plot(PLOT <= 4),
+      cond(COND_STATUS_CD == 1),
+      tree(SPCD == 1)
+    )
+
+  plot_q <- materialize(handler, "plot")
+  cond_q <- materialize(handler, "cond")
+  tree_q <- materialize(handler, "tree")
+
+  expect_true(dplyr::is.tbl(plot_q))
+  expect_true(dplyr::is.tbl(cond_q))
+  expect_true(dplyr::is.tbl(tree_q))
+
+  plot_res <- plot_q %>% dplyr::collect()
+  cond_res <- cond_q %>% dplyr::collect()
+  tree_res <- tree_q %>% dplyr::collect()
+
+  expect_true(all(plot_res$PLOT <= 4))
+  expect_true(all(cond_res$COND_STATUS_CD == 1))
+  expect_true(all(tree_res$SPCD == 1))
+  expect_equal(plot_res$PLOT_BUCKET, plot_res$PLOT * 10)
+  expect_equal(cond_res$COND_BUCKET, cond_res$CONDID * 100)
+  expect_equal(tree_res$TREE_BUCKET, tree_res$SPCD * 1000)
+})
+
+test_that("materialize() handles GRM tree_history tables", {
+  con <- setup_grm_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1003, spec = new("GRMAnalysis")) %>%
+    transform(
+      tree_history(HIST_FLAG = STATUSCD_begin + 1)
+    ) %>%
+    subset(
+      tree_history(DIA_begin >= 10)
+    )
+
+  tree_history_q <- materialize(handler, "tree_history")
+
+  expect_true(dplyr::is.tbl(tree_history_q))
+
+  tree_history_res <- tree_history_q %>% dplyr::collect()
+
+  expect_true(nrow(tree_history_res) > 0)
+  expect_true(all(tree_history_res$DIA_begin >= 10))
+  expect_equal(tree_history_res$HIST_FLAG, tree_history_res$STATUSCD_begin + 1)
+})
+
+test_that("aggregate(tree_history()) supports GRM helper targets", {
+  con <- setup_grm_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  res <- eval_handler(con, evalid = 1003, spec = new("GRMAnalysis")) %>%
+    aggregate(tree_history(mortality = grm_mortality())) %>%
+    dplyr::collect()
+
+  expect_true(nrow(res) > 0)
+  expect_true("mortality" %in% colnames(res))
+})
+
+test_that("GRM macro aggregates do not prefilter on the default expander weight", {
+  con <- setup_grm_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1003, spec = new("GRMAnalysis"))
+
+  generic_sql <- dbplyr::sql_render(
+    fiaplyr:::.make_tree_history_aggregates(handler, VOLCFNET, sparse = TRUE)
+  )
+  macro_sql <- dbplyr::sql_render(
+    fiaplyr:::.make_tree_history_aggregates(handler, mortality = grm_mortality(), sparse = TRUE)
+  )
+
+  expect_match(generic_sql, '".expander_wt" IS NULL', fixed = TRUE)
+  expect_no_match(macro_sql, '".expander_wt" IS NULL', fixed = TRUE)
+  expect_match(macro_sql, "TPA_UNADJ_begin")
+})
+
+test_that("materialize() rejects invalid slots and unsupported tree_history usage", {
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001)
+
+  expect_error(
+    materialize(handler, "bogus"),
+    "Unsupported slot"
+  )
+
+  expect_error(
+    materialize(handler, "tree_history"),
+    "not available for this analysis spec"
+  )
 })

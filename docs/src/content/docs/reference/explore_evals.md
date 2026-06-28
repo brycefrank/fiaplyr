@@ -16,7 +16,7 @@ explore_evals(db, backend = NULL)
 ## Arguments
 
 - `db`: A DBIConnection object connected to an FIA database.
-- `backend`: Optional DatabaseBackend for custom schema/table names.
+- `backend`: Optional DatabaseMapping for custom schema/table names.
 
 ## Value
 

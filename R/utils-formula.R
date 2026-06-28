@@ -53,8 +53,8 @@ parse_formula <- function(f) {
 .parse_target_helper <- function(spec) {
   target_table <- attr(spec, "target_table")
 
-  if (is.null(target_table) || !target_table %in% c("tree", "cond", "plot")) {
-    stop("Scoped target helpers must use `tree()`, `cond()`, or `plot()`.")
+  if (is.null(target_table) || !target_table %in% c("tree", "cond", "plot", "tree_history")) {
+    stop("Scoped target helpers must use `tree()`, `cond()`, `plot()`, or `tree_history()`.")
   }
 
   targets <- vapply(spec, rlang::as_label, character(1))

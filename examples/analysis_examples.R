@@ -14,29 +14,29 @@ explore_evals(db)
 # -----------------------------------------------------------------------------
 
 # Initialize handler for a specific evaluation (e.g., EVALID 12345)
-# By default, this uses the StatusAnalysis schema.
+# By default, this uses the StatusAnalysis spec.
 # It automatically loads PLOT, TREE, COND, etc.
 status_handler <- eval_handler(db, evalid = 411001)
 
 # Perform standard aggregation
 # This delegates to StatusAnalysis::aggregate_data -> .make_tree_aggregates
 status_agg <- status_handler %>%
-  aggregate(tree(VOLCFGRS, 1, VOLCFNET))
+  aggregate(tree(VOLCFGRS, 1, VOLCFNET), expander = TPA_UNADJ)
 
 # -----------------------------------------------------------------------------
 # Case 2: Change Analysis (Future Implementation)
 # -----------------------------------------------------------------------------
 
-# Initialize handler with the ChangeAnalysis schema.
-# This would load change-specific tables (e.g., TREE_GRM_COMPONENT) in the future.
-change_handler <- eval_handler(db, evalid = 411703, schema = new("ChangeAnalysis"))
+# Initialize handler with the ChangeAnalysis spec.
+# Change-specific table support belongs on the GRM path; this remains a future skeleton.
+change_handler <- eval_handler(db, evalid = 411703, spec = new("ChangeAnalysis"))
 
 # Perform change aggregation
 # The API will support timepoint wrappers: b() for beginning, m() for midpoint, e() for ending.
 # Note: This is currently a skeleton and will raise a "Not yet implemented" error.
 tryCatch({
   change_agg <- change_handler %>%
-    aggregate(tree(b(VOLCFGRS)))
+    aggregate(tree(b(VOLCFGRS)), expander = TPA_UNADJ)
 }, error = function(e) {
   message("Expected error (Change analysis not fully implemented): ", e$message)
 })

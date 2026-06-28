@@ -1,25 +1,19 @@
 #' Aggregate Data to Plot Level
 #'
+#' Aggregation is the process of summing tree, condition, or other component
+#' values to the plot level, which can be used to create dataframes of
+#' aggregated data, useful for a variety of applications and diagnostics.
+#'
 #' @param handler A handler object.
 #' @param ... A scoped target helper such as `tree(VOLCFGRS)` or `cond()`, plus
 #'   any method-specific options such as `sparse = TRUE`.
-#' @importFrom stats aggregate
 #' @export
+#'
+#' @examples
+#' # Aggregate gross volume to the plot level
+#' handler |>
+#'   aggregate(tree(VOLCFGRS))
 setGeneric("aggregate", function(handler, ...) standardGeneric("aggregate"))
-
-#' Aggregate Trees to Plot Level
-#'
-#' @param object A handler object.
-#' @param ... Additional arguments.
-#' @export
-setGeneric("aggregate_tree", function(object, ...) standardGeneric("aggregate_tree"))
-
-#' Aggregate Conditions to Plot Level
-#'
-#' @param object A handler object.
-#' @param ... Additional arguments.
-#' @export
-setGeneric("aggregate_cond", function(object, ...) standardGeneric("aggregate_cond"))
 
 #' @export
 #' @rdname mutate_tree
@@ -37,56 +31,29 @@ setGeneric("mutate_tree", function(handler, ...) standardGeneric("mutate_tree"))
 #' @param ... Additional arguments.
 setGeneric("mutate_cond", function(handler, ...) standardGeneric("mutate_cond"))
 
-#' @export
-#' @rdname filter_tree
-#' @title Filter Tree Table
-#' @description **Deprecated.** Use `subset(tree(...))` instead.
-#' @param handler A handler object.
-#' @param ... Additional arguments.
-setGeneric("filter_tree", function(handler, ...) standardGeneric("filter_tree"))
-
-#' @export
-#' @rdname filter_cond
-#' @title Filter Condition Table
-#' @description **Deprecated.** Use `subset(cond(...))` instead.
-#' @param handler A handler object.
-#' @param ... Additional arguments.
-setGeneric("filter_cond", function(handler, ...) standardGeneric("filter_cond"))
-
-#' @export
-#' @rdname set_tree_domains
-#' @title Set Tree Domain Variables
-#' @description **Deprecated.** Use `partition(tree(...))` instead.
-#' @param .data A handler object.
-#' @param ... Additional arguments.
-setGeneric("set_tree_domains", function(.data, ...) standardGeneric("set_tree_domains"))
-
-#' @export
-#' @rdname set_cond_domains
-#' @title Set Condition Domain Variables
-#' @description **Deprecated.** Use `partition(cond(...))` instead.
-#' @param .data A handler object.
-#' @param ... Additional arguments.
-setGeneric("set_cond_domains", function(.data, ...) standardGeneric("set_cond_domains"))
-
-#' Transform Table with Scoped Mutations
+#' Add or Modify Columns of a Handler
 #'
 #' Add derived columns or modify existing ones on a specific table level
-#' (plot, condition, or tree). Expressions must be wrapped in scoping helpers
-#' (`tree()`, `cond()`, `plot()`) to specify their target table.
+#' Expressions must be wrapped in scoping helpers (`tree()`, `cond()`, etc) to
+#' specify their target table.
 #'
-#' @param .data A handler object.
+#' @param handler A handler object.
 #' @param ... Scoped expressions using `tree()`, `cond()`, or `plot()` helpers.
 #' @return The handler with pending mutations queued.
 #' @export
-setGeneric("transform", function(.data, ...) standardGeneric("transform"))
-
-#' Subset a Inventory Components on a Handler
 #'
-#' Subsetting discards inventory components from the handler based on logical conditions. This
-#' is done in a hierarchical manner while preserving the integrity of the
-#' inventory structure. Subsetting is encouraged, as it increases the
-#' computation speed of the analysis.
+#' @examples
+#' # Add a basal area column to the tree table
+#' handler |>
+#'   transform(tree(BA = 0.005454 * DIA^2))
+setGeneric("transform", function(handler, ...) standardGeneric("transform"))
+
+#' Subset Inventory Components of a Handler
+#'
+#' Subsetting discards inventory components from the handler based on logical
+#' conditions. This is done in a hierarchical manner while preserving the
+#' integrity of the inventory structure. Subsetting is encouraged, as it
+#' increases the computation speed of the analysis.
 #'
 #' Subsetting is done using the `tree()` and `cond()` helpers. For
 #' example `subset(tree(STATUSCD == 1))` would retain only live trees in later
@@ -95,11 +62,15 @@ setGeneric("transform", function(.data, ...) standardGeneric("transform"))
 #' statements for `tree` apply only to trees. This ensures that the resulting
 #' data structure remains consistent (e.g., no trees without conditions, etc).
 #'
-#' @param .data A handler object.
+#' @param handler A handler object.
 #' @param ... Scoped logical expressions using `tree()`, `cond()`, or `plot()` helpers.
 #' @return The handler with pending filters queued.
 #' @export
-setGeneric("subset", function(.data, ...) standardGeneric("subset"))
+#' @examples
+#' # Retain only live trees
+#' handler |>
+#'  subset(tree(STATUSCD == 1))
+setGeneric("subset", function(handler, ...) standardGeneric("subset"))
 
 #' Partition a Handler into Domains
 #'
@@ -116,11 +87,27 @@ setGeneric("subset", function(.data, ...) standardGeneric("subset"))
 #' `transform()` can be used as domain variables as well. Multiple helpers can
 #' be mixed in a single call, such as `partition(tree(SPCD), cond(OWNCD))`.
 #'
-#' @param .data A handler object.
+#' @param handler A handler object.
 #' @param ... Scoped domain variable names using `tree()`, `cond()`, or `plot()` helpers.
 #' @return The handler with domain variables set.
 #' @export
-setGeneric("partition", function(.data, ...) standardGeneric("partition"))
+#'
+#' @examples
+#' # Set tree-level domains to be unique combinations of species and status code
+#' handler |>
+#'   partition(tree(SPCD, STATUSCD))
+setGeneric("partition", function(handler, ...) standardGeneric("partition"))
+
+#' Materialize a Handler Table
+#'
+#' Render the prepared table for a specific slot after any pending subsets,
+#' transformations, and domain settings have been applied.
+#'
+#' @param handler A handler object.
+#' @param slot The table slot to materialize.
+#' @return A lazy query for the requested table.
+#' @export
+setGeneric("materialize", function(handler, slot) standardGeneric("materialize"))
 
 #' Get Strata Weights
 #'

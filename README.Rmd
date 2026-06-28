@@ -70,8 +70,8 @@ explore_evals(con) |>
   head()
 ```
 
-Because we are using the mini Vermont database, we see just one record, but in a
-full FIA database there are many evaluations. For this tutorial, we will use 
+Because we are using the mini Vermont database, we see just two records, but in
+a full FIA database there are many evaluations. For this tutorial, we will use 
 `500601`, which covers Vermont (`50`) for 2003-2006 (`06`), and can be used to
 estimate status variables (`01`). 
 
