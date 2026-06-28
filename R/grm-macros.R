@@ -264,7 +264,7 @@ grm_removals <- function(
 #' @export
 grm_growth_survivor <- function(
     expr = 1,
-    expander = TPA_UNADJ_begin,
+  expander = dplyr::coalesce(TPA_UNADJ_begin, TPA_UNADJ),
     annualize = FALSE,
     adjust = "auto",
     adjust_basis = "subptyp_grm",
@@ -336,7 +336,7 @@ grm_growth_reversion <- function(
 #' @export
 grm_growth_mortality <- function(
     expr = 1,
-    expander = TPA_UNADJ_begin,
+  expander = dplyr::coalesce(TPA_UNADJ_begin, TPA_UNADJ),
     annualize = FALSE,
     adjust = "auto",
     adjust_basis = "subptyp_grm",
@@ -360,7 +360,7 @@ grm_growth_mortality <- function(
 #' @export
 grm_growth_cut <- function(
     expr = 1,
-    expander = TPA_UNADJ_begin,
+  expander = dplyr::coalesce(TPA_UNADJ_begin, TPA_UNADJ),
     annualize = FALSE,
     adjust = "auto",
     adjust_basis = "subptyp_grm",
@@ -384,7 +384,7 @@ grm_growth_cut <- function(
 #' @export
 grm_growth_diversion <- function(
     expr = 1,
-    expander = TPA_UNADJ_begin,
+  expander = dplyr::coalesce(TPA_UNADJ_begin, TPA_UNADJ),
     annualize = FALSE,
     adjust = "auto",
     adjust_basis = "subptyp_grm",
