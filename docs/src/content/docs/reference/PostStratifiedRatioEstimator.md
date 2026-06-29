@@ -10,10 +10,9 @@ Constructor for PostStratifiedRatioEstimator
 ## Usage
 
 ```r
-PostStratifiedRatioEstimator(numerator, denominator = numerator)
+PostStratifiedRatioEstimator(handler)
 ```
 
 ## Arguments
 
-- `numerator`: A EvalHandler object for the numerator.
-- `denominator`: A EvalHandler object for the denominator. Defaults to numerator.
+- `handler`: An EvalHandler object.

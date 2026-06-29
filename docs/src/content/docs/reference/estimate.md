@@ -11,6 +11,9 @@ Estimate Population Parameters
 
 ```r
 estimate(object, ..., output = "mean", margins = FALSE)
+
+## S4 method for signature 'EvalHandler'
+estimate(object, ..., output = "mean", margins = FALSE)
 ```
 
 ## Arguments
@@ -19,3 +22,9 @@ estimate(object, ..., output = "mean", margins = FALSE)
 - `...`: Exactly one scoped target helper specifying the estimation target.
 - `output`: Output scale, either "mean" (default) or "total".
 - `margins`: Logical. If `TRUE`, returns all marginal estimates in addition to the full cross-domain estimates. Marginals are produced by re-running the estimation pipeline for every strict subset of the active domain variables, including the grand total (no domains). Dropped domain columns appear as `NA` in the output, indicating aggregation over all values of that variable. Defaults to `FALSE`.
+
+## Additional Details
+
+Functions
+
+`estimate(EvalHandler)`: Estimate parameters directly from an EvalHandler

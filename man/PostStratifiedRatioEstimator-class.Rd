@@ -10,9 +10,7 @@ PostStratifiedRatioEstimator Class
 \section{Slots}{
 
 \describe{
-\item{\code{numerator}}{A EvalHandler object for the numerator.}
-
-\item{\code{denominator}}{A EvalHandler object for the denominator.}
+\item{\code{handler}}{An EvalHandler object.}
 
 \item{\code{strata_weights}}{A dataframe containing strata weights.}
 }}

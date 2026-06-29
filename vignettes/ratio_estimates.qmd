@@ -10,34 +10,32 @@ knitr:
 The oft overlooked ratio estimator is a powerful component of FIA analyses,
 enabling the estimation of ratios that can normalize estimates to forested
 areas, yield averages of tree-level quantities, estimate mortality rates,
-and more. Users are encouraged to read the material of [@scott etc chapter] for
-useful examples regarding the ratio estimator before proceeding. An
-understanding of the more basic [status estimates](status_estimates.qmd)
-vignette is also required.
+and more. An understanding of the more basic
+[status estimates](status_estimates.qmd) vignette is also required.
 
 As the name suggests, the ratio estimator is formed by dividing a numerator
 estimate by a denominator estimate, making an analysis dependent on pairs of
-variables. In `fiaplyr`, we accomplish this by passing two handler objects to
-the estimator, one that specifies all estimates in the numerator, and another
-that specifies all estimates in the denominator. Then, estimates for all
-possible pairings are made. This can create an extremely expansive set of
-estimates for the user to interact with, and can be overwhelming at times. To
-reduce the complexity of the output, we suggest using `subset()` rather than
-relying on granular partitions.
+variables. In `fiaplyr`, this is accomplished by using a function within the
+`estimate` context called `ratio`, where users specify numerator and denominator
+attributes. Domain specifications are identical across the numerator and
+denominator, unless the user specifies a particular denominator override.
 
-To illustrate the power of the ratio estimator, we will estimate two types of
-ratios for the state of Vermont between 2003 and 2006.
+To illustrate the power of the ratio estimator, we will provide three examples:
 
-## Growing Stock divided by Forested Area
+1. Growing stock volume divided by forested area.
+2. Diameter height ratio by species.
+3. Proportional representation of species.
+
+## Growing Stock Volume divided by Forested Area
 
 Normalizing estimates by forested area is a common practice in FIA analyses.
-For example, in states with sparse forest cover, per-acre densities that can
-be made with `PostStratifiedEstimator` may seem small to the lay user because
-the density is expressed over the entire state, rather than only for forests
-lands within it. The ratio estimator resolves this by dividing the per-acre
-density by the proportion of forested land, inflating the estimate to represent
-the density exclusively within forests. This is straightforward using the
-`PostStratifiedRatioEstimator`. First, establish a handler
+For example, in states with sparse forest cover, per-acre densities that can be
+made with the standard post-stratified estimator may seem small to the lay user
+because the density is expressed over the entire state, rather than only for
+forested lands within it. The ratio estimator resolves this by dividing the
+per-acre density by the proportion of forested land, inflating the estimate to
+represent the density exclusively within forests. This is straightforward
+using the `ratio` helper. First, establish a handler
 
 ```{r}
 library(fiaplyr)
@@ -52,49 +50,25 @@ con <- dbConnect(duckdb(), fiadb_vt_mini_path())
 handler <- eval_handler(con, 500601)
 ```
 
-Then, create two sub-handlers, one that constructs the numerator (growing stock)
-and one that constructs the denominator (forested area).
+Next, we subset to growing stock trees on forested land, and then specify the
+`ratio` arguments. The first argument forms the output numerators. In this
+case, we have not defined a partition, so this represents just one estimate,
+representing the growing stock volume across Vermont. Then, we specify
+the denominator as `cond()`, which estimates the forested proportion noting
+that we subset to `COND_STATUS_CD == 1` to only include forested conditions.
 
 ```{r}
-# Define the numerator handler for growing stock (TREECLCD == 2)
-gs_handler <- handler |>
-  subset(tree(TREECLCD == 2))
-
-# Define the denominator handler for forested area (COND_STATUS_CD == 1)
-fa_handler <- handler |>
-  subset(cond(COND_STATUS_CD == 1))
-```
-
-Establish the `PostStratifiedRatioEstimator` using the two handlers, and then
-use the `estimate_ratio` method with scoped helpers to define the numerator and
-denominator targets of interest. In this case, we estimate `VOLCFNET` for the
-tree numerator and use `cond()` for the denominator, which represents the
-condition proportion.
-
-```{r}
-# Establish the psr estimator
-psr <- PostStratifiedRatioEstimator(gs_handler, fa_handler)
-
-gstk_ests <- estimate_ratio(psr, tree(VOLCFNET), cond())
-
-gstk_ests
+handler |>
+  subset(tree(TREECLCD == 2), cond(COND_STATUS_CD == 1)) |>
+  estimate(
+    ratio(tree(VOLCFNET), cond())
+  )
 ```
 
 Here, we see the density of growing stock per acre on forested land, which is
-1,807 cubic feet per acre. The table defines the numerator variable `var_n`,
+1,808 cubic feet per acre. The table defines the numerator variable `var_n`,
 and the denominator variable `var_d`. The point estimate and standard error are
 provided.
-
-If the user wishes to see the denominator and numerator estimates separately,
-they can be obtained with the `estimate` method on the numerator and denominator
-handlers, respectively.
-
-```{r}
-estimate_ratio(psr, tree(VOLCFNET), cond(), include_components = TRUE)
-```
-
-The above output includes the numerator and denominator estimates, and their
-standard errors.
 
 ## Diameter Height Ratio by Species
 
@@ -112,17 +86,63 @@ tree_handler <- handler |>
   subset(tree(TREECLCD == 2, DIA >= 10, DIA <= 15, ACTUALHT == HT)) |>
   partition(tree(SPCD))
 
-psr <- PostStratifiedRatioEstimator(tree_handler, tree_handler)
+dhr_ests <- tree_handler |>
+  estimate(
+    ratio(
+      tree(HT),
+      tree(DIA)
+    )
+  ) |> filter(SPCD_n == SPCD_d)
 
 # Prepare readable species labels
 species_labels <- handler@tables$ref_species |>
   select(SPCD, COMMON_NAME) |>
   collect()
 
-dhr <- estimate_ratio(psr, tree(HT), tree(DIA), domain_pairing = "matched") |>
+dhr <- dhr_ests |>
   arrange(desc(estimate)) |>
   filter(se != 0) |>
   left_join(species_labels, by = c("SPCD_n" = "SPCD"))
 
 head(dhr)
 ```
+
+Notice that we filtered the ratio estimates to only include those where the
+species matched between the numerator and denominator. This is because the
+ratio estimator will produce estimates for all possible domain pairings, e.g.,
+the diameter of `SPCD=71` divided by the height of `SPCD=125`. This is useful
+in some contexts, but not here, so they are discarded outright.
+
+## Proportional Representation of Species
+
+It may be of interest to estimate the proportion a species represents within
+a state. This requires an additional feature that allows us to specify the
+domain structure of the denominator. Fortunately, `ratio` allows for denominator
+overrides
+
+```{r}
+# First specify a handler for growing stock trees, partitioned by species
+prop_handler <- handler |>
+  subset(tree(TREECLCD == 2)) |>
+  partition(tree(SPCD))
+
+prop_ests <- prop_handler |>
+  estimate(
+    ratio(
+      tree(),
+      tree(),
+      den_partitions = list(tree())
+    )
+  )
+
+prop_ests |>
+  arrange(desc(estimate)) |>
+  left_join(species_labels, by = c("SPCD_n" = "SPCD")) |>
+  select(SPCD_n, COMMON_NAME, estimate, se) |>
+  head()
+```
+
+Here, we can see the proportion of each species within the state of Vermont for
+the specific case of growing stock trees. One can imagine all types of custom
+ratios: proportion of trees with defects, static mortality proportions, and
+others.

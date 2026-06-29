@@ -13,6 +13,23 @@ grm_mortality(
   unknown_subptype = "zero"
 )
 }
+\arguments{
+\item{expr}{The variable to summarize. Use \code{1} for stem density.}
+
+\item{expander}{The expansion factor.
+Defaults to \code{TPA_UNADJ_begin}.}
+
+\item{annualize}{Logical. If \code{TRUE}, divides the estimate by \code{REMPER}.}
+
+\item{adjust}{Adjustment behavior for macro-derived targets. One of
+\code{"auto"}, \code{"none"}, or \code{"subptype"}.}
+
+\item{adjust_basis}{Basis used when \code{adjust = "subptype"}. Currently
+supported: \code{"subptyp_grm"}.}
+
+\item{unknown_subptype}{Behavior when subtype cannot be mapped to an
+adjustment factor. One of \code{"zero"}, \code{"drop"}, or \code{"warn"}.}
+}
 \description{
 This macro facilitates the implementation of mortality calculations in a
 manner consistent with the GRM paradigm, including the appropriate use of

@@ -1,42 +1,32 @@
 #' PostStratifiedRatioEstimator Class
 #'
-#' @slot numerator A EvalHandler object for the numerator.
-#' @slot denominator A EvalHandler object for the denominator.
+#' @slot handler An EvalHandler object.
 #' @slot strata_weights A dataframe containing strata weights.
 #' @export
 setClass("PostStratifiedRatioEstimator",
   contains = "Estimator",
   slots = list(
-    numerator = "EvalHandler",
-    denominator = "EvalHandler",
+    handler = "EvalHandler",
     strata_weights = "ANY"
   )
 )
 
 #' Constructor for PostStratifiedRatioEstimator
 #'
-#' @param numerator A EvalHandler object for the numerator.
-#' @param denominator A EvalHandler object for the denominator. Defaults to numerator.
+#' @param handler An EvalHandler object.
 #' @export
-PostStratifiedRatioEstimator <- function(numerator, denominator = numerator) {
-  # Check if EVALIDs match
-  if (evalid(numerator) != evalid(denominator)) {
-    stop("Numerator and denominator must have the same EVALID.")
-  }
-
+PostStratifiedRatioEstimator <- function(handler) {
   new("PostStratifiedRatioEstimator",
-    numerator = numerator,
-    denominator = denominator,
-    strata_weights = get_strata_weights(numerator)
+    handler = handler,
+    strata_weights = get_strata_weights(handler)
   )
 }
 
 #' Estimate Ratio
 #'
 #' @param object A PostStratifiedRatioEstimator object.
-#' @param ... Exactly two scoped target helpers specifying the numerator and
-#'   denominator targets, such as `tree(VOLCFNET)`, `tree_history(...)`, and
-#'   `cond()`.
+#' @param intent A `fiaplyr_ratio_intent` object, usually created via
+#'   `ratio(tree(...), cond(...))`.
 #' @param domain_pairing Domain pairing strategy, either `"all"` (default) for
 #'   all numerator/denominator domain combinations or `"matched"` to only retain
 #'   rows where both sides share the same domain columns and values.
@@ -44,47 +34,55 @@ PostStratifiedRatioEstimator <- function(numerator, denominator = numerator) {
 #'   component estimates and standard errors (`estimate_n`, `se_n`, `estimate_d`,
 #'   `se_d`) to the output.
 #' @export
-setGeneric("estimate_ratio", function(object, ..., domain_pairing = "all", include_components = FALSE) {
+setGeneric("estimate_ratio", function(object, intent, domain_pairing = "all", include_components = FALSE) {
   standardGeneric("estimate_ratio")
 })
 
 #' @describeIn estimate_ratio Estimate ratio for PostStratifiedRatioEstimator
-setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ..., domain_pairing = c("all", "matched"), include_components = FALSE) {
+setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, intent, domain_pairing = c("all", "matched"), include_components = FALSE) {
   domain_pairing <- match.arg(domain_pairing)
   if (!is.logical(include_components) || length(include_components) != 1 || is.na(include_components)) {
     stop("`include_components` must be TRUE or FALSE.")
   }
-  args <- list(...)
-  if (length(args) != 2) stop("Must provide exactly two scoped target helpers (numerator, denominator).")
+  if (!inherits(intent, "fiaplyr_ratio_intent")) {
+    stop("`intent` must be a `fiaplyr_ratio_intent` object, usually from `ratio(...)`.")
+  }
+  if (is.null(intent$numerator) || is.null(intent$denominator)) {
+    stop("`ratio()` must include both numerator and denominator target helpers.")
+  }
 
-  spec_num <- args[[1]]
-  spec_den <- args[[2]]
+  spec_num <- intent$numerator
+  spec_den <- intent$denominator
+
+  base_handler <- object@handler
+  num_handler <- base_handler
+  den_handler <- .psr_apply_den_partitions(base_handler, intent$den_partitions)
 
   # 1. Parse targets and aggregate plot-level data for each side
   parsed_num <- .parse_target_spec(spec_num, "estimate_ratio")
   parsed_den <- .parse_target_spec(spec_den, "estimate_ratio")
 
-  agg_num <- .psr_aggregate(object@numerator, parsed_num)
-  agg_den <- .psr_aggregate(object@denominator, parsed_den)
+  agg_num <- .psr_aggregate(num_handler, parsed_num)
+  agg_den <- .psr_aggregate(den_handler, parsed_den)
 
   # 2. Resolve value column names
   vals_num <- .psr_val_cols(parsed_num)
   vals_den <- .psr_val_cols(parsed_den)
 
   # 3. Join strata once for each side - reused by both the variance and covariance pipelines
-  strata_num <- .ps_join_strata(agg_num, object@numerator)
-  strata_den <- .ps_join_strata(agg_den, object@denominator)
+  strata_num <- .ps_join_strata(agg_num, num_handler)
+  strata_den <- .ps_join_strata(agg_den, den_handler)
 
   # 4. Stats pipeline for each side, producing [domain_vars, var, estimate, se]
   stats_num <- strata_num %>%
     .ps_strata_stats(vals_num) %>%
     .ps_eu_stats(vals_num) %>%
-    .ps_pop_stats(object@numerator, vals_num)
+    .ps_pop_stats(num_handler, vals_num)
 
   stats_den <- strata_den %>%
     .ps_strata_stats(vals_den) %>%
     .ps_eu_stats(vals_den) %>%
-    .ps_pop_stats(object@denominator, vals_den)
+    .ps_pop_stats(den_handler, vals_den)
 
   # 5. Covariance pipeline.
   # Build a lookup table mapping each cov column name to its (var_n, var_d) pair.
@@ -100,7 +98,7 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
   pop_cov <- strata_num %>%
     .ps_strata_cov(strata_den, vals_num, vals_den, cov_cols) %>%
     .ps_eu_cov(cov_cols) %>%
-    .ps_pop_cov(object@numerator, cov_cols)
+    .ps_pop_cov(num_handler, cov_cols)
 
   # Pivot pop_cov to long format using the known lookup (avoids fragile name parsing)
   pop_cov_long <- pop_cov %>%
@@ -209,6 +207,33 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, ...
 
 
 # --- PSR internal helpers ---
+
+#' Apply denominator-only partition overrides for ratio intent
+#' @noRd
+.psr_apply_den_partitions <- function(handler, den_partitions) {
+  if (is.null(den_partitions)) {
+    return(handler)
+  }
+
+  parts <- den_partitions
+  if (is.list(parts) && !is.null(attr(parts, "target_table"))) {
+    parts <- list(parts)
+  }
+
+  if (!is.list(parts) || length(parts) == 0) {
+    stop("`den_partitions` must be NULL, a scoped helper, or a non-empty list of scoped helpers.")
+  }
+
+  is_scoped <- vapply(parts, function(x) {
+    is.list(x) && !is.null(attr(x, "target_table"))
+  }, logical(1))
+
+  if (!all(is_scoped)) {
+    stop("All `den_partitions` entries must be scoped helpers like `cond(...)` or `tree(...)`.")
+  }
+
+  .route_scoped_expressions(handler, parts, operation = "set_domains")
+}
 
 #' Aggregate plot-level data for one side of the ratio
 #' @noRd

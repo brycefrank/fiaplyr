@@ -89,12 +89,12 @@ handler@tables$tree_history |>
     # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
       DIA_begin DIA_midpt   DIA
           <dbl>     <dbl> <dbl>
-    1       1.9      1.9    1.9
-    2       2.5      2.5    2.5
-    3       8        8.3    8.6
-    4      12.9     12.9   12.9
-    5       6.6      6.65   6.7
-    6       5.7      5.95   6.2
+    1      11.7     12.6   13.6
+    2       8.6      9.5   10.4
+    3       9.3     10.1   10.9
+    4       3.9      4.25   4.6
+    5       3.2      3.4    3.6
+    6       2.6      3.3    4  
 
 Notice that the beginning and midpoint values have suffixes, while the
 end does not. This complies with typical FIA conventions.
@@ -154,9 +154,7 @@ is used to produce annual mortality rates, as is done in most standard
 FIA estimates.
 
 ``` r
-ps <- PostStratifiedEstimator(handler)
-
-ps |>
+handler |>
   estimate(
     tree_history(mort = grm_mortality(VOLCFSND, annualize = TRUE)),
     output = "total"
@@ -168,11 +166,10 @@ ps |>
       <chr>      <dbl>    <dbl>
     1 mort  101032246. 6741699.
 
-Likewise, something like ingrowth can also be estimated with the
-`grm_ingrowth` macro
+Likewise, ingrowth can also be estimated with the `grm_ingrowth` macro
 
 ``` r
-ps |>
+handler |>
   estimate(
     tree_history(ingrowth = grm_ingrowth(VOLCFSND, annualize = TRUE)),
     output = "total"
@@ -188,7 +185,7 @@ Higher order change components are `grm_net_change`, `grm_net_growth`
 and `grm_gross_growth`, all of which use convenient macros.
 
 ``` r
-ps |>
+handler |>
   estimate(
     tree_history(net_change = grm_net_change(VOLCFSND, annualize = TRUE)),
     output = "total"
@@ -209,18 +206,14 @@ The only modification, of course, is the specification of the GRM
 estimates themselves.
 
 ``` r
-mort_handler <- handler
-
-fa_handler <- handler |>
-  subset(cond(COND_STATUS_CD == 1))
-
-psr <- PostStratifiedRatioEstimator(mort_handler, fa_handler)
-
-psr |>
-  estimate_ratio(
-    tree_history(mort = grm_mortality(VOLCFSND, annualize = TRUE)),
-    cond()
-  )  
+handler |>
+  subset(cond(COND_STATUS_CD == 1)) |>
+  estimate(
+    ratio(
+      tree_history(mort = grm_mortality(VOLCFSND, annualize = TRUE)),
+      cond()
+    )
+  )
 ```
 
     # A tibble: 1 × 4

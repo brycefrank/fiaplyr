@@ -463,6 +463,49 @@ setMethod("aggregate", "EvalHandler", function(handler, ...) {
   do.call(aggregate_data, c(list(spec = handler@spec, handler = handler), args))
 })
 
+#' @describeIn estimate Estimate parameters directly from an EvalHandler
+setMethod("estimate", "EvalHandler", function(object, ..., output = "mean", margins = FALSE) {
+  args <- list(...)
+
+  if (length(args) == 0) {
+    stop("Must provide at least one target helper, such as `tree(VOLCFNET)`, `cond()`, or `ratio(...)`.")
+  }
+
+  first <- args[[1]]
+
+  if (inherits(first, "fiaplyr_ratio_intent")) {
+    if (is.null(first$numerator) || is.null(first$denominator)) {
+      stop("`ratio()` must include both numerator and denominator target helpers.")
+    }
+
+    if (!identical(output, "mean") || !identical(margins, FALSE)) {
+      stop("`output` and `margins` are not supported with `ratio(...)`. Use `estimate_ratio()` options instead.")
+    }
+
+    ratio_est <- PostStratifiedRatioEstimator(object)
+    extra_args <- if (length(args) > 1) args[-1] else list()
+
+    return(do.call(
+      estimate_ratio,
+      c(
+        list(object = ratio_est, intent = first),
+        extra_args
+      )
+    ))
+  }
+
+  est <- PostStratifiedEstimator(object)
+
+  do.call(
+    estimate,
+    c(
+      list(object = est),
+      args,
+      list(output = output, margins = margins)
+    )
+  )
+})
+
 #' @describeIn get_strata_weights Get strata weights for EvalHandler
 setMethod("get_strata_weights", "EvalHandler", function(handler) {
   handler@tables$pop_stratum %>%
