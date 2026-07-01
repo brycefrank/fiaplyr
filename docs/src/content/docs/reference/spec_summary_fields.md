@@ -33,7 +33,7 @@ A named list of summary fields.
 
 ## Additional Details
 
-Methods (by class)
+Functions
 
 `spec_summary_fields(AnalysisSpec)`: Default summary fields for AnalysisSpec
 

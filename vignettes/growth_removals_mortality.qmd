@@ -109,20 +109,17 @@ for the specified variable. The `annualize` argument is used to produce annual
 mortality rates, as is done in most standard FIA estimates.
 
 ```{r}
-ps <- PostStratifiedEstimator(handler)
-
-ps |>
+handler |>
   estimate(
     tree_history(mort = grm_mortality(VOLCFSND, annualize = TRUE)),
     output = "total"
   )
 ```
 
-Likewise, something like ingrowth can also be estimated with the `grm_ingrowth`
-macro
+Likewise, ingrowth can also be estimated with the `grm_ingrowth` macro
 
 ```{r}
-ps |>
+handler |>
   estimate(
     tree_history(ingrowth = grm_ingrowth(VOLCFSND, annualize = TRUE)),
     output = "total"
@@ -133,7 +130,7 @@ Higher order change components are `grm_net_change`, `grm_net_growth` and
 `grm_gross_growth`, all of which use convenient macros.
 
 ```{r}
-ps |>
+handler |>
   estimate(
     tree_history(net_change = grm_net_change(VOLCFSND, annualize = TRUE)),
     output = "total"
@@ -148,16 +145,12 @@ along the same lines as [ratio estimates](ratio_estimates.qmd). The only
 modification, of course, is the specification of the GRM estimates themselves.
 
 ```{r}
-mort_handler <- handler
-
-fa_handler <- handler |>
-  subset(cond(COND_STATUS_CD == 1))
-
-psr <- PostStratifiedRatioEstimator(mort_handler, fa_handler)
-
-psr |>
-  estimate_ratio(
-    tree_history(mort = grm_mortality(VOLCFSND, annualize = TRUE)),
-    cond()
-  )  
+handler |>
+  subset(cond(COND_STATUS_CD == 1)) |>
+  estimate(
+    ratio(
+      tree_history(mort = grm_mortality(VOLCFSND, annualize = TRUE)),
+      cond()
+    )
+  )
 ```

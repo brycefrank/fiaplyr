@@ -5,11 +5,16 @@
 \alias{estimate_ratio,PostStratifiedRatioEstimator-method}
 \title{Estimate Ratio}
 \usage{
-estimate_ratio(object, ..., domain_pairing = "all", include_components = FALSE)
+estimate_ratio(
+  object,
+  intent,
+  domain_pairing = "all",
+  include_components = FALSE
+)
 
 \S4method{estimate_ratio}{PostStratifiedRatioEstimator}(
   object,
-  ...,
+  intent,
   domain_pairing = c("all", "matched"),
   include_components = FALSE
 )
@@ -17,8 +22,8 @@ estimate_ratio(object, ..., domain_pairing = "all", include_components = FALSE)
 \arguments{
 \item{object}{A PostStratifiedRatioEstimator object.}
 
-\item{...}{Exactly two scoped target helpers specifying the numerator and
-denominator targets, such as \code{tree(VOLCFNET)} and \code{cond()}.}
+\item{intent}{A \code{fiaplyr_ratio_intent} object, usually created via
+\code{ratio(tree(...), cond(...))}.}
 
 \item{domain_pairing}{Domain pairing strategy, either \code{"all"} (default) for
 all numerator/denominator domain combinations or \code{"matched"} to only retain

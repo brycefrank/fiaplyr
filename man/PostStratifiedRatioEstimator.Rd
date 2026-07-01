@@ -4,12 +4,10 @@
 \alias{PostStratifiedRatioEstimator}
 \title{Constructor for PostStratifiedRatioEstimator}
 \usage{
-PostStratifiedRatioEstimator(numerator, denominator = numerator)
+PostStratifiedRatioEstimator(handler)
 }
 \arguments{
-\item{numerator}{A EvalHandler object for the numerator.}
-
-\item{denominator}{A EvalHandler object for the denominator. Defaults to numerator.}
+\item{handler}{An EvalHandler object.}
 }
 \description{
 Constructor for PostStratifiedRatioEstimator

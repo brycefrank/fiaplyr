@@ -16,7 +16,7 @@ handler <- eval_handler(con, 411001) |>
 handler |>
   aggregate(tree(VOLCFGRS, VOLCFNET))
 
-psr <- PostStratifiedRatioEstimator(handler, handler)
+psr <- PostStratifiedRatioEstimator(handler)
 
 psr |>
-  estimate_ratio(tree(VOLCFGRS), tree(VOLCFGRS))
+  estimate_ratio(ratio(tree(VOLCFGRS), tree(VOLCFGRS)))

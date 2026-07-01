@@ -203,8 +203,10 @@ NULL
 #' specifications given in Bechtold and Patterson (2005). Users are able to
 #' modify this behavior with macro arguments.
 #'
-#' @inheritParams grm_macro_shared_args @param expander The expansion factor.
-#' Defaults to `TPA_UNADJ_begin`. @export
+#' @inheritParams grm_macro_shared_args
+#' @param expander The expansion factor.
+#' Defaults to `TPA_UNADJ_begin`.
+#' @export
 grm_mortality <- function(
     expr = 1,
     expander = TPA_UNADJ_begin,

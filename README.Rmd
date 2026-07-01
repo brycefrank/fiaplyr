@@ -195,19 +195,17 @@ domain specification and mutations makes a very expressive way to generate
 custom estimates. Extensions to other types of estimators is possible, but not
 currently implemented.
 
-To produce post-stratified estimates use the `PostStratifiedEstimator` class.
-The `estimate` method uses the same formula syntax as `aggregate`, but instead
-of producing plot-level values, it produces estimates of the specified variable
+To produce post-stratified estimates use the `estimate` method on the handler.
+The `estimate` method uses the same syntax as `aggregate`, but instead of
+producing plot-level values, it produces estimates of the specified variable
 for the area specified by the evaluation.
 
 Recall our desire to estimate basal area, this is now straightforward.
 
 ```{r}
 # Create an estimator from the handler
-estimator <- PostStratifiedEstimator(ba_handler)
-
-# Estimate total Basal Area
-ba_est <- estimate(estimator, tree(ba = BA))
+ba_est <- ba_handler |>
+  estimate(tree(ba = BA))
 
 ba_est
 ```
@@ -216,7 +214,8 @@ By default, outputs are means, typically representing areal densities. An
 estimate of the total can be made instead
 
 ```{r}
-ba_total_est <- estimate(estimator, tree(BA), output = "total")
+ba_total_est <- ba_handler |>
+  estimate(tree(BA), output = "total")
 
 ba_total_est
 ```
@@ -228,13 +227,37 @@ estimates by species class simply do the following
 
 ```{r}
 # Estimate Basal Area by Species
-ba_by_sp_handle <- ba_handler |>
+ba_by_sp_handler <- ba_handler |>
   partition(tree(SPCD))
 
-estimator_by_sp <- PostStratifiedEstimator(ba_by_sp_handle)
-
-ba_by_sp_est <- estimate(estimator_by_sp, tree(BA))
+ba_by_sp_est <- ba_by_sp_handler |>
+  estimate(tree(BA)) |>
+  arrange(desc(estimate))
 
 head(ba_by_sp_est)
 ```
+
+For any given domain estimate, they are interpreted as the mean value for that
+domain across the state. For tree attributes, these are per-acre densities.
+Hence, the first row is interpreted as: the mean basal area per acre for
+`SPCD = 318` is 18.6 ft²/acre, with a standard error of 0.96 ft²/acre across
+the state of Vermont. This estimate is not normalized by forested area,
+which requires the more sophisticated ratio estimator
+
+```{r}
+ba_by_sp_ratio_est <- ba_by_sp_handler |>
+  subset(cond(COND_STATUS_CD == 1)) |> # subset to only forested areas
+  estimate(
+    ratio(tree(BA), cond())
+  )
+
+ba_by_sp_ratio_est |>
+  arrange(desc(estimate)) |>
+  head()
+```
+
+Here, estimates are divided by the forested proportion of the state, and the
+first row is interpreted as: the mean basal area per acre on forested land for
+`SPCD = 318` is 24.1 ft²/acre, with a standard error of 1.01 ft²/acre across the
+state of Vermont.
 

@@ -67,27 +67,27 @@ forested_handler <- handler |>
   subset(cond(COND_STATUS_CD == 1))
 ```
 
-Post-stratified estimates are made using the `PostStratifiedEstimator()`
-class. This class implements the standard FIA post-stratified estimator
-used most frequently in FIA state reports and similar products. Pass the
-handler to the estimator, and specify the estimation target with the
+Post-stratified estimates, among others used by FIA, can be made using
+the `estimate` method on the handler. By default, the `estimate` method
+uses the `PostStratifiedEstimator()` class, which implements the
+standard FIA post-stratified estimator used most frequently in FIA state
+reports and similar products. Specify the estimation target with the
 same scoped helpers used throughout the package. For example, `cond()`
 estimates condition proportions, while `tree(...)` estimates tree-level
 attributes.
 
 ``` r
-ps_estimator <- PostStratifiedEstimator(forested_handler)
-
-for_prop_est <- ps_estimator |>
+forested_handler |>
   estimate(cond())
-
-for_prop_est
 ```
 
     # A tibble: 1 × 3
       var   estimate      se
       <chr>    <dbl>   <dbl>
     1 prop     0.772 0.00909
+
+Here, we see the proportion of forested land in Vermont is 0.772, with a
+standard error of 0.009.
 
 ## Growing Stock by County
 
@@ -100,9 +100,7 @@ growing_stock_handler <- handler |>
   subset(tree(TREECLCD == 2)) |>
   partition(cond(COUNTYCD))
 
-ps_estimator <- PostStratifiedEstimator(growing_stock_handler)
-
-growing_stock_est <- ps_estimator |>
+growing_stock_est <- growing_stock_handler |>
   estimate(tree(VOLCFGRS))
 
 head(growing_stock_est)
@@ -135,3 +133,41 @@ estimator, which is covered in a separate vignette. However, this
 imparts unnecessary variation, because the area of counties is known
 with certainty, and the ratio estimator is designed to account for the
 variation in the denominator (i.e., an estimate of the county size).
+
+## Average Diameter by Species
+
+Average diameter by species is a more complex estimate, because it
+requires the use of a ratio estimator. The numerator is formed by the
+sum of the diameters of trees of a given species, while the denominator
+is formed by the count of trees of that species.
+
+``` r
+avg_dia_handler <- handler |>
+  subset(tree(STATUSCD == 1)) |>
+  partition(tree(SPCD))
+
+avg_dia_ests <- avg_dia_handler |>
+  estimate(
+    ratio(tree(DIA), tree())
+  ) |>
+  filter(SPCD_n == SPCD_d) |>
+  arrange(desc(estimate))
+
+head(avg_dia_ests)
+```
+
+    # A tibble: 6 × 6
+      SPCD_n SPCD_d var_n var_d      estimate    se
+       <dbl>  <dbl> <chr> <chr>         <dbl> <dbl>
+    1    922    922 DIA   tree_count     26.8 0    
+    2    125    125 DIA   tree_count     16.5 0.473
+    3    540    540 DIA   tree_count     15.9 0    
+    4    742    742 DIA   tree_count     14.4 3.81 
+    5    837    837 DIA   tree_count     13.3 0    
+    6    832    832 DIA   tree_count     12.2 0.908
+
+Note that the domain specifications are crossed between the numerator
+and denominator (generating dia x density estimates for all pairs of
+species, a behavior that is useful for other purposes), hence we filter
+only to those that match. More expressive examples of ratio estimation
+is given in the [ratio estimates](ratio_estimates) vignette.

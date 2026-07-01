@@ -11,8 +11,6 @@ PostStratifiedRatioEstimator Class
 
 Slots
 
-`numerator`A EvalHandler object for the numerator.
-
-`denominator`A EvalHandler object for the denominator.
+`handler`An EvalHandler object.
 
 `strata_weights`A dataframe containing strata weights.
