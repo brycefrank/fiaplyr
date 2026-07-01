@@ -1,6 +1,6 @@
 Package: fiaplyr
 Title: Interface to FIA Databases with 'dbplyr'
-Version: 0.2.0
+Version: 0.2.1
 Authors@R:
     person("Bryce", "Frank", , "bfrank70@gmail.com", role = c("aut", "cre"))
 Description: Provides a dplyr-style interface for subsetting, transforming, and
