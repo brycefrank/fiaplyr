@@ -5,8 +5,10 @@ setClass("StatusAnalysis", contains = "AnalysisSpec")
 
 #' Create a Status Analysis Specification
 #'
-#' Construct a [StatusAnalysis][StatusAnalysis-class] object for use with
-#' [eval_handler()].
+#' A status analysis specification is typically used when estimating the current
+#' state of tree and condition variables. This specification initializes a set
+#' of lazy queries and stores them into the `@tables` slot of the handler,
+#' which are used in further analysis functions.
 #'
 #' @return A [StatusAnalysis][StatusAnalysis-class] object.
 #' @export

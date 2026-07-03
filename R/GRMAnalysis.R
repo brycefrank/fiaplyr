@@ -17,8 +17,10 @@ setClass("GRMAnalysis",
 
 #' Create a GRM Analysis Specification
 #'
-#' Construct a [GRMAnalysis][GRMAnalysis-class] object for use with
-#' [eval_handler()].
+#' A GRM analysis specification is typically used for the analysis of
+#' growth, removals, and mortality, and their related components. It is highly
+#' reccomended to use this specification only with evaluations ending with `03`
+#' which are specifically engineered for the GRM context.
 #'
 #' @param tree_basis Tree basis preset. One of `all_live`,
 #'   `growing_stock`, or `sawtimber`.
@@ -27,9 +29,13 @@ setClass("GRMAnalysis",
 #' @return A [GRMAnalysis][GRMAnalysis-class] object.
 #' @export
 grm_analysis <- function(
-    tree_basis = "all_live",
-    land_basis = "forest_land") {
-  tree_basis <- match.arg(tree_basis, c("all_live", "growing_stock", "sawtimber"))
+  tree_basis = "all_live",
+  land_basis = "forest_land"
+) {
+  tree_basis <- match.arg(
+    tree_basis, c("all_live", "growing_stock", "sawtimber")
+  )
+
   land_basis <- match.arg(land_basis, c("forest_land", "timberland"))
 
   rules <- build_grm_component_rules(tree_basis, land_basis)
@@ -384,12 +390,12 @@ get_tree_basis_filters <- function(basis) {
       t1 = rlang::expr(
         TREECLCD == 2 &
           ((SPCD < 300 & DIA_begin >= 9.0) |
-             (SPCD >= 300 & DIA_begin >= 11.0))
+            (SPCD >= 300 & DIA_begin >= 11.0))
       ),
       t2 = rlang::expr(
         TREECLCD == 2 &
           ((SPCD < 300 & DIA >= 9.0) |
-             (SPCD >= 300 & DIA >= 11.0))
+            (SPCD >= 300 & DIA >= 11.0))
       )
     ),
     stop(sprintf("Unknown tree basis: '%s'", basis))
@@ -443,22 +449,17 @@ build_grm_component_rules <- function(tree_basis, land_basis) {
 
     # DIVERSION1: was in-population at T1, but land basis diverted by T2.
     in_pop_t1 & is_land_basis_t1 & !is_land_basis_t2 ~ "diversion",
-
     in_pop_t1 & in_pop_t2 &
       PREV_STATUS_CD == status_live & STATUSCD == status_live ~ "survivor",
-
     in_pop_t1 &
       PREV_STATUS_CD == status_live & STATUSCD == status_dead &
       is_land_basis_t2 &
       !!natural_mortality ~ "mortality",
-
     in_pop_t1 &
       PREV_STATUS_CD == status_live & STATUSCD == status_dead &
       is_land_basis_t2 &
       !!harvest_removal ~ "removal",
-
     RECONCILECD == 1 & STATUSCD == status_live ~ "ingrowth",
-
     TRUE ~ "other"
   )
 
