@@ -11,7 +11,8 @@
   strata_summary <- .get_strata_summary(handler)
   plot_data %>%
     dplyr::inner_join(
-      handler@tables$pop_plot_stratum_assgn %>% dplyr::select(PLT_CN, STRATUM_CN),
+      handler@tables$pop_plot_stratum_assgn %>%
+        dplyr::select(PLT_CN, STRATUM_CN),
       by = "PLT_CN"
     ) %>%
     dplyr::inner_join(strata_summary, by = "STRATUM_CN")
@@ -33,7 +34,14 @@
   strata_data %>%
     dplyr::group_by(
       dplyr::across(
-        dplyr::all_of(c("ESTN_UNIT_CN", "STRATUM_CN", "w_h", "n_h", "n", domain_vars))
+        dplyr::all_of(c(
+          "ESTN_UNIT_CN",
+          "STRATUM_CN",
+          "w_h",
+          "n_h",
+          "n",
+          domain_vars
+        ))
       )
     ) %>%
     dplyr::summarise(
@@ -55,7 +63,10 @@
   domain_vars <- setdiff(all_cols, c(.strat_keys, targets))
 
   strata_means %>%
-    dplyr::group_by(dplyr::across(dplyr::all_of(c("ESTN_UNIT_CN", domain_vars)))) %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(c(
+      "ESTN_UNIT_CN",
+      domain_vars
+    )))) %>%
     dplyr::summarise(
       dplyr::across(dplyr::all_of(targets), ~ sum(w_h * .x, na.rm = TRUE))
     ) %>%
@@ -74,7 +85,9 @@
 #' @noRd
 .ps_pop_estimates <- function(eu_data, handler, targets) {
   eu_weights <- handler@tables$pop_estn_unit %>%
-    dplyr::mutate(w_eu = as.numeric(P1PNTCNT_EU) / sum(P1PNTCNT_EU, na.rm = TRUE)) %>%
+    dplyr::mutate(
+      w_eu = as.numeric(P1PNTCNT_EU) / sum(P1PNTCNT_EU, na.rm = TRUE)
+    ) %>%
     dplyr::select(CN, w_eu)
 
   all_cols <- colnames(eu_data)
@@ -109,7 +122,14 @@
   strata_data %>%
     dplyr::group_by(
       dplyr::across(
-        dplyr::all_of(c("ESTN_UNIT_CN", "STRATUM_CN", "w_h", "n_h", "n", domain_vars))
+        dplyr::all_of(c(
+          "ESTN_UNIT_CN",
+          "STRATUM_CN",
+          "w_h",
+          "n_h",
+          "n",
+          domain_vars
+        ))
       )
     ) %>%
     dplyr::summarise(
@@ -119,7 +139,8 @@
           mean = ~ sum(.x, na.rm = TRUE) / n_h,
           var = ~ dplyr::case_when(
             n_h <= 1 ~ 0,
-            TRUE ~ (sum(.x^2, na.rm = TRUE) - n_h * (sum(.x, na.rm = TRUE) / n_h)^2) /
+            TRUE ~ (sum(.x^2, na.rm = TRUE) -
+              n_h * (sum(.x, na.rm = TRUE) / n_h)^2) /
               (n_h * (n_h - 1))
           )
         ),
@@ -148,7 +169,10 @@
   domain_vars <- setdiff(all_cols, c(.strat_keys, all_stat_cols))
 
   strata_stats %>%
-    dplyr::group_by(dplyr::across(dplyr::all_of(c("ESTN_UNIT_CN", domain_vars)))) %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(c(
+      "ESTN_UNIT_CN",
+      domain_vars
+    )))) %>%
     dplyr::summarise(
       dplyr::across(
         dplyr::all_of(mean_targets),
@@ -185,7 +209,6 @@
 
   mean_targets <- paste0(targets, "_mean")
   var_targets <- paste0(targets, "_var")
-  se_targets <- paste0(targets, "_se")
   all_stat_cols <- c(mean_targets, var_targets)
 
   all_cols <- colnames(eu_stats)
@@ -210,33 +233,21 @@
     ) %>%
     dplyr::ungroup()
 
-  result <- result %>% dplyr::collect()
+  long_parts <- lapply(seq_along(targets), function(i) {
+    mean_col <- rlang::sym(mean_targets[[i]])
+    var_col <- rlang::sym(var_targets[[i]])
+    var_literal <- dbplyr::sql(paste0("'", targets[[i]], "'"))
 
-  mean_long <- result %>%
-    dplyr::select(dplyr::all_of(c(domain_vars, mean_targets))) %>%
-    tidyr::pivot_longer(
-      cols = dplyr::all_of(mean_targets),
-      names_to = "var_raw",
-      values_to = "estimate"
-    ) %>%
-    dplyr::mutate(var = sub("_mean$", "", var_raw)) %>%
-    dplyr::select(-var_raw)
+    result %>%
+      dplyr::transmute(
+        dplyr::across(dplyr::all_of(domain_vars)),
+        var = !!var_literal,
+        estimate = !!mean_col,
+        var_val = !!var_col
+      )
+  })
 
-  var_long <- result %>%
-    dplyr::select(dplyr::all_of(c(domain_vars, var_targets))) %>%
-    tidyr::pivot_longer(
-      cols = dplyr::all_of(var_targets),
-      names_to = "var_raw",
-      values_to = "var_val"
-    ) %>%
-    dplyr::mutate(var = sub("_var$", "", var_raw)) %>%
-    dplyr::select(-var_raw)
-
-  if (length(domain_vars) == 0) {
-    joined_long <- dplyr::inner_join(mean_long, var_long, by = "var")
-  } else {
-    joined_long <- dplyr::inner_join(mean_long, var_long, by = c(domain_vars, "var"))
-  }
+  joined_long <- Reduce(dplyr::union_all, long_parts)
 
   final_res <- joined_long %>%
     dplyr::mutate(se = sqrt(var_val)) %>%
@@ -265,7 +276,13 @@
 #' @param cov_cols Character vector of output column names
 #' @return A lazy query with stratum-level covariance columns.
 #' @noRd
-.ps_strata_cov <- function(strata_data_num, strata_data_den, targets_num, targets_den, cov_cols) {
+.ps_strata_cov <- function(
+  strata_data_num,
+  strata_data_den,
+  targets_num,
+  targets_den,
+  cov_cols
+) {
   all_cols_n <- colnames(strata_data_num)
   all_cols_d <- colnames(strata_data_den)
   domain_vars_n <- setdiff(all_cols_n, c(.plot_keys, .strat_keys, targets_num))
@@ -284,7 +301,14 @@
   joined <- strata_data_num %>%
     dplyr::inner_join(strata_d_slim, by = join_keys)
 
-  group_cols <- c("ESTN_UNIT_CN", "STRATUM_CN", "w_h", "n_h", "n", all_domain_vars)
+  group_cols <- c(
+    "ESTN_UNIT_CN",
+    "STRATUM_CN",
+    "w_h",
+    "n_h",
+    "n",
+    all_domain_vars
+  )
 
   # Build one summarise expression per (targets_num[i], targets_den[j]) pair.
   # cov_h = (sum(y_n * y_d) - sum(y_n)*sum(y_d)/n_h) / (n_h*(n_h-1))
@@ -298,7 +322,7 @@
         dplyr::case_when(
           n_h <= 1 ~ 0,
           TRUE ~ (sum(!!tn * !!td, na.rm = TRUE) -
-                    sum(!!tn, na.rm = TRUE) * sum(!!td, na.rm = TRUE) / n_h) /
+            sum(!!tn, na.rm = TRUE) * sum(!!td, na.rm = TRUE) / n_h) /
             (n_h * (n_h - 1))
         )
       )
@@ -325,7 +349,10 @@
   domain_vars <- setdiff(all_cols, c(.strat_keys, cov_cols))
 
   strata_cov %>%
-    dplyr::group_by(dplyr::across(dplyr::all_of(c("ESTN_UNIT_CN", domain_vars)))) %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(c(
+      "ESTN_UNIT_CN",
+      domain_vars
+    )))) %>%
     dplyr::summarise(
       dplyr::across(
         dplyr::all_of(cov_cols),
@@ -347,7 +374,9 @@
 #' @noRd
 .ps_pop_cov <- function(eu_cov, handler, cov_cols) {
   eu_weights <- handler@tables$pop_estn_unit %>%
-    dplyr::mutate(w_eu = as.numeric(P1PNTCNT_EU) / sum(P1PNTCNT_EU, na.rm = TRUE)) %>%
+    dplyr::mutate(
+      w_eu = as.numeric(P1PNTCNT_EU) / sum(P1PNTCNT_EU, na.rm = TRUE)
+    ) %>%
     dplyr::select(CN, w_eu)
 
   all_cols <- colnames(eu_cov)

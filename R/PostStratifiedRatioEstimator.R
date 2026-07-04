@@ -3,7 +3,8 @@
 #' @slot handler An EvalHandler object.
 #' @slot strata_weights A dataframe containing strata weights.
 #' @export
-setClass("PostStratifiedRatioEstimator",
+setClass(
+  "PostStratifiedRatioEstimator",
   contains = "Estimator",
   slots = list(
     handler = "EvalHandler",
@@ -16,7 +17,8 @@ setClass("PostStratifiedRatioEstimator",
 #' @param handler An EvalHandler object.
 #' @export
 PostStratifiedRatioEstimator <- function(handler) {
-  new("PostStratifiedRatioEstimator",
+  new(
+    "PostStratifiedRatioEstimator",
     handler = handler,
     strata_weights = get_strata_weights(handler)
   )
@@ -34,176 +36,225 @@ PostStratifiedRatioEstimator <- function(handler) {
 #'   component estimates and standard errors (`estimate_n`, `se_n`, `estimate_d`,
 #'   `se_d`) to the output.
 #' @export
-setGeneric("estimate_ratio", function(object, intent, domain_pairing = "all", include_components = FALSE) {
-  standardGeneric("estimate_ratio")
-})
+setGeneric(
+  "estimate_ratio",
+  function(object, intent, domain_pairing = "all", include_components = FALSE) {
+    standardGeneric("estimate_ratio")
+  }
+)
 
 #' @describeIn estimate_ratio Estimate ratio for PostStratifiedRatioEstimator
-setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, intent, domain_pairing = c("all", "matched"), include_components = FALSE) {
-  domain_pairing <- match.arg(domain_pairing)
-  if (!is.logical(include_components) || length(include_components) != 1 || is.na(include_components)) {
-    stop("`include_components` must be TRUE or FALSE.")
+setMethod(
+  "estimate_ratio",
+  "PostStratifiedRatioEstimator",
+  function(
+    object,
+    intent,
+    domain_pairing = c("all", "matched"),
+    include_components = FALSE
+  ) {
+    domain_pairing <- match.arg(domain_pairing)
+
+    if (
+      !is.logical(include_components) ||
+        length(include_components) != 1 ||
+        is.na(include_components)
+    ) {
+      stop("`include_components` must be TRUE or FALSE.")
+    }
+    if (!inherits(intent, "fiaplyr_ratio_intent")) {
+      stop(
+        "`intent` must be a `fiaplyr_ratio_intent` object, usually from `ratio(...)`."
+      )
+    }
+    if (is.null(intent$numerator) || is.null(intent$denominator)) {
+      stop(
+        "`ratio()` must include both numerator and denominator target helpers."
+      )
+    }
+
+    spec_num <- intent$numerator
+    spec_den <- intent$denominator
+
+    parsed_num <- .parse_target_spec(spec_num, "estimate_ratio")
+    parsed_den <- .parse_target_spec(spec_den, "estimate_ratio")
+
+    # Get the attributes for each side
+    atts_num <- .psr_val_cols(parsed_num)
+    atts_den <- .psr_val_cols(parsed_den)
+
+    # Aggregate the numerator
+    agg_num <- aggregate(object@handler, spec_num, sparse = TRUE) |>
+      dplyr::rename_with(~ paste0(.x, "_n"), dplyr::all_of(atts_num))
+
+    # Aggregate the denominator, applying any den_partitions overrides
+    agg_den <- aggregate(
+      .psr_apply_den_partitions(object@handler, intent$den_partitions),
+      spec_den,
+      sparse = TRUE
+    ) |>
+      dplyr::rename_with(~ paste0(.x, "_d"), dplyr::all_of(atts_den))
+
+    # Update the attribute names for later use with new suffixes
+    atts_num_fmt <- paste0(atts_num, "_n")
+    atts_den_fmt <- paste0(atts_den, "_d")
+    atts_fmt <- c(atts_num_fmt, atts_den_fmt)
+
+    doms_num <- setdiff(colnames(agg_num), c(.plot_keys, atts_num_fmt))
+    doms_den <- setdiff(colnames(agg_den), c(.plot_keys, atts_den_fmt))
+    .psr_validate_domain_pairing(domain_pairing, doms_num, doms_den)
+    shared_doms <- intersect(doms_num, doms_den)
+
+    # join the aggregations, suffixing _n and _d to side-specific columns
+    agg <- dplyr::full_join(
+      agg_num,
+      agg_den,
+      by = .plot_keys,
+      suffix = c("_n", "_d")
+    )
+
+    if (domain_pairing == "matched" && length(shared_doms) > 0) {
+      matched_checks <- lapply(shared_doms, function(dom) {
+        lhs <- rlang::sym(paste0(dom, "_n"))
+        rhs <- rlang::sym(paste0(dom, "_d"))
+        rlang::expr((is.na(!!lhs) & is.na(!!rhs)) | (!!lhs == !!rhs))
+      })
+
+      agg <- agg %>% dplyr::filter(!!!matched_checks)
+    }
+
+    # 3. Join strata once for each side - reused by both the variance and covariance pipelines
+    agg_strat <- .ps_join_strata(agg, object@handler)
+
+    # 4. Stats pipeline for each side, producing [domain_vars, var, estimate, se]
+    agg_stats <- agg_strat |>
+      .ps_strata_stats(atts_fmt) |>
+      .ps_eu_stats(atts_fmt) |>
+      .ps_pop_stats(object@handler, atts_fmt)
+
+    domain_cols <- setdiff(colnames(agg_stats), c("var", "estimate", "se"))
+
+    num_map <- stats::setNames(atts_num, atts_num_fmt)
+    den_map <- stats::setNames(atts_den, atts_den_fmt)
+
+    num_case <- purrr::imap(num_map, function(out, inp) {
+      rlang::expr(var == !!inp ~ !!out)
+    })
+    den_case <- purrr::imap(den_map, function(out, inp) {
+      rlang::expr(var == !!inp ~ !!out)
+    })
+
+    # Split numerator and denominator
+    stats_num <- agg_stats |>
+      dplyr::filter(var %in% atts_num_fmt) |>
+      dplyr::mutate(var_n = dplyr::case_when(!!!num_case)) |>
+      dplyr::select(dplyr::all_of(domain_cols), var_n, estimate, se)
+
+    stats_den <- agg_stats |>
+      dplyr::filter(var %in% atts_den_fmt) |>
+      dplyr::mutate(var_d = dplyr::case_when(!!!den_case)) |>
+      dplyr::select(dplyr::all_of(domain_cols), var_d, estimate, se)
+
+    stats <- dplyr::inner_join(
+      stats_num,
+      stats_den,
+      by = domain_cols,
+      suffix = c("_n", "_d")
+    )
+
+    stats
+
+    # 5. Covariance pipeline on the unified strata table.
+    #cov_pair_df <- data.frame(
+    #  var_n = rep(atts_num, each = length(atts_den)),
+    #  var_d = rep(atts_den, times = length(atts_num)),
+    #  stringsAsFactors = FALSE
+    #)
+    #cov_cols <- paste0(".cov_", seq_len(nrow(cov_pair_df)))
+    #cov_pair_df$cov_col <- cov_cols
+
+    #cov_exprs <- list()
+    #k <- 1L
+    #for (i in seq_along(atts_num_fmt)) {
+    #  for (j in seq_along(atts_den_fmt)) {
+    #    x_n <- rlang::sym(atts_num_fmt[[i]])
+    #    x_d <- rlang::sym(atts_den_fmt[[j]])
+    #    cov_exprs[[cov_cols[[k]]]] <- rlang::expr(
+    #      dplyr::case_when(
+    #        n_h <= 1 ~ 0,
+    #        TRUE ~ (sum(!!x_n * !!x_d, na.rm = TRUE) -
+    #          sum(!!x_n, na.rm = TRUE) * sum(!!x_d, na.rm = TRUE) / n_h) /
+    #          (n_h * (n_h - 1))
+    #      )
+    #    )
+    #    k <- k + 1L
+    #  }
+    #}
+
+    #strata_cov <- agg_strat |>
+    #  dplyr::group_by(
+    #    dplyr::across(
+    #      dplyr::all_of(c(
+    #        "ESTN_UNIT_CN",
+    #        "STRATUM_CN",
+    #        "w_h",
+    #        "n_h",
+    #        "n",
+    #        domain_cols
+    #      ))
+    #    )
+    #  ) |>
+    #  dplyr::summarise(!!!cov_exprs) |>
+    #  dplyr::ungroup()
+
+    #pop_cov <- strata_cov %>%
+    #  .ps_eu_cov(cov_cols) %>%
+    #  .ps_pop_cov(object@handler, cov_cols)
+
+    #pop_cov_long <- pop_cov %>%
+    #  tidyr::pivot_longer(
+    #    cols = dplyr::all_of(cov_cols),
+    #    names_to = "cov_col",
+    #    values_to = "cov_val"
+    #  ) %>%
+    #  dplyr::left_join(cov_pair_df, by = "cov_col") %>%
+    #  dplyr::select(-cov_col)
+
+    #cov_join_keys <- c(domain_cols, "var_n", "var_d")
+    #pop_full <- dplyr::left_join(
+    #  stats,
+    #  pop_cov_long,
+    #  by = cov_join_keys
+    #)
+    ## Missing cov_val means numerator and denominator never co-occur on the same plot,
+    ## so all cross-products y_n * y_d = 0 and the true covariance is 0.
+    #pop_full <- pop_full %>%
+    #  dplyr::mutate(cov_val = dplyr::coalesce(cov_val, 0))
+
+    ## 9. Apply the ratio variance formula:
+    ##    v(R) = (1/Y_d^2) * [v(Y_n) + R^2*v(Y_d) - 2*R*cov(Y_n, Y_d)]
+    #base_cols <- c(domain_cols, "var_n", "var_d", "estimate", "se")
+    #component_cols <- c("estimate_n", "se_n", "estimate_d", "se_d")
+    #out_cols <- if (isTRUE(include_components)) {
+    #  c(base_cols, component_cols)
+    #} else {
+    #  base_cols
+    #}
+
+    #final_res <- pop_full %>%
+    #  dplyr::mutate(
+    #    estimate = estimate_n / estimate_d,
+    #    var_ratio = (1 / estimate_d^2) *
+    #      (se_n^2 +
+    #        (estimate_n / estimate_d)^2 * se_d^2 -
+    #        2 * (estimate_n / estimate_d) * cov_val),
+    #    se = sqrt(pmax(var_ratio, 0))
+    #  ) %>%
+    #  dplyr::select(dplyr::all_of(out_cols))
+
+    #return(final_res)
   }
-  if (!inherits(intent, "fiaplyr_ratio_intent")) {
-    stop("`intent` must be a `fiaplyr_ratio_intent` object, usually from `ratio(...)`.")
-  }
-  if (is.null(intent$numerator) || is.null(intent$denominator)) {
-    stop("`ratio()` must include both numerator and denominator target helpers.")
-  }
-
-  spec_num <- intent$numerator
-  spec_den <- intent$denominator
-
-  base_handler <- object@handler
-  num_handler <- base_handler
-  den_handler <- .psr_apply_den_partitions(base_handler, intent$den_partitions)
-
-  # 1. Parse targets and aggregate plot-level data for each side
-  parsed_num <- .parse_target_spec(spec_num, "estimate_ratio")
-  parsed_den <- .parse_target_spec(spec_den, "estimate_ratio")
-
-  agg_num <- .psr_aggregate(num_handler, parsed_num)
-  agg_den <- .psr_aggregate(den_handler, parsed_den)
-
-  # 2. Resolve value column names
-  vals_num <- .psr_val_cols(parsed_num)
-  vals_den <- .psr_val_cols(parsed_den)
-
-  # 3. Join strata once for each side - reused by both the variance and covariance pipelines
-  strata_num <- .ps_join_strata(agg_num, num_handler)
-  strata_den <- .ps_join_strata(agg_den, den_handler)
-
-  # 4. Stats pipeline for each side, producing [domain_vars, var, estimate, se]
-  stats_num <- strata_num %>%
-    .ps_strata_stats(vals_num) %>%
-    .ps_eu_stats(vals_num) %>%
-    .ps_pop_stats(num_handler, vals_num)
-
-  stats_den <- strata_den %>%
-    .ps_strata_stats(vals_den) %>%
-    .ps_eu_stats(vals_den) %>%
-    .ps_pop_stats(den_handler, vals_den)
-
-  # 5. Covariance pipeline.
-  # Build a lookup table mapping each cov column name to its (var_n, var_d) pair.
-  # Row-major order: i (numerator) is the outer loop, j (denominator) is the inner loop.
-  cov_pair_df <- data.frame(
-    var_n = rep(vals_num, each = length(vals_den)),
-    var_d = rep(vals_den, times = length(vals_num)),
-    stringsAsFactors = FALSE
-  )
-  cov_cols <- paste0(".cov_", seq_len(nrow(cov_pair_df)))
-  cov_pair_df$cov_col <- cov_cols
-
-  pop_cov <- strata_num %>%
-    .ps_strata_cov(strata_den, vals_num, vals_den, cov_cols) %>%
-    .ps_eu_cov(cov_cols) %>%
-    .ps_pop_cov(num_handler, cov_cols)
-
-  # Pivot pop_cov to long format using the known lookup (avoids fragile name parsing)
-  pop_cov_long <- pop_cov %>%
-    tidyr::pivot_longer(
-      cols = dplyr::all_of(cov_cols),
-      names_to = "cov_col",
-      values_to = "cov_val"
-    ) %>%
-    dplyr::left_join(cov_pair_df, by = "cov_col") %>%
-    dplyr::select(-cov_col)
-  # Columns: [domain_vars_n, domain_vars_d, var_n, var_d, cov_val]
-
-  # 6. Identify domain columns for each side
-  doms_num <- setdiff(colnames(stats_num), c("var", "estimate", "se"))
-  doms_den <- setdiff(colnames(stats_den), c("var", "estimate", "se"))
-  .psr_validate_domain_pairing(domain_pairing, doms_num, doms_den)
-  shared_doms <- intersect(doms_num, doms_den)
-  doms_num_only <- setdiff(doms_num, shared_doms)
-  doms_den_only <- setdiff(doms_den, shared_doms)
-
-  # 7. Add _n/_d suffixes to domain cols and rename var/estimate/se, then cross-join
-  suffix_n <- "_n"
-  suffix_d <- "_d"
-
-  stats_num_suf <- stats_num
-  if (length(doms_num) > 0) {
-    stats_num_suf <- stats_num_suf %>%
-      dplyr::rename_with(~ paste0(.x, suffix_n), dplyr::all_of(doms_num))
-  }
-  stats_num_suf <- stats_num_suf %>%
-    dplyr::rename(var_n = var, estimate_n = estimate, se_n = se)
-
-  stats_den_suf <- stats_den
-  if (length(doms_den) > 0) {
-    stats_den_suf <- stats_den_suf %>%
-      dplyr::rename_with(~ paste0(.x, suffix_d), dplyr::all_of(doms_den))
-  }
-  stats_den_suf <- stats_den_suf %>%
-    dplyr::rename(var_d = var, estimate_d = estimate, se_d = se)
-
-  # Pair numerator and denominator stats according to the requested domain strategy
-  pop_joined <- .psr_join_stats(
-    stats_num_suf,
-    stats_den_suf,
-    doms_num,
-    doms_den,
-    domain_pairing,
-    suffix_n,
-    suffix_d
-  )
-
-  # 8. Add _n/_d suffixes to pop_cov_long domain cols to match pop_joined, then join
-  pop_cov_long_suf <- pop_cov_long
-  if (length(doms_num_only) > 0) {
-    pop_cov_long_suf <- pop_cov_long_suf %>%
-      dplyr::rename_with(~ paste0(.x, suffix_n), dplyr::all_of(doms_num_only))
-  }
-  if (length(doms_den_only) > 0) {
-    pop_cov_long_suf <- pop_cov_long_suf %>%
-      dplyr::rename_with(~ paste0(.x, suffix_d), dplyr::all_of(doms_den_only))
-  }
-  if (length(shared_doms) > 0) {
-    shared_num <- rlang::set_names(rlang::syms(shared_doms), paste0(shared_doms, suffix_n))
-    shared_den <- rlang::set_names(rlang::syms(shared_doms), paste0(shared_doms, suffix_d))
-
-    pop_cov_long_suf <- pop_cov_long_suf %>%
-      dplyr::mutate(!!!shared_num, !!!shared_den) %>%
-      dplyr::select(-dplyr::all_of(shared_doms))
-  }
-
-  doms_num_suf <- if (length(doms_num) > 0) paste0(doms_num, suffix_n) else character(0)
-  doms_den_suf <- if (length(doms_den) > 0) paste0(doms_den, suffix_d) else character(0)
-
-  cov_join_keys <- c(doms_num_suf, doms_den_suf, "var_n", "var_d")
-  pop_full <- dplyr::left_join(pop_joined, pop_cov_long_suf, by = cov_join_keys)
-  # Missing cov_val means numerator and denominator never co-occur on the same plot,
-  # so all cross-products y_n * y_d = 0 and the true covariance is 0.
-  pop_full <- pop_full %>%
-    dplyr::mutate(cov_val = dplyr::coalesce(cov_val, 0))
-
-  # 9. Apply the ratio variance formula:
-  #    v(R) = (1/Y_d^2) * [v(Y_n) + R^2*v(Y_d) - 2*R*cov(Y_n, Y_d)]
-  all_doms <- c(doms_num_suf, doms_den_suf)
-  base_cols <- c(all_doms, "var_n", "var_d", "estimate", "se")
-  component_cols <- c("estimate_n", "se_n", "estimate_d", "se_d")
-  out_cols <- if (isTRUE(include_components)) {
-    c(base_cols, component_cols)
-  } else {
-    base_cols
-  }
-
-  final_res <- pop_full %>%
-    dplyr::mutate(
-      estimate = estimate_n / estimate_d,
-      var_ratio = (1 / estimate_d^2) * (
-        se_n^2 +
-          (estimate_n / estimate_d)^2 * se_d^2 -
-          2 * (estimate_n / estimate_d) * cov_val
-      ),
-      se = sqrt(pmax(var_ratio, 0))
-    ) %>%
-    dplyr::select(dplyr::all_of(out_cols))
-
-  return(final_res)
-})
+)
 
 
 # --- PSR internal helpers ---
@@ -221,64 +272,41 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, int
   }
 
   if (!is.list(parts) || length(parts) == 0) {
-    stop("`den_partitions` must be NULL, a scoped helper, or a non-empty list of scoped helpers.")
+    stop(
+      "`den_partitions` must be NULL, a scoped helper, or a non-empty list of scoped helpers."
+    )
   }
 
-  is_scoped <- vapply(parts, function(x) {
-    is.list(x) && !is.null(attr(x, "target_table"))
-  }, logical(1))
+  is_scoped <- vapply(
+    parts,
+    function(x) {
+      is.list(x) && !is.null(attr(x, "target_table"))
+    },
+    logical(1)
+  )
 
   if (!all(is_scoped)) {
-    stop("All `den_partitions` entries must be scoped helpers like `cond(...)` or `tree(...)`.")
+    stop(
+      "All `den_partitions` entries must be scoped helpers like `cond(...)` or `tree(...)`."
+    )
   }
 
   .route_scoped_expressions(handler, parts, operation = "set_domains")
 }
 
-#' Aggregate plot-level data for one side of the ratio
-#' @noRd
-.psr_aggregate <- function(handler, parsed) {
-  if (parsed$slot == "tree") {
-    if (length(parsed$targets) == 0 || (length(parsed$targets) == 1 && parsed$targets == "1")) {
-      .make_tree_aggregates(handler, adjusted = TRUE, sparse = TRUE)
-    } else {
-      target_quos <- parsed$quosures
-      if (is.null(target_quos)) {
-        target_quos <- rlang::syms(parsed$targets)
-      }
-      names(target_quos) <- parsed$target_names
-      .make_tree_aggregates(handler, !!!target_quos, adjusted = TRUE, sparse = TRUE)
-    }
-  } else if (parsed$slot == "tree_history") {
-    if (length(parsed$targets) == 0 || (length(parsed$targets) == 1 && parsed$targets == "1")) {
-      .make_tree_history_aggregates(handler, adjusted = TRUE, sparse = TRUE)
-    } else {
-      target_quos <- parsed$quosures
-      if (is.null(target_quos)) {
-        target_quos <- rlang::syms(parsed$targets)
-      }
-      names(target_quos) <- parsed$target_names
-      .make_tree_history_aggregates(handler, !!!target_quos, adjusted = TRUE, sparse = TRUE)
-    }
-  } else if (parsed$slot == "cond") {
-    cond_data <- .make_cond_aggregates(handler, adjusted = TRUE, sparse = TRUE)
-    has_named_prop <- length(parsed$targets) > 0 && all(parsed$targets == "1") &&
-      length(parsed$target_names) == 1 && nzchar(parsed$target_names[[1]])
-    if (has_named_prop) {
-      cond_data <- cond_data %>% dplyr::rename(!!parsed$target_names[[1]] := prop)
-    }
-    cond_data
-  } else {
-    stop("Unsupported slot: ", parsed$slot)
-  }
-}
-
 #' Resolve value column names from parsed formula
 #' @noRd
 .psr_val_cols <- function(parsed) {
-  if (length(parsed$targets) == 0 || (length(parsed$targets) == 1 && parsed$targets == "1")) {
+  if (
+    length(parsed$targets) == 0 ||
+      (length(parsed$targets) == 1 && parsed$targets == "1")
+  ) {
     if (parsed$slot == "cond") {
-      if (length(parsed$targets) == 1 && length(parsed$target_names) == 1 && nzchar(parsed$target_names[[1]])) {
+      if (
+        length(parsed$targets) == 1 &&
+          length(parsed$target_names) == 1 &&
+          nzchar(parsed$target_names[[1]])
+      ) {
         parsed$target_names[[1]]
       } else {
         "prop"
@@ -313,7 +341,15 @@ setMethod("estimate_ratio", "PostStratifiedRatioEstimator", function(object, int
 
 #' Pair numerator and denominator stats
 #' @noRd
-.psr_join_stats <- function(stats_num_suf, stats_den_suf, doms_num, doms_den, domain_pairing, suffix_n, suffix_d) {
+.psr_join_stats <- function(
+  stats_num_suf,
+  stats_den_suf,
+  doms_num,
+  doms_den,
+  domain_pairing,
+  suffix_n,
+  suffix_d
+) {
   if (domain_pairing != "matched" || length(doms_num) == 0) {
     return(dplyr::cross_join(stats_num_suf, stats_den_suf))
   }
