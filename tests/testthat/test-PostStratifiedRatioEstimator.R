@@ -12,7 +12,8 @@ test_that("PostStratifiedRatioEstimator estimates correct ratios", {
   # Calculate Ratio: Volume per Area (by Species and Forest Type)
   # Num: tree(VOLCFNET)
   # Den: cond() (Implicit Area)
-  res <- estimate_ratio(ratio_est, ratio(tree(VOLCFNET), cond()))
+  res <- estimate_ratio(ratio_est, ratio(tree(VOLCFNET), cond())) |>
+    dplyr::collect()
 
   # Verify structure
   expected_cols <- c("SPCD_n", "FORTYPCD_d", "var_n", "var_d", "estimate", "se")
@@ -58,7 +59,9 @@ test_that("ratio intent can override denominator partitions", {
   ) |>
     dplyr::collect()
 
-  expect_true(all(c("SPCD_n", "FORTYPCD_d", "estimate", "se") %in% colnames(res)))
+  expect_true(all(
+    c("SPCD_n", "FORTYPCD_d", "estimate", "se") %in% colnames(res)
+  ))
   expect_true(nrow(res) > 0)
   expect_true(all(is.finite(res$estimate)))
   expect_true(all(is.finite(res$se)))
@@ -114,7 +117,10 @@ test_that("estimate_ratio() preserves user-defined target names", {
   handler <- eval_handler(con, evalid = 1001)
   ratio_est <- PostStratifiedRatioEstimator(handler)
 
-  res <- estimate_ratio(ratio_est, ratio(tree(my_num = VOLCFNET), cond(my_den = 1))) |>
+  res <- estimate_ratio(
+    ratio_est,
+    ratio(tree(my_num = VOLCFNET), cond(my_den = 1))
+  ) |>
     dplyr::collect()
 
   expect_equal(unique(res$var_n), "my_num")
@@ -133,7 +139,10 @@ test_that("PostStratifiedRatioEstimator supports shared domains on both sides", 
   res <- estimate_ratio(ratio_est, ratio(tree(VOLCFNET), tree(DIA))) |>
     dplyr::collect()
 
-  expect_identical(colnames(res), c("SPCD_n", "SPCD_d", "var_n", "var_d", "estimate", "se"))
+  expect_identical(
+    colnames(res),
+    c("SPCD_n", "SPCD_d", "var_n", "var_d", "estimate", "se")
+  )
   expect_equal(nrow(res), 4)
   expect_true(all(c(1, 2) %in% res$SPCD_n))
   expect_true(all(c(1, 2) %in% res$SPCD_d))
@@ -158,7 +167,10 @@ test_that("PostStratifiedRatioEstimator can restrict ratios to matched domains",
   ) |>
     dplyr::collect()
 
-  expect_identical(colnames(res), c("SPCD_n", "SPCD_d", "var_n", "var_d", "estimate", "se"))
+  expect_identical(
+    colnames(res),
+    c("SPCD_n", "SPCD_d", "var_n", "var_d", "estimate", "se")
+  )
   expect_equal(nrow(res), 2)
   expect_equal(res$SPCD_n, res$SPCD_d)
   expect_true(all(c(1, 2) %in% res$SPCD_n))
@@ -195,7 +207,9 @@ test_that("PostStratifiedRatioEstimator can append numerator and denominator com
 
   res_default <- estimate_ratio(ratio_est, ratio(tree(VOLCFNET), cond())) |>
     dplyr::collect()
-  expect_false(any(c("estimate_n", "se_n", "estimate_d", "se_d") %in% colnames(res_default)))
+  expect_false(any(
+    c("estimate_n", "se_n", "estimate_d", "se_d") %in% colnames(res_default)
+  ))
 
   res_components <- estimate_ratio(
     ratio_est,
@@ -204,10 +218,15 @@ test_that("PostStratifiedRatioEstimator can append numerator and denominator com
   ) |>
     dplyr::collect()
 
-  expect_true(all(c("estimate_n", "se_n", "estimate_d", "se_d") %in% colnames(res_components)))
+  expect_true(all(
+    c("estimate_n", "se_n", "estimate_d", "se_d") %in% colnames(res_components)
+  ))
   expect_true(all(is.finite(res_components$estimate_n)))
   expect_true(all(is.finite(res_components$se_n)))
   expect_true(all(is.finite(res_components$estimate_d)))
   expect_true(all(is.finite(res_components$se_d)))
-  expect_equal(res_components$estimate, res_components$estimate_n / res_components$estimate_d)
+  expect_equal(
+    res_components$estimate,
+    res_components$estimate_n / res_components$estimate_d
+  )
 })
