@@ -36,6 +36,14 @@ Class for Evaluation Pipeline
 
 \item{\code{tree_history_filters}}{Pending tree-history-level filter quosures.}
 
+\item{\code{plot_augmentations}}{Pending plot-level external-data join specs.}
+
+\item{\code{tree_augmentations}}{Pending tree-level external-data join specs.}
+
+\item{\code{cond_augmentations}}{Pending condition-level external-data join specs.}
+
+\item{\code{tree_history_augmentations}}{Pending tree-history-level external-data join specs.}
+
 \item{\code{tables}}{A list of lazy queries for the tables.}
 
 \item{\code{spec}}{The AnalysisSpec used.}

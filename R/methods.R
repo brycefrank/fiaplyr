@@ -98,6 +98,44 @@ setGeneric("subset", function(handler, ...) standardGeneric("subset"))
 #'   partition(tree(SPCD, STATUSCD))
 setGeneric("partition", function(handler, ...) standardGeneric("partition"))
 
+#' Augment a Handler with External Data
+#'
+#' Join external data (a local data frame or a lazy database table) onto a
+#' specific table level of a handler. This is useful for attaching reference
+#' information such as species common names, county names, or plot-level
+#' covariates. Columns added via `augment()` become available to subsequent
+#' `transform()`, `subset()`, `partition()`, and `aggregate()` calls.
+#'
+#' The target table and join are specified using the scoped helpers
+#' (`tree()`, `cond()`, `plot()`, `tree_history()`). The first, unnamed argument
+#' to the helper is the data to join; named arguments configure the join:
+#'
+#' \describe{
+#'   \item{`by`}{Join key(s), passed to the underlying `dplyr` join. A character
+#'     vector or a named character vector (e.g. `c("SPCD" = "code")`). If
+#'     omitted, a natural join on common columns is used.}
+#'   \item{`type`}{Join type: one of `"left"` (default), `"inner"`, `"right"`,
+#'     or `"full"`.}
+#'   \item{`copy`}{Logical controlling whether a local data frame is uploaded to
+#'     the remote database. If omitted, local data is copied automatically (with
+#'     a warning) when joined against a remote table.}
+#' }
+#'
+#' @param handler A handler object.
+#' @param ... One or more scoped helpers describing the data to join, e.g.
+#'   `tree(species_ref, by = "SPCD", type = "left")`.
+#' @return The handler with pending augmentations queued.
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#'   species_ref <- data.frame(SPCD = c(1, 2), COMMON_NAME = c("Pine", "Oak"))
+#'   handler |>
+#'     augment(tree(species_ref, by = "SPCD", type = "left")) |>
+#'     partition(tree(COMMON_NAME))
+#' }
+setGeneric("augment", function(handler, ...) standardGeneric("augment"))
+
 #' Materialize a Handler Table
 #'
 #' Render the prepared table for a specific slot after any pending subsets,
@@ -107,14 +145,18 @@ setGeneric("partition", function(handler, ...) standardGeneric("partition"))
 #' @param slot The table slot to materialize.
 #' @return A lazy query for the requested table.
 #' @export
-setGeneric("materialize", function(handler, slot) standardGeneric("materialize"))
+setGeneric("materialize", function(handler, slot) {
+  standardGeneric("materialize")
+})
 
 #' Get Strata Weights
 #'
 #' @param handler A handler object.
 #' @return A lazy query with strata weights.
 #' @export
-setGeneric("get_strata_weights", function(handler) standardGeneric("get_strata_weights"))
+setGeneric("get_strata_weights", function(handler) {
+  standardGeneric("get_strata_weights")
+})
 
 #' Estimate Population Parameters
 #'
@@ -129,5 +171,5 @@ setGeneric("get_strata_weights", function(handler) standardGeneric("get_strata_w
 #'   that variable. Defaults to `FALSE`.
 #' @export
 setGeneric("estimate", function(object, ..., output = "mean", margins = FALSE) {
-	standardGeneric("estimate")
+  standardGeneric("estimate")
 })

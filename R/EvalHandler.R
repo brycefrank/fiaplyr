@@ -13,11 +13,16 @@
 #' @slot tree_filters Pending tree-level filter quosures.
 #' @slot cond_filters Pending condition-level filter quosures.
 #' @slot tree_history_filters Pending tree-history-level filter quosures.
+#' @slot plot_augmentations Pending plot-level external-data join specs.
+#' @slot tree_augmentations Pending tree-level external-data join specs.
+#' @slot cond_augmentations Pending condition-level external-data join specs.
+#' @slot tree_history_augmentations Pending tree-history-level external-data join specs.
 #' @slot tables A list of lazy queries for the tables.
 #' @slot spec The AnalysisSpec used.
 #' @slot internal_cache Environment for caching intermediate results.
 #' @export
-setClass("EvalHandler",
+setClass(
+  "EvalHandler",
   contains = "BaseHandler",
   slots = list(
     evalid = "numeric",
@@ -35,7 +40,11 @@ setClass("EvalHandler",
     tree_history_domains = "ANY",
     tree_filters = "list",
     cond_filters = "list",
-    tree_history_filters = "list"
+    tree_history_filters = "list",
+    plot_augmentations = "list",
+    tree_augmentations = "list",
+    cond_augmentations = "list",
+    tree_history_augmentations = "list"
   )
 )
 
@@ -46,7 +55,7 @@ setClass("EvalHandler",
 #' `eval_handler()` function connects to an evaluation and allows users to
 #' manipulate the underlying data to produce estimates and aggregates of need.
 #' Refer to [Status Estimates](/guides/status_estimates/) for an introduction.
-#' 
+#'
 #' @param db A DBIConnection object.
 #' @param evalid A numeric identifier for the evaluation.
 #' @param spec An [AnalysisSpec][AnalysisSpec-class] object. Defaults to
@@ -66,12 +75,19 @@ eval_handler <- function(db, evalid, spec = status_analysis(), backend = NULL) {
   tables <- initialize_tables(spec, db, evalid, backend)
 
   if (!is.null(tables$pop_eval)) {
-    if (tables$pop_eval %>% dplyr::tally() %>% dplyr::collect() %>% dplyr::pull(n) == 0) {
+    if (
+      tables$pop_eval %>%
+        dplyr::tally() %>%
+        dplyr::collect() %>%
+        dplyr::pull(n) ==
+        0
+    ) {
       stop(paste0("EVALID ", evalid, " does not exist in the database."))
     }
   }
 
-  new("EvalHandler",
+  new(
+    "EvalHandler",
     db = db,
     evalid = evalid,
     tables = tables,
@@ -88,7 +104,11 @@ eval_handler <- function(db, evalid, spec = status_analysis(), backend = NULL) {
     tree_history_domains = list(),
     tree_filters = list(),
     cond_filters = list(),
-    tree_history_filters = list()
+    tree_history_filters = list(),
+    plot_augmentations = list(),
+    tree_augmentations = list(),
+    cond_augmentations = list(),
+    tree_history_augmentations = list()
   )
 }
 
@@ -108,7 +128,9 @@ setMethod("summary", "EvalHandler", function(object) {
     dplyr::collect() %>%
     dplyr::pull(EVAL_DESCR)
 
-  if (length(eval_descr) == 0) eval_descr <- NA_character_
+  if (length(eval_descr) == 0) {
+    eval_descr <- NA_character_
+  }
 
   n_plots <- object@tables$plot %>%
     dplyr::summarise(n_plots = dplyr::n()) %>%
@@ -117,10 +139,13 @@ setMethod("summary", "EvalHandler", function(object) {
 
   spec_fields <- spec_summary_fields(object@spec, object)
 
-  res <- c(list(
-    eval_descr = eval_descr,
-    n_plots = n_plots
-  ), spec_fields)
+  res <- c(
+    list(
+      eval_descr = eval_descr,
+      n_plots = n_plots
+    ),
+    spec_fields
+  )
 
   # Populate cache
   object@internal_cache$summary <- res
@@ -178,7 +203,11 @@ setMethod("show", "EvalHandler", function(object) {
   tree_dom_labels <- vapply(object@tree_domains, rlang::as_label, character(1))
   cond_dom_labels <- vapply(object@cond_domains, rlang::as_label, character(1))
 
-  if (length(plot_dom_labels) > 0 || length(tree_dom_labels) > 0 || length(cond_dom_labels) > 0) {
+  if (
+    length(plot_dom_labels) > 0 ||
+      length(tree_dom_labels) > 0 ||
+      length(cond_dom_labels) > 0
+  ) {
     cat("\n")
     if (length(plot_dom_labels) > 0) {
       cat("Plot domains:   ", paste(plot_dom_labels, collapse = ", "), "\n")
@@ -202,26 +231,33 @@ setMethod("show", "EvalHandler", function(object) {
 #' @param operation One of "append_mutations", "append_filters", or "set_domains".
 #' @return The modified handler.
 #' @keywords internal
-.route_scoped_expressions <- function(handler, args, operation = "append_mutations") {
+.route_scoped_expressions <- function(
+  handler,
+  args,
+  operation = "append_mutations"
+) {
   if (length(args) == 0) {
     return(handler)
   }
 
   # Check if the entire args list has a target_table attribute (from scoped helpers)
   list_target_table <- attr(args, "target_table")
-  
+
   if (!is.null(list_target_table)) {
     # All expressions in this list share the same target
     if (!list_target_table %in% c("tree", "cond", "plot", "tree_history")) {
       rlang::abort(
-        sprintf("Invalid target table: '%s'. Must be 'tree', 'cond', 'plot', or 'tree_history'.", list_target_table)
+        sprintf(
+          "Invalid target table: '%s'. Must be 'tree', 'cond', 'plot', or 'tree_history'.",
+          list_target_table
+        )
       )
     }
-    
+
     slot_mutations <- paste0(list_target_table, "_mutations")
     slot_filters <- paste0(list_target_table, "_filters")
     slot_domains <- paste0(list_target_table, "_domains")
-    
+
     if (operation == "append_mutations") {
       slot(handler, slot_mutations) <- c(slot(handler, slot_mutations), args)
     } else if (operation == "append_filters") {
@@ -230,11 +266,18 @@ setMethod("show", "EvalHandler", function(object) {
       slot(handler, slot_domains) <- args
     }
   } else {
-    domain_updates <- list(tree = NULL, cond = NULL, plot = NULL, tree_history = NULL)
+    domain_updates <- list(
+      tree = NULL,
+      cond = NULL,
+      plot = NULL,
+      tree_history = NULL
+    )
 
     # Multiple expressions with potentially different targets
     for (arg in args) {
-      if (is.null(arg)) next
+      if (is.null(arg)) {
+        next
+      }
 
       target_table <- attr(arg, "target_table")
 
@@ -247,7 +290,10 @@ setMethod("show", "EvalHandler", function(object) {
 
       if (!target_table %in% c("tree", "cond", "plot", "tree_history")) {
         rlang::abort(
-          sprintf("Invalid target table: '%s'. Must be 'tree', 'cond', 'plot', or 'tree_history'.", target_table)
+          sprintf(
+            "Invalid target table: '%s'. Must be 'tree', 'cond', 'plot', or 'tree_history'.",
+            target_table
+          )
         )
       }
 
@@ -266,14 +312,16 @@ setMethod("show", "EvalHandler", function(object) {
 
     if (operation == "set_domains") {
       for (target_table in names(domain_updates)) {
-        if (is.null(domain_updates[[target_table]])) next
+        if (is.null(domain_updates[[target_table]])) {
+          next
+        }
 
         slot_domains <- paste0(target_table, "_domains")
         slot(handler, slot_domains) <- domain_updates[[target_table]]
       }
     }
   }
-  
+
   handler
 }
 
@@ -286,11 +334,57 @@ setMethod("show", "EvalHandler", function(object) {
     return(args_list[[1]])
   }
 
-  if (length(args_list) > 1 && all(vapply(args_list, .has_scoped_helper_target, logical(1)))) {
+  if (
+    length(args_list) > 1 &&
+      all(vapply(args_list, .has_scoped_helper_target, logical(1)))
+  ) {
     return(args_list)
   }
 
   quosures
+}
+
+#' Internal: Parse a Scoped Helper into an Augmentation Spec
+#'
+#' Extracts the data argument and join options (`by`, `type`, `copy`) from a
+#' scoped helper used within `augment()`.
+#'
+#' @param qs A tagged quosure list produced by a scoped helper.
+#' @return A list with `target`, `data`, `by`, `type`, and `copy` elements.
+#' @keywords internal
+.parse_augment_helper <- function(qs) {
+  target <- attr(qs, "target_table")
+
+  nms <- names(qs)
+  if (is.null(nms)) {
+    nms <- rep("", length(qs))
+  }
+
+  is_data_arg <- !nzchar(nms)
+  if (sum(is_data_arg) != 1) {
+    rlang::abort(
+      "Each `augment()` helper must contain exactly one unnamed data argument, e.g. `tree(species_ref, by = \"SPCD\")`.",
+      class = "fiaplyr_augment_bad_helper"
+    )
+  }
+
+  data <- rlang::eval_tidy(qs[[which(is_data_arg)]])
+
+  get_named <- function(name, default) {
+    if (name %in% nms) {
+      rlang::eval_tidy(qs[[which(nms == name)[1]]])
+    } else {
+      default
+    }
+  }
+
+  list(
+    target = target,
+    data = data,
+    by = get_named("by", NULL),
+    type = get_named("type", "left"),
+    copy = get_named("copy", NULL)
+  )
 }
 
 #' Transform: Add Derived Columns or Modify Values
@@ -371,6 +465,62 @@ setMethod("partition", "EvalHandler", function(handler, ...) {
   args <- .normalize_scoped_args(args_list, rlang::enquos(...))
 
   .route_scoped_expressions(handler, args, operation = "set_domains")
+})
+
+#' Augment: Join External Data onto a Handler Table
+#'
+#' Attach external data (a local data frame or a lazy database table) to a
+#' specific table level via a join. Expressions must be wrapped in the
+#' appropriate scoping helper: `tree()`, `cond()`, `plot()`, or
+#' `tree_history()`. The first unnamed argument to the helper is the data to
+#' join; named arguments `by`, `type`, and `copy` configure the join. Columns
+#' added here become available to later `transform()`, `subset()`,
+#' `partition()`, and `aggregate()` calls.
+#'
+#' @param handler An EvalHandler object.
+#' @param ... One or more scoped helpers describing the data to join, e.g.
+#'   `tree(species_ref, by = "SPCD", type = "left")`.
+#' @return The handler with pending augmentations queued.
+#' @export
+#' @examples
+#' \dontrun{
+#'   handler <- eval_handler(con, evalid = 500601)
+#'   species_ref <- data.frame(SPCD = c(1, 2), COMMON_NAME = c("Pine", "Oak"))
+#'   handler |>
+#'     augment(tree(species_ref, by = "SPCD")) |>
+#'     partition(tree(COMMON_NAME))
+#' }
+setMethod("augment", "EvalHandler", function(handler, ...) {
+  helpers <- list(...)
+
+  if (length(helpers) == 0) {
+    return(handler)
+  }
+
+  for (helper in helpers) {
+    if (!.has_scoped_helper_target(helper)) {
+      rlang::abort(
+        "All arguments to `augment()` must be scoped using `tree()`, `cond()`, `plot()`, or `tree_history()`.",
+        class = "fiaplyr_unscoped_expr"
+      )
+    }
+
+    spec <- .parse_augment_helper(helper)
+
+    if (!spec$target %in% c("tree", "cond", "plot", "tree_history")) {
+      rlang::abort(
+        sprintf(
+          "Invalid target table: '%s'. Must be 'tree', 'cond', 'plot', or 'tree_history'.",
+          spec$target
+        )
+      )
+    }
+
+    slot_name <- paste0(spec$target, "_augmentations")
+    slot(handler, slot_name) <- c(slot(handler, slot_name), list(spec))
+  }
+
+  handler
 })
 
 #' Mutate Tree Table (Deprecated)
@@ -464,47 +614,57 @@ setMethod("aggregate", "EvalHandler", function(handler, ...) {
 })
 
 #' @describeIn estimate Estimate parameters directly from an EvalHandler
-setMethod("estimate", "EvalHandler", function(object, ..., output = "mean", margins = FALSE) {
-  args <- list(...)
+setMethod(
+  "estimate",
+  "EvalHandler",
+  function(object, ..., output = "mean", margins = FALSE) {
+    args <- list(...)
 
-  if (length(args) == 0) {
-    stop("Must provide at least one target helper, such as `tree(VOLCFNET)`, `cond()`, or `ratio(...)`.")
-  }
-
-  first <- args[[1]]
-
-  if (inherits(first, "fiaplyr_ratio_intent")) {
-    if (is.null(first$numerator) || is.null(first$denominator)) {
-      stop("`ratio()` must include both numerator and denominator target helpers.")
-    }
-
-    if (!identical(output, "mean") || !identical(margins, FALSE)) {
-      stop("`output` and `margins` are not supported with `ratio(...)`. Use `estimate_ratio()` options instead.")
-    }
-
-    ratio_est <- PostStratifiedRatioEstimator(object)
-    extra_args <- if (length(args) > 1) args[-1] else list()
-
-    return(do.call(
-      estimate_ratio,
-      c(
-        list(object = ratio_est, intent = first),
-        extra_args
+    if (length(args) == 0) {
+      stop(
+        "Must provide at least one target helper, such as `tree(VOLCFNET)`, `cond()`, or `ratio(...)`."
       )
-    ))
-  }
+    }
 
-  est <- PostStratifiedEstimator(object)
+    first <- args[[1]]
 
-  do.call(
-    estimate,
-    c(
-      list(object = est),
-      args,
-      list(output = output, margins = margins)
+    if (inherits(first, "fiaplyr_ratio_intent")) {
+      if (is.null(first$numerator) || is.null(first$denominator)) {
+        stop(
+          "`ratio()` must include both numerator and denominator target helpers."
+        )
+      }
+
+      if (!identical(output, "mean") || !identical(margins, FALSE)) {
+        stop(
+          "`output` and `margins` are not supported with `ratio(...)`. Use `estimate_ratio()` options instead."
+        )
+      }
+
+      ratio_est <- PostStratifiedRatioEstimator(object)
+      extra_args <- if (length(args) > 1) args[-1] else list()
+
+      return(do.call(
+        estimate_ratio,
+        c(
+          list(object = ratio_est, intent = first),
+          extra_args
+        )
+      ))
+    }
+
+    est <- PostStratifiedEstimator(object)
+
+    do.call(
+      estimate,
+      c(
+        list(object = est),
+        args,
+        list(output = output, margins = margins)
+      )
     )
-  )
-})
+  }
+)
 
 #' @describeIn get_strata_weights Get strata weights for EvalHandler
 setMethod("get_strata_weights", "EvalHandler", function(handler) {
@@ -518,7 +678,11 @@ setMethod("get_strata_weights", "EvalHandler", function(handler) {
       w_h = as.numeric(P1POINTCNT) / P1PNTCNT_EU
     ) %>%
     dplyr::select(
-      STRATUM_CN = CN, ESTN_UNIT_CN, w_h, P2POINTCNT, AREA_USED
+      STRATUM_CN = CN,
+      ESTN_UNIT_CN,
+      w_h,
+      P2POINTCNT,
+      AREA_USED
     )
 })
 
@@ -527,7 +691,10 @@ setMethod("materialize", "EvalHandler", function(handler, slot) {
   slot <- as.character(slot)
 
   if (length(slot) != 1 || is.na(slot) || !nzchar(slot)) {
-    stop("`slot` must resolve to exactly one non-empty table name.", call. = FALSE)
+    stop(
+      "`slot` must resolve to exactly one non-empty table name.",
+      call. = FALSE
+    )
   }
 
   if (!slot %in% c("plot", "cond", "tree", "tree_history")) {
@@ -536,7 +703,10 @@ setMethod("materialize", "EvalHandler", function(handler, slot) {
 
   if (slot == "tree_history") {
     if (is.null(handler@tables$tree_history)) {
-      stop("`tree_history` is not available for this analysis spec.", call. = FALSE)
+      stop(
+        "`tree_history` is not available for this analysis spec.",
+        call. = FALSE
+      )
     }
     return(.build_tree_history_data(handler))
   }

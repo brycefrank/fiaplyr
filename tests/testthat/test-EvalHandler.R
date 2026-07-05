@@ -82,12 +82,17 @@ test_that("EvalHandler filters correctly by evalid", {
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   # Add another evaluation dummy data to ensure we are filtering
-  DBI::dbWriteTable(con, "POP_EVAL", data.frame(
-    CN = 2,
-    EVALID = 9999,
-    EVAL_DESCR = "Wrong Eval",
-    stringsAsFactors = FALSE
-  ), append = TRUE)
+  DBI::dbWriteTable(
+    con,
+    "POP_EVAL",
+    data.frame(
+      CN = 2,
+      EVALID = 9999,
+      EVAL_DESCR = "Wrong Eval",
+      stringsAsFactors = FALSE
+    ),
+    append = TRUE
+  )
 
   handler <- eval_handler(con, evalid = 1001)
 
@@ -151,10 +156,16 @@ test_that("missing SUBP_COND is tolerated", {
 
 add_shared_countycd_columns <- function(con) {
   DBI::dbExecute(con, "ALTER TABLE COND ADD COLUMN COUNTYCD DOUBLE")
-  DBI::dbExecute(con, "UPDATE COND SET COUNTYCD = CASE WHEN CONDID = 1 THEN 10 ELSE 20 END")
+  DBI::dbExecute(
+    con,
+    "UPDATE COND SET COUNTYCD = CASE WHEN CONDID = 1 THEN 10 ELSE 20 END"
+  )
 
   DBI::dbExecute(con, "ALTER TABLE TREE ADD COLUMN COUNTYCD DOUBLE")
-  DBI::dbExecute(con, "UPDATE TREE SET COUNTYCD = CASE WHEN SPCD = 1 THEN 100 ELSE 200 END")
+  DBI::dbExecute(
+    con,
+    "UPDATE TREE SET COUNTYCD = CASE WHEN SPCD = 1 THEN 100 ELSE 200 END"
+  )
 }
 
 test_that("aggregate() accepts cond() helper targets", {
@@ -301,7 +312,7 @@ test_that("unscoped expressions in new API error appropriately", {
   untagged_quos <- rlang::quos(BA = 0.005454 * DIA^2)
   # Make sure it doesn't have target_table attribute
   expect_null(attr(untagged_quos, "target_table"))
-  
+
   # The routing function should error
   expect_error(
     .route_scoped_expressions(handler, untagged_quos, "append_mutations"),
@@ -327,7 +338,10 @@ test_that("aggregate(tree()) mixes implicit and macro targets", {
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   result <- eval_handler(con, evalid = 1001) %>%
-    aggregate(tree(VOLCFGRS, wm_vol = sum(TPA_UNADJ * VOLCFGRS) / sum(TPA_UNADJ))) %>%
+    aggregate(tree(
+      VOLCFGRS,
+      wm_vol = sum(TPA_UNADJ * VOLCFGRS) / sum(TPA_UNADJ)
+    )) %>%
     dplyr::collect()
 
   expect_true("VOLCFGRS" %in% colnames(result))
@@ -437,7 +451,11 @@ test_that("GRM macro aggregates do not prefilter on the default expander weight"
     fiaplyr:::.make_tree_history_aggregates(handler, VOLCFNET, sparse = TRUE)
   )
   macro_sql <- dbplyr::sql_render(
-    fiaplyr:::.make_tree_history_aggregates(handler, mortality = grm_mortality(), sparse = TRUE)
+    fiaplyr:::.make_tree_history_aggregates(
+      handler,
+      mortality = grm_mortality(),
+      sparse = TRUE
+    )
   )
 
   expect_match(generic_sql, '".expander_wt" IS NULL', fixed = TRUE)
@@ -459,5 +477,81 @@ test_that("materialize() rejects invalid slots and unsupported tree_history usag
   expect_error(
     materialize(handler, "tree_history"),
     "not available for this analysis spec"
+  )
+})
+
+test_that("augment(tree()) joins a local data frame and copies with a warning", {
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001)
+
+  species_ref <- data.frame(
+    SPCD = c(1, 2),
+    COMMON_NAME = c("Pine", "Oak"),
+    stringsAsFactors = FALSE
+  )
+
+  augmented <- handler %>%
+    augment(tree(species_ref, by = "SPCD"))
+
+  expect_length(augmented@tree_augmentations, 1)
+
+  expect_warning(
+    materialize(augmented, "tree"),
+    "copying a local table"
+  )
+
+  res <- suppressWarnings(
+    materialize(augmented, "tree") %>% dplyr::collect()
+  )
+
+  expect_true("COMMON_NAME" %in% names(res))
+  expect_setequal(unique(res$COMMON_NAME), c("Pine", "Oak"))
+})
+
+test_that("augment() columns are usable by partition() and aggregate()", {
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001)
+
+  species_ref <- data.frame(
+    SPCD = c(1, 2),
+    COMMON_NAME = c("Pine", "Oak"),
+    stringsAsFactors = FALSE
+  )
+
+  res <- suppressWarnings(
+    handler %>%
+      augment(tree(species_ref, by = "SPCD")) %>%
+      partition(tree(COMMON_NAME)) %>%
+      aggregate(tree(VOLCFGRS)) %>%
+      dplyr::collect()
+  )
+
+  expect_true("COMMON_NAME" %in% names(res))
+  expect_setequal(unique(res$COMMON_NAME), c("Pine", "Oak"))
+})
+
+test_that("augment() rejects unscoped arguments and invalid join types", {
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001)
+
+  species_ref <- data.frame(SPCD = c(1, 2), COMMON_NAME = c("Pine", "Oak"))
+
+  expect_error(
+    handler %>% augment(species_ref),
+    class = "fiaplyr_unscoped_expr"
+  )
+
+  bad <- handler %>%
+    augment(tree(species_ref, by = "SPCD", type = "cross"))
+
+  expect_error(
+    suppressWarnings(materialize(bad, "tree") %>% dplyr::collect()),
+    "Invalid join type"
   )
 })

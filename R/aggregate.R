@@ -12,7 +12,14 @@
 #'
 #' @return A lazy query with the full scaffold joined to the aggregated data.
 #' @noRd
-.complete_scaffold <- function(plot_qry, aggregated_qry, plot_keys, domain_vars, sparse = FALSE, zero_fill_vars = NULL) {
+.complete_scaffold <- function(
+  plot_qry,
+  aggregated_qry,
+  plot_keys,
+  domain_vars,
+  sparse = FALSE,
+  zero_fill_vars = NULL
+) {
   # Any column in the aggregated result that is NOT a plot key or a domain variable is a target variable.
   agg_cols <- colnames(aggregated_qry)
   target_vars <- setdiff(agg_cols, c(plot_keys, domain_vars))
@@ -114,34 +121,40 @@
     user_names <- rep("", length(target_vars))
   }
 
-  vapply(seq_along(target_vars), function(i) {
-    var_quo <- target_vars[[i]]
+  vapply(
+    seq_along(target_vars),
+    function(i) {
+      var_quo <- target_vars[[i]]
 
-    if (length(user_names) >= i && nzchar(user_names[[i]])) {
-      return(user_names[[i]])
-    }
-
-    expr <- rlang::quo_get_expr(var_quo)
-    if (rlang::is_symbol(expr)) {
-      return(rlang::as_string(expr))
-    }
-
-    if (rlang::is_call(expr)) {
-      fn <- rlang::call_name(expr)
-      arg <- expr[[2]]
-      if (!is.null(fn) && !is.null(arg) && rlang::is_symbol(arg)) {
-        return(paste0(fn, "_", rlang::as_string(arg)))
+      if (length(user_names) >= i && nzchar(user_names[[i]])) {
+        return(user_names[[i]])
       }
-    }
 
-    rlang::as_label(var_quo)
-  }, character(1))
+      expr <- rlang::quo_get_expr(var_quo)
+      if (rlang::is_symbol(expr)) {
+        return(rlang::as_string(expr))
+      }
+
+      if (rlang::is_call(expr)) {
+        fn <- rlang::call_name(expr)
+        arg <- expr[[2]]
+        if (!is.null(fn) && !is.null(arg) && rlang::is_symbol(arg)) {
+          return(paste0(fn, "_", rlang::as_string(arg)))
+        }
+      }
+
+      rlang::as_label(var_quo)
+    },
+    character(1)
+  )
 }
 
 .eval_as_macro <- function(var_quo) {
   # Try the quosure's captured environment first
   result <- tryCatch(rlang::eval_tidy(var_quo), error = function(e) NULL)
-  if (inherits(result, "fiaplyr_macro")) return(result)
+  if (inherits(result, "fiaplyr_macro")) {
+    return(result)
+  }
   # Fall back to evaluating the expression in the fiaplyr namespace.
   # This handles cases where the quosure's environment (e.g., inside an S4
   # method body) doesn't have the package's exported symbols on its search path.
@@ -151,8 +164,16 @@
 
 .macro_adjustment_factor_expr <- function(macro, adjusted) {
   macro_adjust <- if (is.null(macro$adjust)) "auto" else macro$adjust
-  macro_basis <- if (is.null(macro$adjust_basis)) "subptyp_grm" else macro$adjust_basis
-  unknown_subptype <- if (is.null(macro$unknown_subptype)) "zero" else macro$unknown_subptype
+  macro_basis <- if (is.null(macro$adjust_basis)) {
+    "subptyp_grm"
+  } else {
+    macro$adjust_basis
+  }
+  unknown_subptype <- if (is.null(macro$unknown_subptype)) {
+    "zero"
+  } else {
+    macro$unknown_subptype
+  }
 
   if (macro_adjust == "none") {
     return(rlang::expr(1))
@@ -175,7 +196,10 @@
   }
 
   if (identical(unknown_subptype, "warn")) {
-    warning("Unknown GRM subtypes are being treated as zero-adjustment rows for this macro target.", call. = FALSE)
+    warning(
+      "Unknown GRM subtypes are being treated as zero-adjustment rows for this macro target.",
+      call. = FALSE
+    )
   }
 
   rlang::expr(dplyr::coalesce(ADJ_FACTOR, 0))
@@ -189,11 +213,74 @@
   # Only apply the TPA_UNADJ IS NOT NULL filter when ALL targets use TPA expansion
   # (bare symbols or the literal 1). Macros and passthrough expressions manage
   # their own expansion logic and must not have rows silently dropped.
-  all(vapply(target_vars, function(var_quo) {
-    expr <- rlang::quo_get_expr(var_quo)
-    rlang::is_symbol(expr) ||
-      (is.numeric(expr) && length(expr) == 1 && !is.na(expr) && expr == 1)
-  }, logical(1)))
+  all(vapply(
+    target_vars,
+    function(var_quo) {
+      expr <- rlang::quo_get_expr(var_quo)
+      rlang::is_symbol(expr) ||
+        (is.numeric(expr) && length(expr) == 1 && !is.na(expr) && expr == 1)
+    },
+    logical(1)
+  ))
+}
+
+#' Apply queued augmentations (external-data joins) to a lazy query
+#'
+#' @param res A lazy query (or data frame) to join onto.
+#' @param augmentations A list of augmentation specs produced by
+#'   `.parse_augment_helper()`.
+#' @return The query with all augmentation joins applied.
+#' @keywords internal
+.apply_augmentations <- function(res, augmentations) {
+  if (length(augmentations) == 0) {
+    return(res)
+  }
+
+  for (aug in augmentations) {
+    join_fn <- switch(
+      aug$type,
+      left = dplyr::left_join,
+      inner = dplyr::inner_join,
+      right = dplyr::right_join,
+      full = dplyr::full_join,
+      rlang::abort(sprintf(
+        "Invalid join type '%s'. Must be one of 'left', 'inner', 'right', or 'full'.",
+        aug$type
+      ))
+    )
+
+    copy <- aug$copy
+    if (is.null(copy)) {
+      res_is_lazy <- inherits(res, "tbl_lazy")
+      data_is_local <- !inherits(aug$data, "tbl_lazy")
+      copy <- res_is_lazy && data_is_local
+
+      if (copy) {
+        n_rows <- tryCatch(nrow(aug$data), error = function(e) NA_integer_)
+        warning(
+          sprintf(
+            paste0(
+              "augment() is copying a local table (%s rows) into the remote database. ",
+              "For large tables, pre-load the data into the database and pass a lazy ",
+              "table reference, or set `copy = FALSE` explicitly."
+            ),
+            if (is.na(n_rows)) "unknown" else format(n_rows, big.mark = ",")
+          ),
+          call. = FALSE
+        )
+      }
+    }
+
+    res <- join_fn(
+      res,
+      aug$data,
+      by = aug$by,
+      copy = copy,
+      suffix = c("", ".aug")
+    )
+  }
+
+  res
 }
 
 #' Aggregate condition data to plot or subplot levels
@@ -204,8 +291,16 @@
   res <- .build_cond_data(object)
 
   plot_keys <- .plot_keys_raw
-  plot_domains <- .resolve_partition_domains(object@plot_domains, "plot", colnames(res))
-  cond_domains <- .resolve_partition_domains(object@cond_domains, "cond", colnames(res))
+  plot_domains <- .resolve_partition_domains(
+    object@plot_domains,
+    "plot",
+    colnames(res)
+  )
+  cond_domains <- .resolve_partition_domains(
+    object@cond_domains,
+    "cond",
+    colnames(res)
+  )
 
   # Aggregate matching records
   # We group by PLOT keys + any user defined groups (in hierarchical order)
@@ -231,7 +326,8 @@
         )
       ) |>
       dplyr::left_join(
-        object@tables$pop_plot_stratum_assgn %>% dplyr::select(PLT_CN, STRATUM_CN),
+        object@tables$pop_plot_stratum_assgn %>%
+          dplyr::select(PLT_CN, STRATUM_CN),
         by = c("CN" = "PLT_CN")
       ) |>
       dplyr::left_join(
@@ -239,7 +335,10 @@
         by = c("STRATUM_CN", "PROP_BASIS" = "SUBPTYPE")
       ) |>
       dplyr::summarise(
-        prop = dplyr::coalesce(sum(CONDPROP_UNADJ * ADJ_FACTOR, na.rm = TRUE), 0)
+        prop = dplyr::coalesce(
+          sum(CONDPROP_UNADJ * ADJ_FACTOR, na.rm = TRUE),
+          0
+        )
       )
   } else {
     aggregated <- res %>%
@@ -275,7 +374,14 @@
 
   # Join to condition table
   res <- res %>%
-    dplyr::inner_join(object@tables$cond, by = c("CN" = "PLT_CN"), suffix = c("", ".cond"))
+    dplyr::inner_join(
+      object@tables$cond,
+      by = c("CN" = "PLT_CN"),
+      suffix = c("", ".cond")
+    )
+
+  # Join external data queued via augment(cond(...))
+  res <- .apply_augmentations(res, object@cond_augmentations)
 
   # Apply pending condition-level mutations
   if (length(object@cond_mutations) > 0) {
@@ -291,10 +397,13 @@
 }
 
 #' Prepare plot-level data with mutations and filters applied
-#' 
+#'
 #' @keywords internal
 .build_plot_data <- function(object) {
   res <- object@tables$plot
+
+  # Join external data queued via augment(plot(...))
+  res <- .apply_augmentations(res, object@plot_augmentations)
 
   # Apply plot-level mutations
   if (length(object@plot_mutations) > 0) {
@@ -316,7 +425,13 @@
 #' @param ... Variables to aggregate (tidy-select supported)
 #' @param level The level to aggregate to. Can be "plot" or "subplot".
 #' @keywords internal
-.make_tree_aggregates <- function(object, ..., adjusted = FALSE, level = "plot", sparse = FALSE) {
+.make_tree_aggregates <- function(
+  object,
+  ...,
+  adjusted = FALSE,
+  level = "plot",
+  sparse = FALSE
+) {
   res <- .build_tree_data(object)
   res <- res %>%
     dplyr::mutate(.expander_wt = TPA_UNADJ)
@@ -324,12 +439,18 @@
   if (adjusted) {
     res <- res %>%
       dplyr::left_join(
-        object@tables$pop_plot_stratum_assgn %>% dplyr::select(PLT_CN, STRATUM_CN),
+        object@tables$pop_plot_stratum_assgn %>%
+          dplyr::select(PLT_CN, STRATUM_CN),
         by = c("CN" = "PLT_CN")
       ) %>%
       dplyr::left_join(
         object@tables$pop_stratum %>%
-          dplyr::select(CN, ADJ_FACTOR_MACR, ADJ_FACTOR_MICR, ADJ_FACTOR_SUBP) %>%
+          dplyr::select(
+            CN,
+            ADJ_FACTOR_MACR,
+            ADJ_FACTOR_MICR,
+            ADJ_FACTOR_SUBP
+          ) %>%
           dplyr::rename(STRATUM_CN = CN),
         by = "STRATUM_CN"
       )
@@ -344,9 +465,21 @@
   }
 
   plot_keys <- .plot_keys_raw
-  plot_domains <- .resolve_partition_domains(object@plot_domains, "plot", colnames(res))
-  cond_domains <- .resolve_partition_domains(object@cond_domains, "cond", colnames(res))
-  tree_domains <- .resolve_partition_domains(object@tree_domains, "tree", colnames(res))
+  plot_domains <- .resolve_partition_domains(
+    object@plot_domains,
+    "plot",
+    colnames(res)
+  )
+  cond_domains <- .resolve_partition_domains(
+    object@cond_domains,
+    "cond",
+    colnames(res)
+  )
+  tree_domains <- .resolve_partition_domains(
+    object@tree_domains,
+    "tree",
+    colnames(res)
+  )
 
   # Determine target variables for aggregation
   target_vars <- dplyr::quos(...)
@@ -404,7 +537,10 @@
         if (inherits(evaluated, "fiaplyr_macro")) {
           zero_fill_vars <<- c(zero_fill_vars, resolved_names[[i]])
           expanded_expr <- evaluated$expr
-          factor_expr <- .macro_adjustment_factor_expr(evaluated, adjusted = adjusted)
+          factor_expr <- .macro_adjustment_factor_expr(
+            evaluated,
+            adjusted = adjusted
+          )
           rlang::expr(sum((!!expanded_expr) * (!!factor_expr), na.rm = TRUE))
         } else {
           expr
@@ -448,7 +584,12 @@
 #'   factors based on GRM subtype code.
 #' @param sparse Logical. If TRUE, returns a sparse result.
 #' @keywords internal
-.make_tree_history_aggregates <- function(object, ..., adjusted = FALSE, sparse = FALSE) {
+.make_tree_history_aggregates <- function(
+  object,
+  ...,
+  adjusted = FALSE,
+  sparse = FALSE
+) {
   res <- .build_tree_history_data(object)
   res <- res %>%
     dplyr::mutate(.expander_wt = TPA_UNADJ)
@@ -458,7 +599,8 @@
 
     res <- res %>%
       dplyr::left_join(
-        object@tables$pop_plot_stratum_assgn %>% dplyr::select(PLT_CN, STRATUM_CN),
+        object@tables$pop_plot_stratum_assgn %>%
+          dplyr::select(PLT_CN, STRATUM_CN),
         by = c("CN" = "PLT_CN")
       ) %>%
       dplyr::mutate(
@@ -483,9 +625,21 @@
   }
 
   plot_keys <- .plot_keys_raw
-  plot_domains <- .resolve_partition_domains(object@plot_domains, "plot", colnames(res))
-  cond_domains <- .resolve_partition_domains(object@cond_domains, "cond", colnames(res))
-  tree_history_domains <- .resolve_partition_domains(object@tree_history_domains, "tree_history", colnames(res))
+  plot_domains <- .resolve_partition_domains(
+    object@plot_domains,
+    "plot",
+    colnames(res)
+  )
+  cond_domains <- .resolve_partition_domains(
+    object@cond_domains,
+    "cond",
+    colnames(res)
+  )
+  tree_history_domains <- .resolve_partition_domains(
+    object@tree_history_domains,
+    "tree_history",
+    colnames(res)
+  )
 
   # Determine target variables for aggregation
   target_vars <- dplyr::quos(...)
@@ -543,7 +697,10 @@
         if (inherits(evaluated, "fiaplyr_macro")) {
           zero_fill_vars <<- c(zero_fill_vars, resolved_names[[i]])
           expanded_expr <- evaluated$expr
-          factor_expr <- .macro_adjustment_factor_expr(evaluated, adjusted = adjusted)
+          factor_expr <- .macro_adjustment_factor_expr(
+            evaluated,
+            adjusted = adjusted
+          )
           rlang::expr(sum((!!expanded_expr) * (!!factor_expr), na.rm = TRUE))
         } else {
           expr
@@ -584,16 +741,35 @@
 
   # Join to condition table, then tree table
   res <- res %>%
-    dplyr::inner_join(object@tables$cond, by = c("CN" = "PLT_CN"), suffix = c("", ".cond")) %>%
-    dplyr::inner_join(object@tables$tree, by = c("CN" = "PLT_CN", "CONDID" = "CONDID"), suffix = c("", ".tree"))
+    dplyr::inner_join(
+      object@tables$cond,
+      by = c("CN" = "PLT_CN"),
+      suffix = c("", ".cond")
+    ) %>%
+    dplyr::inner_join(
+      object@tables$tree,
+      by = c("CN" = "PLT_CN", "CONDID" = "CONDID"),
+      suffix = c("", ".tree")
+    )
 
   # Join to reference species table if available
   if (!is.null(object@tables$ref_species)) {
     res <- res %>%
-      dplyr::left_join(object@tables$ref_species, by = "SPCD", suffix = c("", ".ref"))
+      dplyr::left_join(
+        object@tables$ref_species,
+        by = "SPCD",
+        suffix = c("", ".ref")
+      )
   } else {
-    warning("REF_SPECIES table not available; continuing without species reference columns.", call. = FALSE)
+    warning(
+      "REF_SPECIES table not available; continuing without species reference columns.",
+      call. = FALSE
+    )
   }
+
+  # Join external data queued via augment(cond(...)) and augment(tree(...))
+  res <- .apply_augmentations(res, object@cond_augmentations)
+  res <- .apply_augmentations(res, object@tree_augmentations)
 
   # Apply condition-level mutations (these affect all trees in those conditions)
   if (length(object@cond_mutations) > 0) {
@@ -625,16 +801,35 @@
 
   # Join to condition table, then tree_history table
   res <- res %>%
-    dplyr::inner_join(object@tables$cond, by = c("CN" = "PLT_CN"), suffix = c("", ".cond")) %>%
-    dplyr::inner_join(object@tables$tree_history, by = c("CN" = "PLT_CN", "CONDID" = "CONDID"), suffix = c("", ".tree_history"))
+    dplyr::inner_join(
+      object@tables$cond,
+      by = c("CN" = "PLT_CN"),
+      suffix = c("", ".cond")
+    ) %>%
+    dplyr::inner_join(
+      object@tables$tree_history,
+      by = c("CN" = "PLT_CN", "CONDID" = "CONDID"),
+      suffix = c("", ".tree_history")
+    )
 
   # Join to reference species table if available
   if (!is.null(object@tables$ref_species)) {
     res <- res %>%
-      dplyr::left_join(object@tables$ref_species, by = "SPCD", suffix = c("", ".ref"))
+      dplyr::left_join(
+        object@tables$ref_species,
+        by = "SPCD",
+        suffix = c("", ".ref")
+      )
   } else {
-    warning("REF_SPECIES table not available; continuing without species reference columns.", call. = FALSE)
+    warning(
+      "REF_SPECIES table not available; continuing without species reference columns.",
+      call. = FALSE
+    )
   }
+
+  # Join external data queued via augment(cond(...)) and augment(tree_history(...))
+  res <- .apply_augmentations(res, object@cond_augmentations)
+  res <- .apply_augmentations(res, object@tree_history_augmentations)
 
   # Apply condition-level mutations (these affect all trees in those conditions)
   if (length(object@cond_mutations) > 0) {
