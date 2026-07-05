@@ -257,6 +257,154 @@
 }
 
 
+# --- Flat-weights optimized pipeline (PostStratifiedEstimator) ---
+
+#' Join plot-level data to all structural weights simultaneously
+#'
+#' Combines strata weights (w_h, n_h, n) and estimation-unit weights (w_eu or
+#' eu_area) into a single flat lookup table and joins it to the streaming
+#' database plot data in one pass, pre-computing the linear-combination
+#' multipliers \code{coeff_mean} and \code{coeff_var_weight} used by
+#' \code{.ps_database_stats}.
+#'
+#' @param plot_data A lazy query with plot-level data (must have PLT_CN).
+#' @param handler A EvalHandler object.
+#' @param output Output scale: \code{"mean"} (default) or \code{"total"}.
+#' @return A lazy query with strata and weight columns added.
+#' @noRd
+.ps_join_flat_weights <- function(plot_data, handler, output = "mean") {
+  output <- match.arg(output, c("mean", "total"))
+
+  strata_summary <- .get_strata_summary(handler)
+
+  eu_weights <- handler@tables$pop_estn_unit %>%
+    dplyr::mutate(
+      w_eu = as.numeric(P1PNTCNT_EU) / sum(P1PNTCNT_EU, na.rm = TRUE),
+      eu_area = as.numeric(AREA_USED)
+    ) %>%
+    dplyr::select(ESTN_UNIT_CN = CN, w_eu, eu_area)
+
+  flat_weights <- strata_summary %>%
+    dplyr::inner_join(eu_weights, by = "ESTN_UNIT_CN") %>%
+    dplyr::mutate(
+      coeff_mean = dplyr::if_else(output == "mean", w_h * w_eu, w_h * eu_area),
+      coeff_var_weight = dplyr::if_else(
+        output == "mean",
+        (1 / n) * (w_h * n_h + (1 - w_h) * n_h / n) * (w_eu^2),
+        (1 / n) * (w_h * n_h + (1 - w_h) * n_h / n) * (eu_area^2)
+      )
+    ) %>%
+    dplyr::select(STRATUM_CN, ESTN_UNIT_CN, w_h, n_h, n, w_eu, coeff_mean, coeff_var_weight)
+
+  plot_data %>%
+    dplyr::inner_join(
+      handler@tables$pop_plot_stratum_assgn %>% dplyr::select(PLT_CN, STRATUM_CN),
+      by = "PLT_CN"
+    ) %>%
+    dplyr::inner_join(flat_weights, by = "STRATUM_CN")
+}
+
+#' Flattened Database Pipeline for Point Estimates
+#'
+#' Single GROUP BY pass that collapses raw plot data directly to domain-level
+#' population estimates using the pre-computed \code{coeff_mean} multipliers
+#' from \code{.ps_join_flat_weights}.
+#'
+#' @param flat_strata_data A lazy query (output of \code{.ps_join_flat_weights}).
+#' @param targets Character vector of target column names to aggregate.
+#' @return A lazy query with domain-level point estimates (wide format).
+#' @noRd
+.ps_database_estimates <- function(flat_strata_data, targets) {
+  all_cols <- colnames(flat_strata_data)
+  domain_vars <- setdiff(all_cols, c(.plot_keys, .strat_keys, "w_h", "n_h", "n", "w_eu", "coeff_mean", "coeff_var_weight", targets))
+
+  flat_strata_data %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(domain_vars))) %>%
+    dplyr::summarise(
+      dplyr::across(
+        dplyr::all_of(targets),
+        ~ sum(.x * coeff_mean, na.rm = TRUE)
+      )
+    ) %>%
+    dplyr::ungroup()
+}
+
+#' Flattened Database Pipeline for Variance and Estimates (BNP 2005)
+#'
+#' Single GROUP BY pass that collapses raw plot data directly to domain-level
+#' population estimates and variances using the pre-computed weight multipliers
+#' from \code{.ps_join_flat_weights}. Returns wide format with columns named
+#' \code{{target}_estimate} and \code{{target}_var}.
+#'
+#' @param flat_strata_data A lazy query (output of \code{.ps_join_flat_weights}).
+#' @param targets Character vector of target column names to aggregate.
+#' @return A lazy query with domain-level estimates and variances (wide format).
+#' @noRd
+.ps_database_stats <- function(flat_strata_data, targets) {
+  all_cols <- colnames(flat_strata_data)
+  domain_vars <- setdiff(all_cols, c(.plot_keys, .strat_keys, "w_h", "n_h", "n", "w_eu", "coeff_mean", "coeff_var_weight", targets))
+
+  flat_strata_data %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(domain_vars))) %>%
+    dplyr::summarise(
+      dplyr::across(
+        dplyr::all_of(targets),
+        list(
+          estimate = ~ sum(.x * coeff_mean, na.rm = TRUE),
+          var = ~ sum(
+            dplyr::case_when(
+              n_h <= 1 ~ 0,
+              TRUE ~ ((.x^2) - n_h * ((.x / n_h)^2)) / (n_h * (n_h - 1))
+            ) * coeff_var_weight,
+            na.rm = TRUE
+          )
+        ),
+        .names = "{.col}_{.fn}"
+      )
+    ) %>%
+    dplyr::ungroup()
+}
+
+#' Convert wide stats output to long format
+#'
+#' Pivots the wide \code{{target}_estimate} / \code{{target}_var} output of
+#' \code{.ps_database_stats} into the canonical long format
+#' \code{(domain_vars..., var, estimate, se)} expected by callers.
+#'
+#' @param db_stats A lazy query (output of \code{.ps_database_stats}).
+#' @param targets Character vector of original target column names.
+#' @return A lazy query with columns \code{(domain_vars..., var, estimate, se)}.
+#' @noRd
+.ps_format_wide_to_long <- function(db_stats, targets) {
+  estimate_targets <- paste0(targets, "_estimate")
+  var_targets <- paste0(targets, "_var")
+  all_stat_cols <- c(estimate_targets, var_targets)
+
+  all_cols <- colnames(db_stats)
+  domain_vars <- setdiff(all_cols, all_stat_cols)
+
+  long_parts <- lapply(seq_along(targets), function(i) {
+    estimate_col <- rlang::sym(estimate_targets[[i]])
+    var_col <- rlang::sym(var_targets[[i]])
+    var_literal <- dbplyr::sql(paste0("'", targets[[i]], "'"))
+
+    db_stats %>%
+      dplyr::transmute(
+        dplyr::across(dplyr::all_of(domain_vars)),
+        var = !!var_literal,
+        estimate = !!estimate_col,
+        var_val = !!var_col
+      )
+  })
+
+  joined_long <- Reduce(dplyr::union_all, long_parts)
+
+  joined_long %>%
+    dplyr::mutate(se = sqrt(var_val)) %>%
+    dplyr::select(dplyr::all_of(domain_vars), var, estimate, se)
+}
+
+
 # --- Ratio estimator covariance pipeline ---
 
 #' Compute stratum-level sample covariance between numerator and denominator variables

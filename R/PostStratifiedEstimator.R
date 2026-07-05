@@ -154,10 +154,9 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = 
   resolved_targets <- .resolve_estimation_targets(targets, target_names, target_quos)
 
   plot_data <- .make_tree_aggregates(handler, !!!agg_targets, adjusted = TRUE, sparse = TRUE)
-  strata_data <- .ps_join_strata(plot_data, handler)
-  strata_stats <- .ps_strata_stats(strata_data, resolved_targets)
-  eu_stats <- .ps_eu_stats(strata_stats, resolved_targets)
-  .ps_pop_stats(eu_stats, handler, resolved_targets, output)
+  flat_data <- .ps_join_flat_weights(plot_data, handler, output)
+  db_stats <- .ps_database_stats(flat_data, resolved_targets)
+  .ps_format_wide_to_long(db_stats, resolved_targets)
 }
 
 .run_tree_history_estimation <- function(handler, targets, target_names = NULL, target_quos = NULL, output = "mean") {
@@ -172,10 +171,9 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = 
   resolved_targets <- .resolve_estimation_targets(targets, target_names, target_quos)
 
   plot_data <- .make_tree_history_aggregates(handler, !!!agg_targets, adjusted = TRUE, sparse = TRUE)
-  strata_data <- .ps_join_strata(plot_data, handler)
-  strata_stats <- .ps_strata_stats(strata_data, resolved_targets)
-  eu_stats <- .ps_eu_stats(strata_stats, resolved_targets)
-  .ps_pop_stats(eu_stats, handler, resolved_targets, output)
+  flat_data <- .ps_join_flat_weights(plot_data, handler, output)
+  db_stats <- .ps_database_stats(flat_data, resolved_targets)
+  .ps_format_wide_to_long(db_stats, resolved_targets)
 }
 
 .run_cond_estimation <- function(handler, target_names = NULL, output = "mean") {
@@ -187,10 +185,9 @@ setMethod("estimate", "PostStratifiedEstimator", function(object, ..., output = 
     cond_target <- "prop"
   }
 
-  strata_data <- .ps_join_strata(plot_data, handler)
-  strata_stats <- .ps_strata_stats(strata_data, cond_target)
-  eu_stats <- .ps_eu_stats(strata_stats, cond_target)
-  .ps_pop_stats(eu_stats, handler, cond_target, output)
+  flat_data <- .ps_join_flat_weights(plot_data, handler, output)
+  db_stats <- .ps_database_stats(flat_data, cond_target)
+  .ps_format_wide_to_long(db_stats, cond_target)
 }
 
 # Internal helper for condition estimation
