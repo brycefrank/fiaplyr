@@ -285,14 +285,13 @@
     dplyr::select(ESTN_UNIT_CN = CN, w_eu, eu_area)
 
   flat_weights <- strata_summary %>%
-    dplyr::inner_join(eu_weights, by = "ESTN_UNIT_CN") %>%
+    dplyr::inner_join(eu_weights, by = "ESTN_UNIT_CN")
+
+  coeff_eu_sym <- if (output == "mean") rlang::sym("w_eu") else rlang::sym("eu_area")
+  flat_weights <- flat_weights %>%
     dplyr::mutate(
-      coeff_mean = dplyr::if_else(output == "mean", w_h * w_eu, w_h * eu_area),
-      coeff_var_weight = dplyr::if_else(
-        output == "mean",
-        (1 / n) * (w_h * n_h + (1 - w_h) * n_h / n) * (w_eu^2),
-        (1 / n) * (w_h * n_h + (1 - w_h) * n_h / n) * (eu_area^2)
-      )
+      coeff_mean = w_h * !!coeff_eu_sym,
+      coeff_var_weight = (1 / n) * (w_h * n_h + (1 - w_h) * n_h / n) * (!!coeff_eu_sym)^2
     ) %>%
     dplyr::select(STRATUM_CN, ESTN_UNIT_CN, w_h, n_h, n, w_eu, coeff_mean, coeff_var_weight)
 
