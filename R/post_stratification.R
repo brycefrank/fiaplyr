@@ -391,6 +391,5 @@
         ~ sum(.x * w_eu^2, na.rm = TRUE)
       )
     ) %>%
-    dplyr::ungroup() %>%
-    dplyr::collect()
+    dplyr::ungroup()
 }

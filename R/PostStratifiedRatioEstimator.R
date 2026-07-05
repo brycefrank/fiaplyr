@@ -126,11 +126,19 @@ setMethod(
     # 3. Join strata once for each side - reused by both the variance and covariance pipelines
     agg_strat <- .ps_join_strata(agg, object@handler)
 
-    # 4. Stats pipeline for each side, producing [domain_vars, var, estimate, se]
-    agg_stats <- agg_strat |>
-      .ps_strata_stats(atts_fmt) |>
-      .ps_eu_stats(atts_fmt) |>
-      .ps_pop_stats(object@handler, atts_fmt)
+    # 4. Covariance-aware PSR pipeline (strata -> EU -> population)
+    psr_strata <- .psr_strata_stats(
+      agg_strat,
+      targets_num_fmt = atts_num_fmt,
+      targets_den_fmt = atts_den_fmt,
+      targets_num = atts_num,
+      targets_den = atts_den
+    )
+    psr_eu <- .psr_eu_stats(psr_strata)
+    psr_pop <- .psr_pop_stats(psr_eu, object@handler, atts_fmt)
+
+    agg_stats <- psr_pop$stats
+    pop_cov_long <- psr_pop$cov
 
     domain_cols <- setdiff(colnames(agg_stats), c("var", "estimate", "se"))
 
@@ -162,97 +170,39 @@ setMethod(
       suffix = c("_n", "_d")
     )
 
-    stats
+    cov_join_keys <- c(domain_cols, "var_n", "var_d")
+    pop_full <- dplyr::left_join(
+      stats,
+      pop_cov_long,
+      by = cov_join_keys
+    )
+    # Missing cov_val means numerator and denominator never co-occur on the same plot,
+    # so all cross-products y_n * y_d = 0 and the true covariance is 0.
+    pop_full <- pop_full %>%
+      dplyr::mutate(cov_val = dplyr::coalesce(cov_val, 0))
 
-    # 5. Covariance pipeline on the unified strata table.
-    #cov_pair_df <- data.frame(
-    #  var_n = rep(atts_num, each = length(atts_den)),
-    #  var_d = rep(atts_den, times = length(atts_num)),
-    #  stringsAsFactors = FALSE
-    #)
-    #cov_cols <- paste0(".cov_", seq_len(nrow(cov_pair_df)))
-    #cov_pair_df$cov_col <- cov_cols
+    # 9. Apply the ratio variance formula:
+    #    v(R) = (1/Y_d^2) * [v(Y_n) + R^2*v(Y_d) - 2*R*cov(Y_n, Y_d)]
+    base_cols <- c(domain_cols, "var_n", "var_d", "estimate", "se")
+    component_cols <- c("estimate_n", "se_n", "estimate_d", "se_d")
+    out_cols <- if (isTRUE(include_components)) {
+      c(base_cols, component_cols)
+    } else {
+      base_cols
+    }
 
-    #cov_exprs <- list()
-    #k <- 1L
-    #for (i in seq_along(atts_num_fmt)) {
-    #  for (j in seq_along(atts_den_fmt)) {
-    #    x_n <- rlang::sym(atts_num_fmt[[i]])
-    #    x_d <- rlang::sym(atts_den_fmt[[j]])
-    #    cov_exprs[[cov_cols[[k]]]] <- rlang::expr(
-    #      dplyr::case_when(
-    #        n_h <= 1 ~ 0,
-    #        TRUE ~ (sum(!!x_n * !!x_d, na.rm = TRUE) -
-    #          sum(!!x_n, na.rm = TRUE) * sum(!!x_d, na.rm = TRUE) / n_h) /
-    #          (n_h * (n_h - 1))
-    #      )
-    #    )
-    #    k <- k + 1L
-    #  }
-    #}
+    final_res <- pop_full %>%
+      dplyr::mutate(
+        estimate = estimate_n / estimate_d,
+        var_ratio = (1 / estimate_d^2) *
+          (se_n^2 +
+            (estimate_n / estimate_d)^2 * se_d^2 -
+            2 * (estimate_n / estimate_d) * cov_val),
+        se = sqrt(pmax(var_ratio, 0))
+      ) %>%
+      dplyr::select(dplyr::all_of(out_cols))
 
-    #strata_cov <- agg_strat |>
-    #  dplyr::group_by(
-    #    dplyr::across(
-    #      dplyr::all_of(c(
-    #        "ESTN_UNIT_CN",
-    #        "STRATUM_CN",
-    #        "w_h",
-    #        "n_h",
-    #        "n",
-    #        domain_cols
-    #      ))
-    #    )
-    #  ) |>
-    #  dplyr::summarise(!!!cov_exprs) |>
-    #  dplyr::ungroup()
-
-    #pop_cov <- strata_cov %>%
-    #  .ps_eu_cov(cov_cols) %>%
-    #  .ps_pop_cov(object@handler, cov_cols)
-
-    #pop_cov_long <- pop_cov %>%
-    #  tidyr::pivot_longer(
-    #    cols = dplyr::all_of(cov_cols),
-    #    names_to = "cov_col",
-    #    values_to = "cov_val"
-    #  ) %>%
-    #  dplyr::left_join(cov_pair_df, by = "cov_col") %>%
-    #  dplyr::select(-cov_col)
-
-    #cov_join_keys <- c(domain_cols, "var_n", "var_d")
-    #pop_full <- dplyr::left_join(
-    #  stats,
-    #  pop_cov_long,
-    #  by = cov_join_keys
-    #)
-    ## Missing cov_val means numerator and denominator never co-occur on the same plot,
-    ## so all cross-products y_n * y_d = 0 and the true covariance is 0.
-    #pop_full <- pop_full %>%
-    #  dplyr::mutate(cov_val = dplyr::coalesce(cov_val, 0))
-
-    ## 9. Apply the ratio variance formula:
-    ##    v(R) = (1/Y_d^2) * [v(Y_n) + R^2*v(Y_d) - 2*R*cov(Y_n, Y_d)]
-    #base_cols <- c(domain_cols, "var_n", "var_d", "estimate", "se")
-    #component_cols <- c("estimate_n", "se_n", "estimate_d", "se_d")
-    #out_cols <- if (isTRUE(include_components)) {
-    #  c(base_cols, component_cols)
-    #} else {
-    #  base_cols
-    #}
-
-    #final_res <- pop_full %>%
-    #  dplyr::mutate(
-    #    estimate = estimate_n / estimate_d,
-    #    var_ratio = (1 / estimate_d^2) *
-    #      (se_n^2 +
-    #        (estimate_n / estimate_d)^2 * se_d^2 -
-    #        2 * (estimate_n / estimate_d) * cov_val),
-    #    se = sqrt(pmax(var_ratio, 0))
-    #  ) %>%
-    #  dplyr::select(dplyr::all_of(out_cols))
-
-    #return(final_res)
+    return(final_res)
   }
 )
 
@@ -321,6 +271,117 @@ setMethod(
       parsed$targets
     }
   }
+}
+
+#' PSR strata stage: compute point stats and cross-side covariances
+#' @noRd
+.psr_strata_stats <- function(
+  strata_data,
+  targets_num_fmt,
+  targets_den_fmt,
+  targets_num,
+  targets_den
+) {
+  all_targets <- c(targets_num_fmt, targets_den_fmt)
+
+  stats_out <- .ps_strata_stats(strata_data, all_targets)
+
+  cov_pair_df <- data.frame(
+    var_n = rep(targets_num, each = length(targets_den)),
+    var_d = rep(targets_den, times = length(targets_num)),
+    stringsAsFactors = FALSE
+  )
+  cov_cols <- paste0(".cov_", seq_len(nrow(cov_pair_df)))
+  cov_pair_df$cov_col <- cov_cols
+
+  all_cols <- colnames(strata_data)
+  domain_vars <- setdiff(all_cols, c(.plot_keys, .strat_keys, all_targets))
+
+  cov_exprs <- list()
+  k <- 1L
+  for (i in seq_along(targets_num_fmt)) {
+    for (j in seq_along(targets_den_fmt)) {
+      x_n <- rlang::sym(targets_num_fmt[[i]])
+      x_d <- rlang::sym(targets_den_fmt[[j]])
+      cov_exprs[[cov_cols[[k]]]] <- rlang::expr(
+        dplyr::case_when(
+          n_h <= 1 ~ 0,
+          TRUE ~ (sum(!!x_n * !!x_d, na.rm = TRUE) -
+            sum(!!x_n, na.rm = TRUE) * sum(!!x_d, na.rm = TRUE) / n_h) /
+            (n_h * (n_h - 1))
+        )
+      )
+      k <- k + 1L
+    }
+  }
+
+  cov_out <- strata_data %>%
+    dplyr::group_by(
+      dplyr::across(
+        dplyr::all_of(c(
+          "ESTN_UNIT_CN",
+          "STRATUM_CN",
+          "w_h",
+          "n_h",
+          "n",
+          domain_vars
+        ))
+      )
+    ) %>%
+    dplyr::summarise(!!!cov_exprs) %>%
+    dplyr::ungroup()
+
+  list(
+    stats = stats_out,
+    cov = cov_out,
+    cov_cols = cov_cols,
+    cov_pair_df = cov_pair_df
+  )
+}
+
+#' PSR EU stage: roll up stats and covariances to estimation units
+#' @noRd
+.psr_eu_stats <- function(psr_strata) {
+  list(
+    stats = .ps_eu_stats(
+      psr_strata$stats,
+      targets = gsub(
+        "_(mean|var)$",
+        "",
+        grep("_mean$", colnames(psr_strata$stats), value = TRUE)
+      )
+    ),
+    cov = .ps_eu_cov(psr_strata$cov, psr_strata$cov_cols),
+    cov_cols = psr_strata$cov_cols,
+    cov_pair_df = psr_strata$cov_pair_df
+  )
+}
+
+#' PSR population stage: roll up stats and covariances to population level
+#' @noRd
+.psr_pop_stats <- function(psr_eu, handler, targets_fmt) {
+  pop_stats <- .ps_pop_stats(psr_eu$stats, handler, targets = targets_fmt)
+
+  pop_cov <- .ps_pop_cov(psr_eu$cov, handler, psr_eu$cov_cols)
+
+  domain_vars <- setdiff(colnames(pop_cov), psr_eu$cov_cols)
+  cov_long_parts <- lapply(seq_along(psr_eu$cov_cols), function(i) {
+    cov_col <- rlang::sym(psr_eu$cov_cols[[i]])
+    var_n_lit <- dbplyr::sql(paste0("'", psr_eu$cov_pair_df$var_n[[i]], "'"))
+    var_d_lit <- dbplyr::sql(paste0("'", psr_eu$cov_pair_df$var_d[[i]], "'"))
+
+    pop_cov %>%
+      dplyr::transmute(
+        dplyr::across(dplyr::all_of(domain_vars)),
+        var_n = !!var_n_lit,
+        var_d = !!var_d_lit,
+        cov_val = !!cov_col
+      )
+  })
+
+  pop_cov_long <- Reduce(dplyr::union_all, cov_long_parts)
+
+  list(stats = pop_stats, cov = pop_cov_long)
 }
 
 #' Validate ratio-domain pairing mode
