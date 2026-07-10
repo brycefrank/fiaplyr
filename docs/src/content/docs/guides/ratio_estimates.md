@@ -12,9 +12,8 @@ As the name suggests, the ratio estimator is formed by dividing a
 numerator estimate by a denominator estimate, making an analysis
 dependent on pairs of variables. In `fiaplyr`, this is accomplished by
 using a function within the `estimate` context called `ratio`, where
-users specify numerator and denominator attributes. Domain
-specifications are identical across the numerator and denominator,
-unless the user specifies a particular denominator override.
+users specify numerator and denominator attributes. Both attributes are
+evaluated from the same handler.
 
 To illustrate the power of the ratio estimator, we will provide three
 examples:

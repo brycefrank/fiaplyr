@@ -270,9 +270,11 @@ setMethod(
   shared_domains <- intersect(domains_num, domains_den)
 
   aggregate_num <- aggregate_num %>%
-    dplyr::rename(!!!stats::setNames(rlang::syms(vals_num), names_num))
+    dplyr::rename(!!!stats::setNames(rlang::syms(vals_num), names_num)) %>%
+    dplyr::mutate(.psr_num_present = 1L)
   aggregate_den <- aggregate_den %>%
-    dplyr::rename(!!!stats::setNames(rlang::syms(vals_den), names_den))
+    dplyr::rename(!!!stats::setNames(rlang::syms(vals_den), names_den)) %>%
+    dplyr::mutate(.psr_den_present = 1L)
 
   aggregate_data <- dplyr::full_join(
     aggregate_num,
@@ -282,10 +284,12 @@ setMethod(
   aggregate_data <- .psr_compute_aggregate(aggregate_data)
 
   numerator <- aggregate_data %>%
+    dplyr::filter(.psr_num_present == 1L) %>%
     dplyr::select(dplyr::all_of(c(.plot_keys, domains_num, names_num))) %>%
     dplyr::distinct() %>%
     dplyr::rename(!!!stats::setNames(rlang::syms(names_num), vals_num))
   denominator <- aggregate_data %>%
+    dplyr::filter(.psr_den_present == 1L) %>%
     dplyr::select(dplyr::all_of(c(.plot_keys, domains_den, names_den))) %>%
     dplyr::distinct() %>%
     dplyr::rename(!!!stats::setNames(rlang::syms(names_den), vals_den))
