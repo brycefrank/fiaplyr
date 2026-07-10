@@ -201,12 +201,16 @@ setMethod(
     if (!is.null(target_names)) {
       names(agg_targets) <- target_names
     }
+  } else if (length(agg_targets) == 0) {
+    # An empty tree helper requests the implicit tree-count target.
+    agg_targets <- list(rlang::quo(1))
+    names(agg_targets) <- "tree_count"
   }
 
   resolved_targets <- .resolve_estimation_targets(
     targets,
     target_names,
-    target_quos
+    target_quos = agg_targets
   )
 
   plot_data <- .make_tree_aggregates(
