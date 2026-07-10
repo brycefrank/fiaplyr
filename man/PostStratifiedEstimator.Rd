@@ -4,12 +4,15 @@
 \alias{PostStratifiedEstimator}
 \title{PostStratifiedEstimator}
 \usage{
-PostStratifiedEstimator(handler)
+PostStratifiedEstimator(handler = NULL, var_est = ve_taylor())
 }
 \arguments{
-\item{handler}{A EvalHandler object.}
+\item{handler}{An optional EvalHandler object.}
+
+\item{var_est}{A variance-estimator specification.}
 }
 \description{
 Create an object that can be used to make post-stratified estimates. The
-estimator is initialized with an \code{EvalHandler} that defines the evaluation.
+estimator can be initialized with an \code{EvalHandler} that defines the
+evaluation, or used as an unbound specification via \code{pe_post_strat()}.
 }

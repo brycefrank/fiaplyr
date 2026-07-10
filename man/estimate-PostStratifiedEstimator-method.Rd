@@ -4,7 +4,13 @@
 \alias{estimate,PostStratifiedEstimator-method}
 \title{Estimate Population Parameters}
 \usage{
-\S4method{estimate}{PostStratifiedEstimator}(object, ..., output = "mean", margins = FALSE)
+\S4method{estimate}{PostStratifiedEstimator,ANY}(
+  object,
+  ...,
+  output = "mean",
+  margins = FALSE,
+  estimator = pe_post_strat()
+)
 }
 \arguments{
 \item{object}{A PostStratifiedEstimator object.}
@@ -19,6 +25,8 @@ plus all marginal estimates produced by re-running the pipeline for every
 strict subset of the active domain variables (including the grand total
 with no domains). Dropped domain columns appear as \code{NA}. Defaults to
 \code{FALSE}.}
+
+\item{estimator}{Unused for a bound estimator object.}
 }
 \value{
 A dataframe with estimates.

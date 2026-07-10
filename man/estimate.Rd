@@ -5,12 +5,24 @@
 \alias{estimate,EvalHandler-method}
 \title{Estimate Population Parameters}
 \usage{
-estimate(object, ..., output = "mean", margins = FALSE)
+estimate(
+  object,
+  ...,
+  output = "mean",
+  margins = FALSE,
+  estimator = pe_post_strat()
+)
 
-\S4method{estimate}{EvalHandler}(object, ..., output = "mean", margins = FALSE)
+\S4method{estimate}{EvalHandler,PostStratifiedEstimator}(
+  object,
+  ...,
+  output = "mean",
+  margins = FALSE,
+  estimator = pe_post_strat()
+)
 }
 \arguments{
-\item{object}{An estimator object.}
+\item{object}{An estimator object or evaluation handler.}
 
 \item{...}{Exactly one scoped target helper specifying the estimation target.}
 
@@ -22,6 +34,9 @@ the estimation pipeline for every strict subset of the active domain
 variables, including the grand total (no domains). Dropped domain columns
 appear as \code{NA} in the output, indicating aggregation over all values of
 that variable. Defaults to \code{FALSE}.}
+
+\item{estimator}{A point-estimator specification. Defaults to
+\code{pe_post_strat()} when \code{object} is an evaluation handler.}
 }
 \description{
 Estimate Population Parameters

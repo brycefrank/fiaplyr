@@ -270,6 +270,18 @@ handler. The `estimate` method uses the same syntax as `aggregate`, but
 instead of producing plot-level values, it produces estimates of the
 specified variable for the area specified by the evaluation.
 
+The default estimator is post-stratification with Taylor variance
+estimation. It can be selected explicitly when a workflow needs to make
+the point- and variance-estimator choices visible:
+
+``` r
+ba_est <- ba_handler |>
+  estimate(
+    tree(ba = BA),
+    estimator = pe_post_strat(var_est = ve_taylor())
+  )
+```
+
 Recall our desire to estimate basal area, this is now straightforward.
 
 ``` r

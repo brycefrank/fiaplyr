@@ -99,6 +99,7 @@ setMethod("show", "PostStratifiedEstimator", function(object) {
 #'   strict subset of the active domain variables (including the grand total
 #'   with no domains). Dropped domain columns appear as `NA`. Defaults to
 #'   `FALSE`.
+#' @param estimator Unused for a bound estimator object.
 #' @return A dataframe with estimates.
 #' @export
 setMethod(

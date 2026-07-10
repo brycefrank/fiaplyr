@@ -4,10 +4,12 @@
 \alias{PostStratifiedRatioEstimator}
 \title{Constructor for PostStratifiedRatioEstimator}
 \usage{
-PostStratifiedRatioEstimator(handler)
+PostStratifiedRatioEstimator(handler, var_est = ve_taylor())
 }
 \arguments{
 \item{handler}{An EvalHandler object.}
+
+\item{var_est}{A variance-estimator specification.}
 }
 \description{
 Constructor for PostStratifiedRatioEstimator
