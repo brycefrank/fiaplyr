@@ -114,7 +114,7 @@ setMethod(
   ) {
     if (is.null(object@handler)) {
       stop(
-        "This estimator is not bound to a handler. Pass it to `estimate(..., estimator = )`.",
+        "This estimator is not bound to a handler. Pass it as `estimate(handler, target, estimator = this_estimator)`.",
         call. = FALSE
       )
     }
