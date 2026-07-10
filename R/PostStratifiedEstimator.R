@@ -195,27 +195,27 @@ setMethod(
   target_quos = NULL,
   output = "mean"
 ) {
-  agg_targets <- target_quos
-  if (is.null(agg_targets)) {
-    agg_targets <- rlang::syms(targets)
+  estimation_target_quos <- target_quos
+  if (is.null(estimation_target_quos)) {
+    estimation_target_quos <- rlang::syms(targets)
     if (!is.null(target_names)) {
-      names(agg_targets) <- target_names
+      names(estimation_target_quos) <- target_names
     }
-  } else if (length(agg_targets) == 0) {
+  } else if (length(estimation_target_quos) == 0) {
     # An empty tree helper requests the implicit tree-count target.
-    agg_targets <- list(rlang::quo(1))
-    names(agg_targets) <- "tree_count"
+    estimation_target_quos <- list(rlang::quo(1))
+    names(estimation_target_quos) <- "tree_count"
   }
 
   resolved_targets <- .resolve_estimation_targets(
     targets,
     target_names,
-    target_quos = agg_targets
+    target_quos = estimation_target_quos
   )
 
   plot_data <- .make_tree_aggregates(
     handler,
-    !!!agg_targets,
+    !!!estimation_target_quos,
     adjusted = TRUE,
     sparse = TRUE
   )
