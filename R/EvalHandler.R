@@ -616,8 +616,14 @@ setMethod("aggregate", "EvalHandler", function(handler, ...) {
 #' @describeIn estimate Estimate parameters directly from an EvalHandler
 setMethod(
   "estimate",
-  "EvalHandler",
-  function(object, ..., output = "mean", margins = FALSE) {
+  signature(object = "EvalHandler", estimator = "PostStratifiedEstimator"),
+  function(
+    object,
+    ...,
+    output = "mean",
+    margins = FALSE,
+    estimator = pe_post_strat()
+  ) {
     args <- list(...)
 
     if (length(args) == 0) {
@@ -628,38 +634,17 @@ setMethod(
 
     first <- args[[1]]
 
-    if (inherits(first, "fiaplyr_ratio_intent")) {
-      if (is.null(first$numerator) || is.null(first$denominator)) {
-        stop(
-          "`ratio()` must include both numerator and denominator target helpers."
-        )
-      }
-
-      if (!identical(output, "mean") || !identical(margins, FALSE)) {
-        stop(
-          "`output` and `margins` are not supported with `ratio(...)`. Use `estimate_ratio()` options instead."
-        )
-      }
-
-      ratio_est <- PostStratifiedRatioEstimator(object)
-      extra_args <- if (length(args) > 1) args[-1] else list()
-
-      return(do.call(
-        estimate_ratio,
-        c(
-          list(object = ratio_est, intent = first),
-          extra_args
-        )
-      ))
-    }
-
-    est <- PostStratifiedEstimator(object)
-
+    extra_args <- if (length(args) > 1) args[-1] else list()
     do.call(
-      estimate,
+      .estimate_composed,
       c(
-        list(object = est),
-        args,
+        list(
+          point_estimator = estimator,
+          variance_estimator = estimator@var_est,
+          handler = object,
+          target = first
+        ),
+        extra_args,
         list(output = output, margins = margins)
       )
     )

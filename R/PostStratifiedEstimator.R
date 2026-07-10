@@ -2,23 +2,43 @@ setClass(
   "PostStratifiedEstimator",
   contains = "Estimator",
   slots = list(
-    strata_weights = "ANY"
+    strata_weights = "ANY",
+    var_est = "VarianceEstimator"
   )
 )
 
 #' PostStratifiedEstimator
 #'
 #' Create an object that can be used to make post-stratified estimates. The
-#' estimator is initialized with an `EvalHandler` that defines the evaluation.
+#' estimator can be initialized with an `EvalHandler` that defines the
+#' evaluation, or used as an unbound specification via `pe_post_strat()`.
 #'
-#' @param handler A EvalHandler object.
+#' @param handler An optional EvalHandler object.
+#' @param var_est A variance-estimator specification.
 #' @export
-PostStratifiedEstimator <- function(handler) {
+PostStratifiedEstimator <- function(handler = NULL, var_est = ve_taylor()) {
+  if (!inherits(var_est, "VarianceEstimator")) {
+    stop("`var_est` must be a VarianceEstimator object.", call. = FALSE)
+  }
+
   new(
     "PostStratifiedEstimator",
     handler = handler,
-    strata_weights = get_strata_weights(handler)
+    strata_weights = if (is.null(handler)) NULL else get_strata_weights(handler),
+    var_est = var_est
   )
+}
+
+#' Configure Post-Stratified Point Estimation
+#'
+#' Creates an estimator specification for use with
+#' `estimate(handler, target, estimator = pe_post_strat())`.
+#'
+#' @param var_est A variance-estimator specification.
+#' @return A `PostStratifiedEstimator` specification.
+#' @export
+pe_post_strat <- function(var_est = ve_taylor()) {
+  PostStratifiedEstimator(var_est = var_est)
 }
 
 
@@ -29,6 +49,11 @@ PostStratifiedEstimator <- function(handler) {
 setMethod("show", "PostStratifiedEstimator", function(object) {
   cat("PostStratifiedEstimator\n")
   cat("-----------------------\n")
+
+  if (is.null(object@handler)) {
+    cat("Variance:        ", class(object@var_est)[[1]], "\n")
+    return(invisible(object))
+  }
 
   s <- summary(object@handler)
 
@@ -79,7 +104,20 @@ setMethod("show", "PostStratifiedEstimator", function(object) {
 setMethod(
   "estimate",
   "PostStratifiedEstimator",
-  function(object, ..., output = "mean", margins = FALSE) {
+  function(
+    object,
+    ...,
+    output = "mean",
+    margins = FALSE,
+    estimator = pe_post_strat()
+  ) {
+    if (is.null(object@handler)) {
+      stop(
+        "This estimator is not bound to a handler. Pass it to `estimate(..., estimator = )`.",
+        call. = FALSE
+      )
+    }
+
     args <- list(...)
     if (length(args) != 1) {
       stop(
@@ -130,6 +168,65 @@ setMethod(
     } else {
       stop("Unsupported slot: ", slot_name)
     }
+  }
+)
+
+setMethod(
+  ".estimate_composed",
+  signature(
+    point_estimator = "PostStratifiedEstimator",
+    variance_estimator = "TaylorVarianceEstimator"
+  ),
+  function(
+    point_estimator,
+    variance_estimator,
+    handler,
+    target,
+    ...,
+    output = "mean",
+    margins = FALSE
+  ) {
+    extra_args <- list(...)
+
+    if (inherits(target, "fiaplyr_ratio_intent")) {
+      if (is.null(target$numerator) || is.null(target$denominator)) {
+        stop(
+          "`ratio()` must include both numerator and denominator target helpers."
+        )
+      }
+
+      if (!identical(output, "mean") || !identical(margins, FALSE)) {
+        stop(
+          "`output` and `margins` are not supported with `ratio(...)`. Use `estimate_ratio()` options instead."
+        )
+      }
+
+      ratio_est <- PostStratifiedRatioEstimator(
+        handler,
+        var_est = variance_estimator
+      )
+      return(do.call(
+        estimate_ratio,
+        c(
+          list(object = ratio_est, intent = target),
+          extra_args
+        )
+      ))
+    }
+
+    bound_estimator <- PostStratifiedEstimator(
+      handler,
+      var_est = variance_estimator
+    )
+    do.call(
+      estimate,
+      c(
+        list(object = bound_estimator),
+        list(target),
+        extra_args,
+        list(output = output, margins = margins)
+      )
+    )
   }
 )
 

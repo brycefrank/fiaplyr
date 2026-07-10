@@ -8,6 +8,42 @@ setClass("Estimator",
   )
 )
 
+#' Base Variance Estimator Class
+#'
+#' @export
+setClass("VarianceEstimator", contains = "VIRTUAL")
+
+#' Taylor Variance Estimator
+#'
+#' A variance-estimator specification for Taylor linearization.
+#'
+#' @export
+setClass("TaylorVarianceEstimator", contains = "VarianceEstimator")
+
+#' Configure Taylor Variance Estimation
+#'
+#' @return A `TaylorVarianceEstimator` object.
+#' @export
+ve_taylor <- function() {
+  new("TaylorVarianceEstimator")
+}
+
+setGeneric(
+  ".estimate_composed",
+  function(
+    point_estimator,
+    variance_estimator,
+    handler,
+    target,
+    ...,
+    output = "mean",
+    margins = FALSE
+  ) {
+    standardGeneric(".estimate_composed")
+  },
+  signature = c("point_estimator", "variance_estimator")
+)
+
 #' Get Subplot Type Adjustment Factors
 #'
 #' @param object A EvalHandler object.

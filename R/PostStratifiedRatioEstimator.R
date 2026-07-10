@@ -2,25 +2,33 @@
 #'
 #' @slot handler An EvalHandler object.
 #' @slot strata_weights A dataframe containing strata weights.
+#' @slot var_est A variance-estimator specification.
 #' @export
 setClass(
   "PostStratifiedRatioEstimator",
   contains = "Estimator",
   slots = list(
     handler = "EvalHandler",
-    strata_weights = "ANY"
+    strata_weights = "ANY",
+    var_est = "VarianceEstimator"
   )
 )
 
 #' Constructor for PostStratifiedRatioEstimator
 #'
 #' @param handler An EvalHandler object.
+#' @param var_est A variance-estimator specification.
 #' @export
-PostStratifiedRatioEstimator <- function(handler) {
+PostStratifiedRatioEstimator <- function(handler, var_est = ve_taylor()) {
+  if (!inherits(var_est, "VarianceEstimator")) {
+    stop("`var_est` must be a VarianceEstimator object.", call. = FALSE)
+  }
+
   new(
     "PostStratifiedRatioEstimator",
     handler = handler,
-    strata_weights = get_strata_weights(handler)
+    strata_weights = get_strata_weights(handler),
+    var_est = var_est
   )
 }
 

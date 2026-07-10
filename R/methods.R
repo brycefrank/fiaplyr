@@ -160,7 +160,7 @@ setGeneric("get_strata_weights", function(handler) {
 
 #' Estimate Population Parameters
 #'
-#' @param object An estimator object.
+#' @param object An estimator object or evaluation handler.
 #' @param ... Exactly one scoped target helper specifying the estimation target.
 #' @param output Output scale, either "mean" (default) or "total".
 #' @param margins Logical. If `TRUE`, returns all marginal estimates in addition
@@ -169,7 +169,19 @@ setGeneric("get_strata_weights", function(handler) {
 #'   variables, including the grand total (no domains). Dropped domain columns
 #'   appear as `NA` in the output, indicating aggregation over all values of
 #'   that variable. Defaults to `FALSE`.
+#' @param estimator A point-estimator specification. Defaults to
+#'   `pe_post_strat()` when `object` is an evaluation handler.
 #' @export
-setGeneric("estimate", function(object, ..., output = "mean", margins = FALSE) {
-  standardGeneric("estimate")
-})
+setGeneric(
+  "estimate",
+  function(
+    object,
+    ...,
+    output = "mean",
+    margins = FALSE,
+    estimator = pe_post_strat()
+  ) {
+    standardGeneric("estimate")
+  },
+  signature = c("object", "estimator")
+)
