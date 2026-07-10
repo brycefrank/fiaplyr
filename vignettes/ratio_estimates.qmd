@@ -17,8 +17,7 @@ As the name suggests, the ratio estimator is formed by dividing a numerator
 estimate by a denominator estimate, making an analysis dependent on pairs of
 variables. In `fiaplyr`, this is accomplished by using a function within the
 `estimate` context called `ratio`, where users specify numerator and denominator
-attributes. Domain specifications are identical across the numerator and
-denominator, unless the user specifies a particular denominator override.
+attributes. Both attributes are evaluated from the same handler.
 
 To illustrate the power of the ratio estimator, we will provide three examples:
 
@@ -116,33 +115,29 @@ in some contexts, but not here, so they are discarded outright.
 ## Proportional Representation of Species
 
 It may be of interest to estimate the proportion a species represents within
-a state. This requires an additional feature that allows us to specify the
-domain structure of the denominator. Fortunately, `ratio` allows for denominator
-overrides
+a state. The numerator and denominator use the same handler. For example, we can estimate
+the proportion of growing-stock trees that are balsam fir by creating an
+indicator attribute before forming the ratio.
 
 ```{r}
-# First specify a handler for growing stock trees, partitioned by species
+# First specify a handler for growing stock trees
 prop_handler <- handler |>
   subset(tree(TREECLCD == 2)) |>
-  partition(tree(SPCD))
+  transform(tree(is_balsam_fir = SPCD == 12))
 
 prop_ests <- prop_handler |>
   estimate(
     ratio(
-      tree(),
-      tree(),
-      den_partitions = list(tree())
+      tree(balsam_fir = is_balsam_fir),
+      tree()
     )
   )
 
 prop_ests |>
-  arrange(desc(estimate)) |>
-  left_join(species_labels, by = c("SPCD_n" = "SPCD")) |>
-  select(SPCD_n, COMMON_NAME, estimate, se) |>
+  select(estimate, se) |>
   head()
 ```
 
-Here, we can see the proportion of each species within the state of Vermont for
-the specific case of growing stock trees. One can imagine all types of custom
-ratios: proportion of trees with defects, static mortality proportions, and
-others.
+The result is the proportion of growing-stock trees in Vermont that are balsam
+fir. The same approach supports other custom ratios, such as the proportion of
+trees with defects or static mortality proportions.

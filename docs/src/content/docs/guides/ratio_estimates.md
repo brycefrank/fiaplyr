@@ -132,43 +132,29 @@ are discarded outright.
 ## Proportional Representation of Species
 
 It may be of interest to estimate the proportion a species represents
-within a state. This requires an additional feature that allows us to
-specify the domain structure of the denominator. Fortunately, `ratio`
-allows for denominator overrides
+within a state. The numerator and denominator use the same handler. For
+example, we can estimate the proportion of growing-stock trees that are
+balsam fir by creating an indicator attribute before forming the ratio.
 
 ``` r
-# First specify a handler for growing stock trees, partitioned by species
+# First specify a handler for growing stock trees
 prop_handler <- handler |>
   subset(tree(TREECLCD == 2)) |>
-  partition(tree(SPCD))
+  transform(tree(is_balsam_fir = SPCD == 12))
 
 prop_ests <- prop_handler |>
   estimate(
     ratio(
-      tree(),
-      tree(),
-      den_partitions = list(tree())
+      tree(balsam_fir = is_balsam_fir),
+      tree()
     )
   )
 
 prop_ests |>
-  arrange(desc(estimate)) |>
-  left_join(species_labels, by = c("SPCD_n" = "SPCD")) |>
-  select(SPCD_n, COMMON_NAME, estimate, se) |>
+  select(estimate, se) |>
   head()
 ```
 
-    # A tibble: 6 × 4
-      SPCD_n COMMON_NAME    estimate      se
-       <dbl> <chr>             <dbl>   <dbl>
-    1    318 sugar maple      0.161  0.0105 
-    2    531 American beech   0.155  0.00982
-    3     12 balsam fir       0.143  0.0139 
-    4    316 red maple        0.101  0.00691
-    5     97 red spruce       0.0750 0.00797
-    6    371 yellow birch     0.0708 0.00595
-
-Here, we can see the proportion of each species within the state of
-Vermont for the specific case of growing stock trees. One can imagine
-all types of custom ratios: proportion of trees with defects, static
-mortality proportions, and others.
+The result is the proportion of growing-stock trees in Vermont that are
+balsam fir. The same approach supports other custom ratios, such as the
+proportion of trees with defects or static mortality proportions.

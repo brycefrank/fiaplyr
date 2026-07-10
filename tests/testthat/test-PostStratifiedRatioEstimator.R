@@ -40,7 +40,7 @@ test_that("PostStratifiedRatioEstimator estimates correct ratios", {
   expect_equal(r_sp1_f300, 180, tolerance = 0.01)
 })
 
-test_that("ratio intent can override denominator partitions", {
+test_that("same-scope ratio targets share one plot aggregation", {
   con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
@@ -51,18 +51,15 @@ test_that("ratio intent can override denominator partitions", {
 
   res <- estimate_ratio(
     ratio_est,
-    ratio(
-      tree(VOLCFNET),
-      cond(),
-      den_partitions = list(cond(FORTYPCD))
-    )
+    ratio(tree(volume = VOLCFNET), tree(diameter = DIA))
   ) |>
     dplyr::collect()
 
   expect_true(all(
-    c("SPCD_n", "FORTYPCD_d", "estimate", "se") %in% colnames(res)
+    c("SPCD_n", "SPCD_d", "estimate", "se") %in% colnames(res)
   ))
-  expect_true(nrow(res) > 0)
+  expect_equal(unique(res$var_n), "volume")
+  expect_equal(unique(res$var_d), "diameter")
   expect_true(all(is.finite(res$estimate)))
   expect_true(all(is.finite(res$se)))
 })

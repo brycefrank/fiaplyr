@@ -75,38 +75,34 @@ setMethod(
     spec_num <- intent$numerator
     spec_den <- intent$denominator
 
-    base_handler <- object@handler
-    num_handler <- base_handler
-    den_handler <- .psr_apply_den_partitions(
-      base_handler,
-      intent$den_partitions
-    )
+    handler <- object@handler
 
-    # 1. Parse targets and aggregate plot-level data for each side
+    # 1. Parse targets and aggregate all plot-level values together
     parsed_num <- .parse_target_spec(spec_num, "estimate_ratio")
     parsed_den <- .parse_target_spec(spec_den, "estimate_ratio")
 
-    agg_num <- .psr_aggregate(num_handler, parsed_num)
-    agg_den <- .psr_aggregate(den_handler, parsed_den)
+    aggregates <- .psr_aggregate_pair(handler, parsed_num, parsed_den)
+    agg_num <- aggregates$numerator
+    agg_den <- aggregates$denominator
 
     # 2. Resolve value column names
     vals_num <- .psr_val_cols(parsed_num)
     vals_den <- .psr_val_cols(parsed_den)
 
     # 3. Join strata once for each side - reused by both the variance and covariance pipelines
-    strata_num <- .ps_join_strata(agg_num, num_handler)
-    strata_den <- .ps_join_strata(agg_den, den_handler)
+    strata_num <- .ps_join_strata(agg_num, handler)
+    strata_den <- .ps_join_strata(agg_den, handler)
 
     # 4. Stats pipeline for each side, producing [domain_vars, var, estimate, se]
     stats_num <- strata_num %>%
       .ps_strata_stats(vals_num) %>%
       .ps_eu_stats(vals_num) %>%
-      .ps_pop_stats(num_handler, vals_num)
+      .ps_pop_stats(handler, vals_num)
 
     stats_den <- strata_den %>%
       .ps_strata_stats(vals_den) %>%
       .ps_eu_stats(vals_den) %>%
-      .ps_pop_stats(den_handler, vals_den)
+      .ps_pop_stats(handler, vals_den)
 
     # 5. Covariance pipeline.
     # Build a lookup table mapping each cov column name to its (var_n, var_d) pair.
@@ -122,7 +118,7 @@ setMethod(
     pop_cov <- strata_num %>%
       .ps_strata_cov(strata_den, vals_num, vals_den, cov_cols) %>%
       .ps_eu_cov(cov_cols) %>%
-      .ps_pop_cov(num_handler, cov_cols)
+      .ps_pop_cov(handler, cov_cols)
 
     # Reshape pop_cov to long format lazily using the known lookup. One lazy slice
     # per covariance column is stacked with union_all, avoiding a local pivot and
@@ -256,39 +252,136 @@ setMethod(
 
 # --- PSR internal helpers ---
 
-#' Apply denominator-only partition overrides for ratio intent
+#' Aggregate both sides of a ratio from one handler
 #' @noRd
-.psr_apply_den_partitions <- function(handler, den_partitions) {
-  if (is.null(den_partitions)) {
-    return(handler)
+.psr_aggregate_pair <- function(handler, parsed_num, parsed_den) {
+  if (identical(parsed_num$slot, parsed_den$slot)) {
+    return(.psr_aggregate_same_scope(handler, parsed_num, parsed_den))
   }
 
-  parts <- den_partitions
-  if (is.list(parts) && !is.null(attr(parts, "target_table"))) {
-    parts <- list(parts)
-  }
+  vals_num <- .psr_val_cols(parsed_num)
+  vals_den <- .psr_val_cols(parsed_den)
+  names_num <- paste0(".psr_num_", seq_along(vals_num))
+  names_den <- paste0(".psr_den_", seq_along(vals_den))
+  aggregate_num <- .psr_aggregate(handler, parsed_num)
+  aggregate_den <- .psr_aggregate(handler, parsed_den)
+  domains_num <- setdiff(colnames(aggregate_num), c(.plot_keys, vals_num))
+  domains_den <- setdiff(colnames(aggregate_den), c(.plot_keys, vals_den))
+  shared_domains <- intersect(domains_num, domains_den)
 
-  if (!is.list(parts) || length(parts) == 0) {
-    stop(
-      "`den_partitions` must be NULL, a scoped helper, or a non-empty list of scoped helpers."
-    )
-  }
+  aggregate_num <- aggregate_num %>%
+    dplyr::rename(!!!stats::setNames(rlang::syms(vals_num), names_num))
+  aggregate_den <- aggregate_den %>%
+    dplyr::rename(!!!stats::setNames(rlang::syms(vals_den), names_den))
 
-  is_scoped <- vapply(
-    parts,
-    function(x) {
-      is.list(x) && !is.null(attr(x, "target_table"))
-    },
-    logical(1)
+  aggregate_data <- dplyr::full_join(
+    aggregate_num,
+    aggregate_den,
+    by = c(.plot_keys, shared_domains)
   )
+  aggregate_data <- .psr_compute_aggregate(aggregate_data)
 
-  if (!all(is_scoped)) {
-    stop(
-      "All `den_partitions` entries must be scoped helpers like `cond(...)` or `tree(...)`."
+  numerator <- aggregate_data %>%
+    dplyr::select(dplyr::all_of(c(.plot_keys, domains_num, names_num))) %>%
+    dplyr::distinct() %>%
+    dplyr::rename(!!!stats::setNames(rlang::syms(names_num), vals_num))
+  denominator <- aggregate_data %>%
+    dplyr::select(dplyr::all_of(c(.plot_keys, domains_den, names_den))) %>%
+    dplyr::distinct() %>%
+    dplyr::rename(!!!stats::setNames(rlang::syms(names_den), vals_den))
+
+  list(numerator = numerator, denominator = denominator)
+}
+
+#' Aggregate same-scope ratio targets in one plot-level operation
+#' @noRd
+.psr_aggregate_same_scope <- function(handler, parsed_num, parsed_den) {
+  vals_num <- .psr_val_cols(parsed_num)
+  vals_den <- .psr_val_cols(parsed_den)
+
+  if (parsed_num$slot == "cond") {
+    aggregate_data <- .make_cond_aggregates(
+      handler,
+      adjusted = TRUE,
+      sparse = TRUE
     )
+    aggregate_data <- .psr_compute_aggregate(aggregate_data)
+    domains <- setdiff(colnames(aggregate_data), c(.plot_keys, "prop"))
+
+    numerator <- aggregate_data %>%
+      dplyr::select(dplyr::all_of(c(.plot_keys, domains, "prop"))) %>%
+      dplyr::rename(!!vals_num[[1]] := prop)
+    denominator <- aggregate_data %>%
+      dplyr::select(dplyr::all_of(c(.plot_keys, domains, "prop"))) %>%
+      dplyr::rename(!!vals_den[[1]] := prop)
+
+    return(list(numerator = numerator, denominator = denominator))
   }
 
-  .route_scoped_expressions(handler, parts, operation = "set_domains")
+  quos_num <- .psr_target_quos(parsed_num)
+  quos_den <- .psr_target_quos(parsed_den)
+  names_num <- paste0(".psr_num_", seq_along(quos_num))
+  names_den <- paste0(".psr_den_", seq_along(quos_den))
+  names(quos_num) <- names_num
+  names(quos_den) <- names_den
+  targets <- c(quos_num, quos_den)
+
+  aggregate_data <- if (parsed_num$slot == "tree") {
+    .make_tree_aggregates(
+      handler,
+      !!!targets,
+      adjusted = TRUE,
+      sparse = TRUE
+    )
+  } else if (parsed_num$slot == "tree_history") {
+    .make_tree_history_aggregates(
+      handler,
+      !!!targets,
+      adjusted = TRUE,
+      sparse = TRUE
+    )
+  } else {
+    stop("Unsupported slot: ", parsed_num$slot)
+  }
+  aggregate_data <- .psr_compute_aggregate(aggregate_data)
+
+  internal_names <- c(names_num, names_den)
+  domains <- setdiff(colnames(aggregate_data), c(.plot_keys, internal_names))
+  numerator <- aggregate_data %>%
+    dplyr::select(dplyr::all_of(c(.plot_keys, domains, names_num))) %>%
+    dplyr::rename(!!!stats::setNames(rlang::syms(names_num), vals_num))
+  denominator <- aggregate_data %>%
+    dplyr::select(dplyr::all_of(c(.plot_keys, domains, names_den))) %>%
+    dplyr::rename(!!!stats::setNames(rlang::syms(names_den), vals_den))
+
+  list(numerator = numerator, denominator = denominator)
+}
+
+#' Materialize a plot aggregation for reuse throughout ratio estimation
+#' @noRd
+.psr_compute_aggregate <- function(aggregate_data) {
+  if (!inherits(aggregate_data, "tbl_lazy")) {
+    return(aggregate_data)
+  }
+
+  dplyr::compute(aggregate_data)
+}
+
+#' Resolve aggregation expressions for a parsed ratio target
+#' @noRd
+.psr_target_quos <- function(parsed) {
+  if (
+    length(parsed$targets) == 0 ||
+      (length(parsed$targets) == 1 && parsed$targets == "1")
+  ) {
+    return(list(rlang::quo(1)))
+  }
+
+  if (!is.null(parsed$quosures)) {
+    return(parsed$quosures)
+  }
+
+  rlang::syms(parsed$targets)
 }
 
 #' Aggregate plot-level data for one side of the ratio
