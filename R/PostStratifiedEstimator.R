@@ -201,7 +201,7 @@ setMethod(
     if (!is.null(target_names)) {
       names(estimation_target_quos) <- target_names
     }
-  } else if (length(estimation_target_quos) == 0) {
+  } else if (is.list(estimation_target_quos) && length(estimation_target_quos) == 0) {
     # An empty tree helper requests the implicit tree-count target.
     estimation_target_quos <- list(rlang::quo(1))
     names(estimation_target_quos) <- "tree_count"
