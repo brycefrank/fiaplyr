@@ -4,7 +4,7 @@
 
 ### Added
 
-- Introduced `ratio(num, den)` as a scoped helper for ratio-estimation intent.
+- Introduced `ratio(num, den, den_partitions = NULL)` as a scoped helper for ratio-estimation intent.
 - Added coverage for `estimate(..., ratio(...))` dispatch and ratio-specific option handling in `EvalHandler` tests.
 - Added ratio-estimator tests for denominator partition overrides.
 
