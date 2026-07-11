@@ -76,12 +76,23 @@ setMethod(
     spec_den <- intent$denominator
 
     handler <- object@handler
+    den_handler <- .psr_apply_den_partitions(
+      handler,
+      intent$den_partitions
+    )
 
     # 1. Parse targets and aggregate all plot-level values together
     parsed_num <- .parse_target_spec(spec_num, "estimate_ratio")
     parsed_den <- .parse_target_spec(spec_den, "estimate_ratio")
 
-    aggregates <- .psr_aggregate_pair(handler, parsed_num, parsed_den)
+    aggregates <- if (is.null(intent$den_partitions)) {
+      .psr_aggregate_pair(handler, parsed_num, parsed_den)
+    } else {
+      list(
+        numerator = .psr_aggregate(handler, parsed_num),
+        denominator = .psr_aggregate(den_handler, parsed_den)
+      )
+    }
     agg_num <- aggregates$numerator
     agg_den <- aggregates$denominator
 
@@ -91,7 +102,7 @@ setMethod(
 
     # 3. Join strata once for each side - reused by both the variance and covariance pipelines
     strata_num <- .ps_join_strata(agg_num, handler)
-    strata_den <- .ps_join_strata(agg_den, handler)
+    strata_den <- .ps_join_strata(agg_den, den_handler)
 
     # 4. Stats pipeline for each side, producing [domain_vars, var, estimate, se]
     stats_num <- strata_num %>%
@@ -102,7 +113,7 @@ setMethod(
     stats_den <- strata_den %>%
       .ps_strata_stats(vals_den) %>%
       .ps_eu_stats(vals_den) %>%
-      .ps_pop_stats(handler, vals_den)
+      .ps_pop_stats(den_handler, vals_den)
 
     # 5. Covariance pipeline.
     # Build a lookup table mapping each cov column name to its (var_n, var_d) pair.
@@ -251,6 +262,41 @@ setMethod(
 
 
 # --- PSR internal helpers ---
+
+#' Apply denominator-only partition overrides for ratio intent
+#' @noRd
+.psr_apply_den_partitions <- function(handler, den_partitions) {
+  if (is.null(den_partitions)) {
+    return(handler)
+  }
+
+  parts <- den_partitions
+  if (is.list(parts) && !is.null(attr(parts, "target_table"))) {
+    parts <- list(parts)
+  }
+
+  if (!is.list(parts) || length(parts) == 0) {
+    stop(
+      "`den_partitions` must be NULL, a scoped helper, or a non-empty list of scoped helpers."
+    )
+  }
+
+  is_scoped <- vapply(
+    parts,
+    function(x) {
+      is.list(x) && !is.null(attr(x, "target_table"))
+    },
+    logical(1)
+  )
+
+  if (!all(is_scoped)) {
+    stop(
+      "All `den_partitions` entries must be scoped helpers like `cond(...)` or `tree(...)`."
+    )
+  }
+
+  .route_scoped_expressions(handler, parts, operation = "set_domains")
+}
 
 #' Aggregate both sides of a ratio from one handler
 #' @noRd

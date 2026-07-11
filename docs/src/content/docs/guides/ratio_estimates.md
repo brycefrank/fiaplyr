@@ -13,7 +13,9 @@ numerator estimate by a denominator estimate, making an analysis
 dependent on pairs of variables. In `fiaplyr`, this is accomplished by
 using a function within the `estimate` context called `ratio`, where
 users specify numerator and denominator attributes. Both attributes are
-evaluated from the same handler.
+evaluated from the same handler. The handler's domains apply to the
+numerator and, by default, the denominator. Use `den_partitions` when the
+denominator requires different domain variables.
 
 To illustrate the power of the ratio estimator, we will provide three
 examples:
@@ -131,29 +133,33 @@ are discarded outright.
 ## Proportional Representation of Species
 
 It may be of interest to estimate the proportion a species represents
-within a state. The numerator and denominator use the same handler. For
-example, we can estimate the proportion of growing-stock trees that are
-balsam fir by creating an indicator attribute before forming the ratio.
+within a state. This requires the denominator to omit the species domain
+inherited from the handler, which can be expressed with a denominator
+override.
 
 ``` r
-# First specify a handler for growing stock trees
+# First specify a handler for growing stock trees, partitioned by species
 prop_handler <- handler |>
   subset(tree(TREECLCD == 2)) |>
-  transform(tree(is_balsam_fir = SPCD == 12))
+  partition(tree(SPCD))
 
 prop_ests <- prop_handler |>
   estimate(
     ratio(
-      tree(balsam_fir = is_balsam_fir),
-      tree()
+      tree(),
+      tree(),
+      den_partitions = list(tree())
     )
   )
 
 prop_ests |>
-  select(estimate, se) |>
+  arrange(desc(estimate)) |>
+  left_join(species_labels, by = c("SPCD_n" = "SPCD")) |>
+  select(SPCD_n, COMMON_NAME, estimate, se) |>
   head()
 ```
 
-The result is the proportion of growing-stock trees in Vermont that are
-balsam fir. The same approach supports other custom ratios, such as the
-proportion of trees with defects or static mortality proportions.
+Here, we can see the proportion of each species within the state of
+Vermont for the specific case of growing stock trees. The same approach
+supports other custom ratios, such as the proportion of trees with
+defects or static mortality proportions.

@@ -4,13 +4,16 @@
 \alias{ratio}
 \title{Scoped Helper for Ratio Estimates}
 \usage{
-ratio(num, den)
+ratio(num, den, den_partitions = NULL)
 }
 \arguments{
 \item{num}{A scoped target helper for the numerator, e.g., \code{tree(VOLCFNET)}}
 
 \item{den}{A scoped target helper for the denominator, e.g., \code{cond()}}
 
+\item{den_partitions}{Optional denominator-only domain overrides expressed as
+scoped helpers, either as a single helper (for example \code{cond(FORTYPCD)}) or
+a list of helpers (for example \code{list(cond(FORTYPCD), tree(SPCD))}).}
 }
 \value{
 An object of class \code{fiaplyr_ratio_intent}.
@@ -22,5 +25,6 @@ estimation intent.
 \examples{
 \dontrun{
   handler |> estimate(ratio(tree(VOLCFNET), cond()))
+  handler |> estimate(ratio(tree(VOLCFNET), cond(), den_partitions = list(cond(FORTYPCD))))
 }
 }
