@@ -22,7 +22,8 @@ Imports:
 Suggests:
     duckdb,
     testthat (>= 3.0.0),
-    rvalidator
+    rvalidator,
+    sf
 Remotes:
     brycefrank/rvalidator
 Config/testthat/edition: 3
@@ -38,6 +39,7 @@ Collate:
     'GRMAnalysis.R'
     'grm-macros.R'
     'EvalHandler.R'
+    'WindowHandler.R'
     'Estimator.R'
     'post_stratification.R'
     'PostStratifiedEstimator.R'
