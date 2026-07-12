@@ -128,7 +128,7 @@ temporal_window <- function(years, type = c("measurement", "inventory")) {
     } else if (all(c("LON", "LATITUDE") %in% columns)) {
       c("LON", "LATITUDE")
     } else {
-      stop("Polygon windows require PLOT longitude and latitude columns named LON/LAT.", call. = FALSE)
+      stop("Polygon windows require PLOT longitude and latitude columns named LON/LAT or LON/LATITUDE.", call. = FALSE)
     }
     coords <- plot_qry %>%
       dplyr::select(CN, dplyr::all_of(coord_cols)) %>%
