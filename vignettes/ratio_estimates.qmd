@@ -97,8 +97,7 @@ dhr_ests <- tree_handler |>
 
 # Prepare readable species labels
 species_labels <- handler@tables$ref_species |>
-  select(SPCD, COMMON_NAME) |>
-  collect()
+  select(SPCD, COMMON_NAME)
 
 dhr <- dhr_ests |>
   arrange(desc(estimate)) |>

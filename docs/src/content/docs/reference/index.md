@@ -12,6 +12,7 @@ These pages are generated from `man/*.Rd` during the docs build.
 - [`PostStratifiedRatioEstimator`](./poststratifiedratioestimator)
 - [`aggregate`](./aggregate)
 - [`aggregate_data`](./aggregate_data)
+- [`augment`](./augment)
 - [`cond`](./cond)
 - [`database_backend`](./database_backend)
 - [`database_mapping`](./database_mapping)
