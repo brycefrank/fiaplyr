@@ -92,7 +92,7 @@ temporal_window <- function(years, type = c("measurement", "inventory")) {
   codes
 }
 
-.window_plot_selection <- function(db, window, backend) {
+.window_plot_query <- function(db, window, backend) {
   if (!inherits(window, "fiaplyr_window")) {
     stop("`window` must be created with `spatial_window()` and/or `temporal_window()`.", call. = FALSE)
   }
@@ -139,7 +139,7 @@ temporal_window <- function(years, type = c("measurement", "inventory")) {
     plot_qry <- dplyr::filter(plot_qry, CN %in% !!selected$CN)
   }
 
-  structure(list(plot = plot_qry), class = "fiaplyr_plot_selection")
+  plot_qry
 }
 
 #' Class for Spatiotemporal Window Pipelines
@@ -149,7 +149,7 @@ temporal_window <- function(years, type = c("measurement", "inventory")) {
 setClass(
   "WindowHandler",
   contains = "EvalHandler",
-  slots = list(window = "list")
+  slots = list(window = "ANY")
 )
 
 #' Connect to a Spatiotemporal Window
@@ -169,8 +169,8 @@ window_handler <- function(db, spec = status_analysis(), window, backend = NULL)
   if (is.null(backend)) {
     backend <- database_mapping()
   }
-  selection <- .window_plot_selection(db, window, backend)
-  tables <- initialize_tables(spec, db, selection, backend)
+  selector <- .as_selector(window)
+  tables <- initialize_tables(spec, db, selector, backend)
 
   new(
     "WindowHandler",

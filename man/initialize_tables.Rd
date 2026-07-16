@@ -4,14 +4,14 @@
 \alias{initialize_tables}
 \title{Initialize Tables for an Analysis Spec}
 \usage{
-initialize_tables(spec, db, evalid, backend = NULL)
+initialize_tables(spec, db, selector, backend = NULL)
 }
 \arguments{
 \item{spec}{An AnalysisSpec object.}
 
 \item{db}{A DBIConnection object.}
 
-\item{evalid}{The evaluation ID.}
+\item{selector}{A selection context, typically a numeric EVALID or a Selector.}
 
 \item{backend}{Optional DatabaseMapping for custom schema/table names.}
 }

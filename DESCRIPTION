@@ -35,6 +35,7 @@ Collate:
     'DatabaseMapping.R'
     'BaseHandler.R'
     'AnalysisSpec.R'
+    'Selector.R'
     'StatusAnalysis.R'
     'GRMAnalysis.R'
     'grm-macros.R'

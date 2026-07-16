@@ -12,11 +12,12 @@ setClass("ChangeAnalysis", contains = "AnalysisSpec")
 #'
 #' @param spec An AnalysisSpec object.
 #' @param db A DBIConnection object.
-#' @param evalid The evaluation ID.
+#' @param selector A selection context, typically a numeric EVALID or a Selector.
 #' @param backend Optional DatabaseMapping for custom schema/table names.
 #' @return A list of lazy queries.
 #' @export
-setGeneric("initialize_tables", function(spec, db, evalid, backend = NULL) {
+setGeneric("initialize_tables", function(spec, db, selector, backend = NULL) {
+  selector <- .as_selector(selector)
   standardGeneric("initialize_tables")
 })
 

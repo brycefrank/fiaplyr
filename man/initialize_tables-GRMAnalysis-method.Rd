@@ -4,14 +4,14 @@
 \alias{initialize_tables,GRMAnalysis-method}
 \title{Initialize Tables for GRM Analysis}
 \usage{
-\S4method{initialize_tables}{GRMAnalysis}(spec, db, evalid, backend = NULL)
+\S4method{initialize_tables}{GRMAnalysis}(spec, db, selector, backend = NULL)
 }
 \arguments{
 \item{spec}{A GRMAnalysis object.}
 
 \item{db}{A DBIConnection object.}
 
-\item{evalid}{The evaluation ID.}
+\item{selector}{A selection context, typically a numeric EVALID or a Selector.}
 
 \item{backend}{Optional DatabaseMapping for custom schema/table names.}
 }

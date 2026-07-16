@@ -100,6 +100,45 @@ test_that("EvalHandler filters correctly by evalid", {
   expect_equal(desc, "Test Evaluation")
 })
 
+test_that("initialize_tables accepts selector objects while preserving numeric evalid support", {
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  spec <- status_analysis()
+  numeric_tables <- initialize_tables(spec, con, 1001)
+  selector_tables <- initialize_tables(spec, con, fiaplyr:::.as_selector(1001))
+
+  expect_equal(
+    dplyr::collect(numeric_tables$plot),
+    dplyr::collect(selector_tables$plot)
+  )
+  expect_equal(
+    dplyr::collect(numeric_tables$pop_eval),
+    dplyr::collect(selector_tables$pop_eval)
+  )
+})
+
+test_that("initialize_tables accepts window selectors without conflating them with resolved tables", {
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  spec <- status_analysis()
+
+  DBI::dbExecute(con, "UPDATE PLOT SET STATECD = CASE WHEN CN <= 104 THEN 25 ELSE 44 END")
+  DBI::dbExecute(con, "UPDATE PLOT SET MEASYEAR = CASE WHEN CN <= 104 THEN 2022 ELSE 2026 END")
+
+  window <- spatial_window(states = "MA", counties = 1) &
+    temporal_window(2022, type = "measurement")
+
+  selector <- fiaplyr:::.as_selector(window)
+  expect_s4_class(selector, "WindowSelector")
+  expect_true(inherits(selector@window, "fiaplyr_window"))
+
+  tables <- initialize_tables(spec, con, selector)
+  expect_null(tables$pop_eval)
+  expect_equal(nrow(dplyr::collect(tables$plot)), 4)
+})
+
 test_that("subset(tree()) can use WOODLAND after REF_SPECIES join", {
   con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))

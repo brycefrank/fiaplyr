@@ -18,37 +18,21 @@ status_analysis <- function() {
 #'
 #' @param spec A StatusAnalysis object.
 #' @param db A DBIConnection object.
-#' @param evalid The evaluation ID.
+#' @param selector A selection context, typically a numeric EVALID or a Selector.
 #' @param backend Optional DatabaseMapping for custom schema/table names.
 #' @return A list of lazy queries.
 #' @export
-setMethod("initialize_tables", "StatusAnalysis", function(spec, db, evalid, backend = NULL) {
+setMethod(
+  "initialize_tables",
+  signature = c(spec = "StatusAnalysis", selector = "Selector"),
+  definition = function(spec, db, selector, backend = NULL) {
   if (is.null(backend)) {
     backend <- database_mapping()
   }
 
   tbl_ref <- function(name) get_table_ref(backend, name)
-
-  if (inherits(evalid, "fiaplyr_plot_selection")) {
-    pop_eval_qry <- pop_estn_unit_qry <- pop_stratum_qry <- pop_plot_stratum_assgn_qry <- NULL
-    plot_qry <- dplyr::tbl(db, tbl_ref("PLOT")) %>%
-      dplyr::semi_join(evalid$plot, by = "CN")
-  } else {
-    pop_eval_qry <- dplyr::tbl(db, tbl_ref("POP_EVAL")) %>%
-      dplyr::filter(EVALID == !!evalid)
-
-    pop_estn_unit_qry <- dplyr::tbl(db, tbl_ref("POP_ESTN_UNIT")) %>%
-      dplyr::semi_join(pop_eval_qry, by = c("EVAL_CN" = "CN"))
-
-    pop_stratum_qry <- dplyr::tbl(db, tbl_ref("POP_STRATUM")) %>%
-      dplyr::semi_join(pop_estn_unit_qry, by = c("ESTN_UNIT_CN" = "CN"))
-
-    pop_plot_stratum_assgn_qry <- dplyr::tbl(db, tbl_ref("POP_PLOT_STRATUM_ASSGN")) %>%
-      dplyr::semi_join(pop_stratum_qry, by = c("STRATUM_CN" = "CN"))
-
-    plot_qry <- dplyr::tbl(db, tbl_ref("PLOT")) %>%
-      dplyr::semi_join(pop_plot_stratum_assgn_qry, by = c("CN" = "PLT_CN"))
-  }
+  selection_tables <- resolve_selection_tables(selector, db, backend)
+  plot_qry <- selection_tables$plot
 
   cond_qry <- dplyr::tbl(db, tbl_ref("COND")) %>%
     dplyr::semi_join(plot_qry, by = c("PLT_CN" = "CN"))
@@ -67,17 +51,12 @@ setMethod("initialize_tables", "StatusAnalysis", function(spec, db, evalid, back
     error = function(e) NULL
   )
 
-  list(
-    pop_eval = pop_eval_qry,
-    pop_estn_unit = pop_estn_unit_qry,
-    pop_stratum = pop_stratum_qry,
-    pop_plot_stratum_assgn = pop_plot_stratum_assgn_qry,
-    plot = plot_qry,
+  c(selection_tables, list(
     cond = cond_qry,
     tree = tree_qry,
     ref_species = ref_species_qry,
     subp_cond = subp_cond_qry
-  )
+  ))
 })
 
 #' Aggregate Data for Status Analysis
