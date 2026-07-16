@@ -14,7 +14,7 @@ test_that("fiaplyr agrees with FIADB API for a basic volume estimate", {
     PostStratifiedEstimator() |>
     estimate(tree(VOLCFNET), output = "total")
 
-  fiaplyr_total <- ests$estimate[[1]]
+  fiaplyr_total <- dplyr::pull(ests, estimate)[[1]]
 
   report <- rvalidator::fullreport(
     list(
@@ -46,7 +46,7 @@ test_that("fiaplyr agrees with FIADB API for a GRM mortality total", {
       output = "total"
     )
 
-  fiaplyr_total <- ests$estimate[[1]]
+  fiaplyr_total <- dplyr::pull(ests, estimate)[[1]]
 
   report <- rvalidator::fullreport(
     list(
@@ -78,7 +78,7 @@ test_that("fiaplyr agrees with FIADB API for a GRM ingrowth total", {
       output = "total"
     )
 
-  fiaplyr_total <- ests$estimate[[1]]
+  fiaplyr_total <- dplyr::pull(ests, estimate)[[1]]
 
   report <- rvalidator::fullreport(
     list(
@@ -110,7 +110,7 @@ test_that("fiaplyr agrees with FIADB API for GRM annual removals of sound bole v
       output = "total"
     )
 
-  fiaplyr_total <- ests$estimate[[1]]
+  fiaplyr_total <- dplyr::pull(ests, estimate)[[1]]
 
   report <- rvalidator::fullreport(
     list(
@@ -142,7 +142,7 @@ test_that("fiaplyr agrees with FIADB API for GRM annual reversion stem density",
       output = "total"
     )
 
-  fiaplyr_total <- ests$estimate[[1]]
+  fiaplyr_total <- dplyr::pull(ests, estimate)[[1]]
 
   report <- rvalidator::fullreport(
     list(
@@ -188,7 +188,7 @@ test_that("fiaplyr agrees with FIADB API for GRM annual reversion stem density",
     PostStratifiedEstimator() |>
     estimate(tree_history(!!target_macro), output = "total")
 
-  fiaplyr_total <- ests$estimate[[1]]
+  fiaplyr_total <- dplyr::pull(ests, estimate)[[1]]
 
   report <- rvalidator::fullreport(
     list(

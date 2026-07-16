@@ -17,8 +17,9 @@ As the name suggests, the ratio estimator is formed by dividing a numerator
 estimate by a denominator estimate, making an analysis dependent on pairs of
 variables. In `fiaplyr`, this is accomplished by using a function within the
 `estimate` context called `ratio`, where users specify numerator and denominator
-attributes. Domain specifications are identical across the numerator and
-denominator, unless the user specifies a particular denominator override.
+attributes. Both attributes are evaluated from the same handler.
+The handler's domains apply to the numerator and, by default, the denominator.
+Use `den_partitions` when the denominator requires different domain variables.
 
 To illustrate the power of the ratio estimator, we will provide three examples:
 
@@ -96,8 +97,7 @@ dhr_ests <- tree_handler |>
 
 # Prepare readable species labels
 species_labels <- handler@tables$ref_species |>
-  select(SPCD, COMMON_NAME) |>
-  collect()
+  select(SPCD, COMMON_NAME)
 
 dhr <- dhr_ests |>
   arrange(desc(estimate)) |>
@@ -116,9 +116,8 @@ in some contexts, but not here, so they are discarded outright.
 ## Proportional Representation of Species
 
 It may be of interest to estimate the proportion a species represents within
-a state. This requires an additional feature that allows us to specify the
-domain structure of the denominator. Fortunately, `ratio` allows for denominator
-overrides
+a state. This requires the denominator to omit the species domain inherited
+from the handler, which can be expressed with a denominator override.
 
 ```{r}
 # First specify a handler for growing stock trees, partitioned by species
@@ -143,6 +142,6 @@ prop_ests |>
 ```
 
 Here, we can see the proportion of each species within the state of Vermont for
-the specific case of growing stock trees. One can imagine all types of custom
-ratios: proportion of trees with defects, static mortality proportions, and
-others.
+the specific case of growing stock trees. The same approach supports other
+custom ratios, such as the proportion of trees with defects or static mortality
+proportions.

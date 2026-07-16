@@ -456,7 +456,12 @@ has_alias_for_symbol <- function(aliases, symbol) {
 
 rd_meta <- lapply(rd_files, function(path) {
   base <- tools::file_path_sans_ext(basename(path))
-  aliases <- tryCatch(collect_aliases(path), error = function(e) character())
+  aliases <- tryCatch(
+    collect_aliases(path),
+    error = function(e) {
+      stop("Failed to parse aliases from ", basename(path), ": ", conditionMessage(e), call. = FALSE)
+    }
+  )
   list(path = path, base = base, aliases = aliases)
 })
 
@@ -584,10 +589,11 @@ writeLines(index_lines, file.path(reference_dir, "index.md"))
 message("Built ", file.path(reference_dir, "index.md"))
 
 if (length(missing_functions) || length(missing_classes)) {
-  warning(
+  stop(
     "Some exported topics were not found in man/. Missing functions: ",
     paste(missing_functions, collapse = ", "),
     "; missing classes: ",
-    paste(missing_classes, collapse = ", ")
+    paste(missing_classes, collapse = ", "),
+    call. = FALSE
   )
 }

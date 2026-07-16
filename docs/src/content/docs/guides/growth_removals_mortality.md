@@ -86,7 +86,7 @@ handler@tables$tree_history |>
 ```
 
     # Source:   SQL [?? x 3]
-    # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
+    # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
       DIA_begin DIA_midpt   DIA
           <dbl>     <dbl> <dbl>
     1      11.7     12.6   13.6
@@ -124,7 +124,7 @@ handler@tables$tree_history |>
 ```
 
     # Source:     SQL [?? x 2]
-    # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
+    # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
     # Ordered by: transition
        transition     n
        <chr>      <dbl>
@@ -161,7 +161,8 @@ handler |>
   )
 ```
 
-    # A tibble: 1 × 3
+    # Source:   SQL [?? x 3]
+    # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
       var     estimate       se
       <chr>      <dbl>    <dbl>
     1 mort  101032246. 6741699.
@@ -176,7 +177,8 @@ handler |>
   )
 ```
 
-    # A tibble: 1 × 3
+    # Source:   SQL [?? x 3]
+    # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
       var       estimate       se
       <chr>        <dbl>    <dbl>
     1 ingrowth 31024427. 1391141.
@@ -192,7 +194,8 @@ handler |>
   )
 ```
 
-    # A tibble: 1 × 3
+    # Source:   SQL [?? x 3]
+    # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
       var          estimate        se
       <chr>           <dbl>     <dbl>
     1 net_change 160580318. 20799837.
@@ -216,7 +219,8 @@ handler |>
   )
 ```
 
-    # A tibble: 1 × 4
+    # Source:   SQL [?? x 4]
+    # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
       var_n var_d estimate    se
       <chr> <chr>    <dbl> <dbl>
     1 mort  prop      22.0  1.46
