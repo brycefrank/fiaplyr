@@ -80,6 +80,7 @@ setup_grm_test_db <- function() {
     VOLCFGRS = c(11, 16, 6, 21, 11, 16, 6, 21, 12, 17, 7, 22, 12, 17, 7, 22),
     SPCD = c(1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2),
     PREV_TRE_CN = c(NA_integer_, NA_integer_, NA_integer_, NA_integer_, NA_integer_, NA_integer_, NA_integer_, NA_integer_, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L),
+    REMPER = c(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4),
     TPA_UNADJ = c(6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0),
     STATUSCD = c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
     stringsAsFactors = FALSE
@@ -115,6 +116,8 @@ setup_grm_test_db <- function() {
     STATUSCD = c(1, 1, 1, 1, 1, 1, 1, 1),
     DIA = c(10.5, 12.3, 8.2, 14.5, 10.5, 12.3, 8.2, 14.5),
     HT = c(62, 72, 52, 82, 62, 72, 52, 82),
+    VOLCFNET = c(10.5, 15.5, 5.5, 20.5, 10.5, 15.5, 5.5, 20.5),
+    VOLCFGRS = c(11.5, 16.5, 6.5, 21.5, 11.5, 16.5, 6.5, 21.5),
     stringsAsFactors = FALSE
   ))
 
