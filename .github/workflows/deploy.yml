@@ -35,6 +35,8 @@ jobs:
             any::duckdb
             any::dplyr
             any::pkgload
+            any::knitr
+            any::rmarkdown
             local::.
 
       - name: Setup Quarto
