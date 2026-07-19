@@ -616,6 +616,26 @@ setMethod("aggregate", "EvalHandler", function(handler, ...) {
 #' @describeIn estimate Estimate parameters directly from an EvalHandler
 setMethod(
   "estimate",
+  signature(object = "EvalHandler", estimator = "missing"),
+  function(
+    object,
+    ...,
+    output = "mean",
+    margins = FALSE
+  ) {
+    estimate(
+      object,
+      ...,
+      output = output,
+      margins = margins,
+      estimator = "auto"
+    )
+  }
+)
+
+#' @export
+setMethod(
+  "estimate",
   signature(object = "EvalHandler", estimator = "character"),
   function(
     object,

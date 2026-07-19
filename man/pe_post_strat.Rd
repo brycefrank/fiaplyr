@@ -4,10 +4,10 @@
 \alias{pe_post_strat}
 \title{Configure Post-Stratified Point Estimation}
 \usage{
-pe_post_strat(var_est = ve_taylor())
+pe_post_strat(var_est = "auto")
 }
 \arguments{
-\item{var_est}{A variance-estimator specification.}
+\item{var_est}{A variance-estimator specification, or \code{"auto"}.}
 }
 \value{
 A \code{PostStratifiedEstimator} specification.

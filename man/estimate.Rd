@@ -2,7 +2,9 @@
 % Please edit documentation in R/methods.R, R/EvalHandler.R
 \name{estimate}
 \alias{estimate}
-\alias{estimate,EvalHandler-method}
+\alias{estimate,EvalHandler,missing-method}
+\alias{estimate,EvalHandler,PostStratifiedEstimator-method}
+\alias{estimate,EvalHandler,PostStratifiedRatioEstimator-method}
 \title{Estimate Population Parameters}
 \usage{
 estimate(
@@ -10,7 +12,17 @@ estimate(
   ...,
   output = "mean",
   margins = FALSE,
-  estimator = pe_post_strat()
+  estimator = "auto",
+  var_est = "auto"
+)
+
+\S4method{estimate}{EvalHandler,missing}(
+  object,
+  ...,
+  output = "mean",
+  margins = FALSE,
+  estimator = "auto",
+  var_est = "auto"
 )
 
 \S4method{estimate}{EvalHandler,PostStratifiedEstimator}(
@@ -18,7 +30,17 @@ estimate(
   ...,
   output = "mean",
   margins = FALSE,
-  estimator = pe_post_strat()
+  estimator = pe_post_strat(),
+  var_est = "auto"
+)
+
+\S4method{estimate}{EvalHandler,PostStratifiedRatioEstimator}(
+  object,
+  ...,
+  output = "mean",
+  margins = FALSE,
+  estimator = pe_post_strat_ratio(),
+  var_est = "auto"
 )
 }
 \arguments{
@@ -35,14 +57,35 @@ variables, including the grand total (no domains). Dropped domain columns
 appear as \code{NA} in the output, indicating aggregation over all values of
 that variable. Defaults to \code{FALSE}.}
 
-\item{estimator}{A point-estimator specification. Defaults to
-\code{pe_post_strat()} when \code{object} is an evaluation handler.}
+\item{estimator}{A point-estimator specification, or \code{"auto"} (default) to
+use standard estimator defaults based on the target helper.}
+
+\item{var_est}{A variance-estimator specification, or \code{"auto"} (default) to
+use estimator-specific defaults.}
 }
 \description{
-Estimate Population Parameters
+Estimates of population parameters are produced using the \code{estimate()}
+function, which takes a handler as the first argument, followed by a series
+of scoped helpers specifying the attributes of interest, e.g.,
+\code{tree(VOLCFGRS)} for gross cubic-foot volume. All estimates respect the
+current state of the handler including transformations, subsetting, and
+partitions. Estimates of ratios can be produced using the \code{ratio()} helper,
+e.g., \code{estimate(ratio(tree(VOLCFGRS), tree(BA)))}.
+}
+\details{
+When \code{estimator} is omitted, it is treated as \code{"auto"}. For an
+\code{EvalHandler}, this selects the standard post-stratified estimator for
+ordinary targets and the standard post-stratified ratio estimator for
+\code{ratio()} targets. The \code{"missing"} method shown by
+\code{methods("estimate")} is an internal S4 dispatch method for this omitted
+argument; users do not need to specify \code{estimator = "missing"}.
 }
 \section{Functions}{
 \itemize{
-\item \code{estimate(EvalHandler)}: Estimate parameters directly from an EvalHandler
+\item \code{estimate(object = EvalHandler, estimator = missing)}: Estimate parameters directly from an EvalHandler
+
+\item \code{estimate(object = EvalHandler, estimator = PostStratifiedEstimator)}: Estimate parameters directly from an EvalHandler
+
+\item \code{estimate(object = EvalHandler, estimator = PostStratifiedRatioEstimator)}: Estimate parameters directly from an EvalHandler
 
 }}

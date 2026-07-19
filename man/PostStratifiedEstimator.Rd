@@ -4,12 +4,13 @@
 \alias{PostStratifiedEstimator}
 \title{PostStratifiedEstimator}
 \usage{
-PostStratifiedEstimator(handler = NULL, var_est = ve_taylor())
+PostStratifiedEstimator(handler = NULL, var_est = "auto")
 }
 \arguments{
 \item{handler}{An optional EvalHandler object.}
 
-\item{var_est}{A variance-estimator specification.}
+\item{var_est}{A variance-estimator specification, or \code{"auto"} for the
+default non-ratio post-stratified variance estimator.}
 }
 \description{
 Create an object that can be used to make post-stratified estimates. The

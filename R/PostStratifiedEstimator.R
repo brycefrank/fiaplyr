@@ -53,52 +53,6 @@ pe_post_strat_ratio <- function(var_est = "auto") {
 }
 
 
-#' Show Method for PostStratifiedEstimator
-#'
-#' @param object A PostStratifiedEstimator object.
-#' @export
-setMethod("show", "PostStratifiedEstimator", function(object) {
-  cat("PostStratifiedEstimator\n")
-  cat("-----------------------\n")
-
-  if (is.null(object@handler)) {
-    cat("Variance:        ", class(object@var_est)[[1]], "\n")
-    return(invisible(object))
-  }
-
-  s <- summary(object@handler)
-
-  cat("EVALID:         ", object@handler@evalid, "\n")
-
-  descr_label <- "Description:     "
-  descr_text <- if (is.na(s$eval_descr)) "NA" else s$eval_descr
-  wrapped_descr <- strwrap(descr_text, width = 60, indent = 0, exdent = 0)
-  cat(paste0(descr_label, wrapped_descr[1], "\n"))
-  if (length(wrapped_descr) > 1) {
-    indent_space <- paste(rep(" ", nchar(descr_label)), collapse = "")
-    for (i in 2:length(wrapped_descr)) {
-      cat(paste0(indent_space, wrapped_descr[i], "\n"))
-    }
-  }
-
-  cat("\n")
-
-  n_estn_units <- object@handler@tables$pop_estn_unit %>%
-    dplyr::tally() %>%
-    dplyr::collect() %>%
-    dplyr::pull(n)
-
-  n_strata <- object@handler@tables$pop_stratum %>%
-    dplyr::tally() %>%
-    dplyr::collect() %>%
-    dplyr::pull(n)
-
-  cat("Estn Units:     ", n_estn_units, "\n")
-  cat("Strata:         ", n_strata, "\n")
-  cat("Plots:          ", s$n_plots, "\n")
-})
-
-
 #' Estimate Population Parameters
 #'
 #' @param object A PostStratifiedEstimator object.
@@ -203,7 +157,7 @@ setMethod(
 
     if (inherits(target, "fiaplyr_ratio_intent")) {
       stop(
-        "`ratio(...)` targets require a ratio point estimator. Use `estimator = pe_post_strat_ratio(...)` or `estimator = \"auto\"`.",
+        "A non-ratio estimator requires a ratio point estimator for `ratio(...)` targets. Use `estimator = pe_post_strat_ratio(...)` or `estimator = \"auto\"`.",
         call. = FALSE
       )
     }

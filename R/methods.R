@@ -160,6 +160,14 @@ setGeneric("get_strata_weights", function(handler) {
 
 #' Estimate Population Parameters
 #'
+#' Estimates of population parameters are produced using the `estimate()`
+#' function, which takes a handler as the first argument, followed by a series
+#' of scoped helpers specifying the attributes of interest, e.g.,
+#' `tree(VOLCFGRS)` for gross cubic-foot volume. All estimates respect the
+#' current state of the handler including transformations, subsetting, and
+#' partitions. Estimates of ratios can be produced using the `ratio()` helper,
+#' e.g., `estimate(ratio(tree(VOLCFGRS), tree(BA)))`.
+#'
 #' @param object An estimator object or evaluation handler.
 #' @param ... Exactly one scoped target helper specifying the estimation target.
 #' @param output Output scale, either "mean" (default) or "total".
@@ -173,6 +181,13 @@ setGeneric("get_strata_weights", function(handler) {
 #'   use standard estimator defaults based on the target helper.
 #' @param var_est A variance-estimator specification, or `"auto"` (default) to
 #'   use estimator-specific defaults.
+#' @details
+#' When `estimator` is omitted, it is treated as `"auto"`. For an
+#' `EvalHandler`, this selects the standard post-stratified estimator for
+#' ordinary targets and the standard post-stratified ratio estimator for
+#' `ratio()` targets. The `"missing"` method shown by
+#' `methods("estimate")` is an internal S4 dispatch method for this omitted
+#' argument; users do not need to specify `estimator = "missing"`.
 #' @export
 setGeneric(
   "estimate",

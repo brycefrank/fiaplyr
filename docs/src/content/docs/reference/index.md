@@ -14,7 +14,6 @@ These pages are generated from `man/*.Rd` during the docs build.
 - [`aggregate_data`](./aggregate_data)
 - [`augment`](./augment)
 - [`cond`](./cond)
-- [`database_backend`](./database_backend)
 - [`database_mapping`](./database_mapping)
 - [`estimate`](./estimate)
 - [`estimate_ratio`](./estimate_ratio)
@@ -76,4 +75,3 @@ These pages are generated from `man/*.Rd` during the docs build.
 - [`GRMAnalysis`](./grmanalysis-class)
 - [`PostStratifiedRatioEstimator`](./poststratifiedratioestimator-class)
 - [`StatusAnalysis`](./statusanalysis-class)
-
