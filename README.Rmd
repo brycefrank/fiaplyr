@@ -25,9 +25,13 @@ facilitates complex database operations while maintaining a concise syntax.
 Estimation and other statistical objectives can be formed in a few lines of
 code.
 
-<div align="center">
 <img src="inst/readme_1.png" width="500" alt="fiaplyr workflow overview">
-</div>
+
+The verbs `subset`, `partition`, `transform`, `estimate`, and `aggregate` are
+the main tools, allowing users to retain only the data they need, form domains,
+create new variables, and produce estimates and plot-level values, respectively.
+The combination and interaction of these verbs creates a flexible self-documenting
+framework for working with FIA data.
 
 ## Installation
 
