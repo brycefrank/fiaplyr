@@ -2,11 +2,10 @@
 output: github_document
 ---
 
-# fiaplyr <img src="inst/logo.png" align="right" height="200" />
-
+# fiaplyr <picture><img src="inst/logo.png" alt="fiaplyr logo" height="210" align="right"></picture>
 <!-- badges: start -->
+[![R-CMD-check](https://github.com/brycefrank/fiaplyr/actions/workflows/R-CMD-check.yml/badge.svg)](https://github.com/brycefrank/fiaplyr/actions/workflows/R-CMD-check.yml) [![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](https://github.com/brycefrank/fiaplyr) [![Documentation](https://img.shields.io/badge/docs-brycefrank.com%2Ffiaplyr-blue.svg)](https://brycefrank.com/fiaplyr)
 <!-- badges: end -->
-
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
@@ -18,15 +17,20 @@ knitr::opts_chunk$set(
 ```
 
 `fiaplyr` provides a modern, `dplyr`-inspired interface for working with Forest
-Inventory and Analysis (FIA) databases. With `fiaplyr`, you can chain together
-operations to compute plot-level values, modify variables, specify domains,
-and produce estimates. In sum, the package is a flexible tool allowing for a
-broad range of analyses, but does not enforce any guardrails like EVALIDator or
-other tools. Hence, some degree of exposure to FIA data and methods is
-recommended before using `fiaplyr` for analysis.
+Inventory and Analysis (FIA) databases. Users interact with a `handler`, which
+facilitates complex database operations while maintaining a concise syntax.
+Estimation and other statistical objectives can be formed in a few lines of
+code.
 
-`fiaplyr` is currently in early development, and all outputs should be treated
-as experimental.
+<br clear="all">
+
+<img src="inst/readme_1.png" width="500" alt="fiaplyr workflow overview">
+
+The verbs `subset`, `partition`, `transform`, `estimate`, and `aggregate` are
+the main tools, allowing users to retain only the data they need, form domains,
+create new variables, and produce estimates and plot-level values, respectively.
+The interaction of these verbs creates a flexible self-documenting framework for
+working with FIA data.
 
 ## Installation
 
@@ -200,6 +204,18 @@ The `estimate` method uses the same syntax as `aggregate`, but instead of
 producing plot-level values, it produces estimates of the specified variable
 for the area specified by the evaluation.
 
+The default estimator is post-stratification with Taylor variance estimation.
+It can be selected explicitly when a workflow needs to make the point- and
+variance-estimator choices visible:
+
+```{r eval=FALSE}
+ba_est <- ba_handler |>
+  estimate(
+    tree(ba = BA),
+    estimator = pe_post_strat(var_est = ve_taylor())
+  )
+```
+
 Recall our desire to estimate basal area, this is now straightforward.
 
 ```{r}
@@ -260,4 +276,3 @@ Here, estimates are divided by the forested proportion of the state, and the
 first row is interpreted as: the mean basal area per acre on forested land for
 `SPCD = 318` is 24.1 ft²/acre, with a standard error of 1.01 ft²/acre across the
 state of Vermont.
-

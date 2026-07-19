@@ -1,8 +1,10 @@
 Package: fiaplyr
 Title: Interface to FIA Databases with 'dbplyr'
-Version: 0.2.1
+Version: 0.3.0
 Authors@R:
-    person("Bryce", "Frank", , "bfrank70@gmail.com", role = c("aut", "cre"))
+    person("Bryce", "Frank", email = "bfrank70@gmail.com", role = c("aut", "cre"))
+Author: Bryce Frank [aut, cre]
+Maintainer: Bryce Frank <bfrank70@gmail.com>
 Description: Provides a dplyr-style interface for subsetting, transforming, and
     aggregating Forest Inventory and Analysis (FIA) data.
 License: MIT + file LICENSE
@@ -16,6 +18,7 @@ Imports:
     dplyr,
     dbplyr,
     DBI,
+    purrr,
     tidyr,
     rlang,
     lifecycle

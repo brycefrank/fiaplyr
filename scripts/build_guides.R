@@ -5,8 +5,16 @@ if (!length(script_arg)) {
   stop("Unable to determine script path from commandArgs().")
 }
 
-script_path <- normalizePath(sub("^--file=", "", script_arg[1]), winslash = "/", mustWork = TRUE)
-project_root <- normalizePath(file.path(dirname(script_path), ".."), winslash = "/", mustWork = TRUE)
+script_path <- normalizePath(
+  sub("^--file=", "", script_arg[1]),
+  winslash = "/",
+  mustWork = TRUE
+)
+project_root <- normalizePath(
+  file.path(dirname(script_path), ".."),
+  winslash = "/",
+  mustWork = TRUE
+)
 vignette_dir <- file.path(project_root, "vignettes")
 guide_dir <- file.path(project_root, "docs", "src", "content", "docs", "guides")
 
@@ -47,13 +55,21 @@ extract_title <- function(path) {
   parts <- split_frontmatter(lines)
 
   if (!length(parts$frontmatter)) {
-    return(tools::toTitleCase(gsub("_", " ", tools::file_path_sans_ext(basename(path)))))
+    return(tools::toTitleCase(gsub(
+      "_",
+      " ",
+      tools::file_path_sans_ext(basename(path))
+    )))
   }
 
   title_line <- grep("^title\\s*:", parts$frontmatter, value = TRUE)
 
   if (!length(title_line)) {
-    return(tools::toTitleCase(gsub("_", " ", tools::file_path_sans_ext(basename(path)))))
+    return(tools::toTitleCase(gsub(
+      "_",
+      " ",
+      tools::file_path_sans_ext(basename(path))
+    )))
   }
 
   title <- sub("^title\\s*:\\s*", "", title_line[1])
@@ -69,7 +85,12 @@ rewrite_links <- function(lines) {
 }
 
 rewrite_chunk_fences <- function(lines) {
-  lines <- gsub("^```\\{([[:alnum:]_+-]+)[^}]*\\}$", "```\\1", lines, perl = TRUE)
+  lines <- gsub(
+    "^```\\{([[:alnum:]_+-]+)[^}]*\\}$",
+    "```\\1",
+    lines,
+    perl = TRUE
+  )
   lines <- gsub("^```\\{[^}]*\\}$", "```", lines, perl = TRUE)
   lines
 }
@@ -103,24 +124,6 @@ trim_leading_blank_lines <- function(lines) {
   lines
 }
 
-build_from_source <- function(input, title, output_path) {
-  lines <- readLines(input, warn = FALSE)
-  parts <- split_frontmatter(lines)
-  body <- trim_leading_blank_lines(parts$body)
-  body <- rewrite_chunk_fences(body)
-  body <- rewrite_links(body)
-
-  final <- c(
-    "---",
-    paste0('title: "', title, '"'),
-    "---",
-    "",
-    body
-  )
-
-  writeLines(final, output_path)
-}
-
 build_with_quarto <- function(input, title, output_path) {
   output_name <- paste0(tools::file_path_sans_ext(basename(input)), ".md")
   rendered_path <- file.path(dirname(input), output_name)
@@ -144,7 +147,8 @@ build_with_quarto <- function(input, title, output_path) {
   args <- c(
     "render",
     input,
-    "--to", "gfm"
+    "--to",
+    "gfm"
   )
 
   render_output <- system2(
@@ -157,19 +161,21 @@ build_with_quarto <- function(input, title, output_path) {
 
   status <- attr(render_output, "status")
   if (!is.null(status) && status != 0) {
-    warning(
-      "Failed to render ", basename(input), " with Quarto; falling back to source conversion.\n",
+    stop(
+      "Failed to render ",
+      basename(input),
+      " with Quarto.\n",
       paste(render_output, collapse = "\n")
     )
-    return(FALSE)
   }
 
   if (!file.exists(rendered_path)) {
-    warning(
-      "Quarto did not produce expected output file for ", basename(input),
-      "; falling back to source conversion. Expected: ", rendered_path
+    stop(
+      "Quarto did not produce expected output file for ",
+      basename(input),
+      ". Expected: ",
+      rendered_path
     )
-    return(FALSE)
   }
 
   if (dir.exists(rendered_assets)) {
@@ -196,7 +202,6 @@ build_with_quarto <- function(input, title, output_path) {
   if (dir.exists(rendered_assets)) {
     unlink(rendered_assets, recursive = TRUE, force = TRUE)
   }
-  TRUE
 }
 
 build_one <- function(input) {
@@ -204,11 +209,7 @@ build_one <- function(input) {
   output_path <- file.path(guide_dir, output_name)
   title <- extract_title(input)
 
-  rendered <- build_with_quarto(input, title, output_path)
-
-  if (!rendered) {
-    build_from_source(input, title, output_path)
-  }
+  build_with_quarto(input, title, output_path)
 
   message("Built ", output_path)
 }
@@ -230,12 +231,18 @@ build_readme_if_possible <- function() {
   readme_rmd_path <- file.path(project_root, "README.Rmd")
 
   if (!file.exists(readme_rmd_path)) {
-    warning("README.Rmd not found at ", readme_rmd_path, "; skipping README rebuild")
+    warning(
+      "README.Rmd not found at ",
+      readme_rmd_path,
+      "; skipping README rebuild"
+    )
     return(invisible(NULL))
   }
 
   if (!requireNamespace("devtools", quietly = TRUE)) {
-    warning("Package 'devtools' not installed; skipping README rebuild from README.Rmd")
+    warning(
+      "Package 'devtools' not installed; skipping README rebuild from README.Rmd"
+    )
     return(invisible(NULL))
   }
 
@@ -251,7 +258,11 @@ build_getting_started_from_readme <- function() {
   output_path <- file.path(guide_dir, "getting_started.md")
 
   if (!file.exists(readme_path)) {
-    warning("README.md not found at ", readme_path, "; skipping getting_started sync")
+    warning(
+      "README.md not found at ",
+      readme_path,
+      "; skipping getting_started sync"
+    )
     return(invisible(NULL))
   }
 

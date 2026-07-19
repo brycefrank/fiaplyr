@@ -26,6 +26,6 @@ A lazy query with strata weights.
 
 ## Additional Details
 
-Methods (by class)
+Functions
 
 `get_strata_weights(EvalHandler)`: Get strata weights for EvalHandler

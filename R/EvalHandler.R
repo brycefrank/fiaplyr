@@ -616,8 +616,86 @@ setMethod("aggregate", "EvalHandler", function(handler, ...) {
 #' @describeIn estimate Estimate parameters directly from an EvalHandler
 setMethod(
   "estimate",
-  "EvalHandler",
-  function(object, ..., output = "mean", margins = FALSE) {
+  signature(object = "EvalHandler", estimator = "missing"),
+  function(
+    object,
+    ...,
+    output = "mean",
+    margins = FALSE
+  ) {
+    estimate(
+      object,
+      ...,
+      output = output,
+      margins = margins,
+      estimator = "auto"
+    )
+  }
+)
+
+#' @export
+setMethod(
+  "estimate",
+  signature(object = "EvalHandler", estimator = "character"),
+  function(
+    object,
+    ...,
+    output = "mean",
+    margins = FALSE,
+    estimator = "auto",
+    var_est = "auto"
+  ) {
+    args <- list(...)
+
+    if (length(args) == 0) {
+      stop(
+        "Must provide at least one target helper, such as `tree(VOLCFNET)`, `cond()`, or `ratio(...)`."
+      )
+    }
+
+    if (!identical(estimator, "auto")) {
+      stop("`estimator` must be an estimator object or the string `\"auto\"`.", call. = FALSE)
+    }
+
+    first <- args[[1]]
+    resolved_estimator <- if (inherits(first, "fiaplyr_ratio_intent")) {
+      pe_post_strat_ratio(var_est = var_est)
+    } else {
+      pe_post_strat(var_est = var_est)
+    }
+
+    do.call(
+      estimate,
+      c(
+        list(object = object),
+        args,
+        list(
+          output = output,
+          margins = margins,
+          estimator = resolved_estimator,
+          var_est = "auto"
+        )
+      )
+    )
+  }
+)
+
+#' @describeIn estimate Estimate parameters directly from an EvalHandler
+setMethod(
+  "estimate",
+  signature(object = "EvalHandler", estimator = "PostStratifiedEstimator"),
+  function(
+    object,
+    ...,
+    output = "mean",
+    margins = FALSE,
+    estimator = pe_post_strat(),
+    var_est = "auto"
+  ) {
+    if (!identical(var_est, "auto")) {
+      stop("`var_est` can only be supplied when `estimator = \"auto\"`.", call. = FALSE)
+    }
+
     args <- list(...)
 
     if (length(args) == 0) {
@@ -628,39 +706,72 @@ setMethod(
 
     first <- args[[1]]
 
-    if (inherits(first, "fiaplyr_ratio_intent")) {
-      if (is.null(first$numerator) || is.null(first$denominator)) {
-        stop(
-          "`ratio()` must include both numerator and denominator target helpers."
-        )
-      }
+    extra_args <- if (length(args) > 1) args[-1] else list()
+    do.call(
+      .estimate_composed,
+      c(
+        list(
+          point_estimator = estimator,
+          variance_estimator = estimator@var_est,
+          handler = object,
+          target = first
+        ),
+        extra_args,
+        list(output = output, margins = margins)
+      )
+    )
+  }
+)
 
-      if (!identical(output, "mean") || !identical(margins, FALSE)) {
-        stop(
-          "`output` and `margins` are not supported with `ratio(...)`. Use `estimate_ratio()` options instead."
-        )
-      }
-
-      ratio_est <- PostStratifiedRatioEstimator(object)
-      extra_args <- if (length(args) > 1) args[-1] else list()
-
-      return(do.call(
-        estimate_ratio,
-        c(
-          list(object = ratio_est, intent = first),
-          extra_args
-        )
-      ))
+#' @describeIn estimate Estimate parameters directly from an EvalHandler
+setMethod(
+  "estimate",
+  signature(object = "EvalHandler", estimator = "PostStratifiedRatioEstimator"),
+  function(
+    object,
+    ...,
+    output = "mean",
+    margins = FALSE,
+    estimator = pe_post_strat_ratio(),
+    var_est = "auto"
+  ) {
+    if (!identical(var_est, "auto")) {
+      stop("`var_est` can only be supplied when `estimator = \"auto\"`.", call. = FALSE)
     }
 
-    est <- PostStratifiedEstimator(object)
+    args <- list(...)
+    if (length(args) == 0) {
+      stop(
+        "Must provide at least one target helper, such as `tree(VOLCFNET)`, `cond()`, or `ratio(...)`."
+      )
+    }
+
+    first <- args[[1]]
+    if (!inherits(first, "fiaplyr_ratio_intent")) {
+      stop(
+        "`PostStratifiedRatioEstimator` requires a `ratio(...)` target.",
+        call. = FALSE
+      )
+    }
+
+    if (!identical(output, "mean") || !identical(margins, FALSE)) {
+      stop(
+        "`output` and `margins` are not supported with `ratio(...)`. Use `estimate_ratio()` options instead.",
+        call. = FALSE
+      )
+    }
+
+    extra_args <- if (length(args) > 1) args[-1] else list()
+    bound_ratio_est <- PostStratifiedRatioEstimator(
+      handler = object,
+      var_est = estimator@var_est
+    )
 
     do.call(
-      estimate,
+      estimate_ratio,
       c(
-        list(object = est),
-        args,
-        list(output = output, margins = margins)
+        list(object = bound_ratio_est, intent = first),
+        extra_args
       )
     )
   }

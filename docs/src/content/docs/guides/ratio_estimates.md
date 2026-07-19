@@ -12,9 +12,10 @@ As the name suggests, the ratio estimator is formed by dividing a
 numerator estimate by a denominator estimate, making an analysis
 dependent on pairs of variables. In `fiaplyr`, this is accomplished by
 using a function within the `estimate` context called `ratio`, where
-users specify numerator and denominator attributes. Domain
-specifications are identical across the numerator and denominator,
-unless the user specifies a particular denominator override.
+users specify numerator and denominator attributes. Both attributes are
+evaluated from the same handler. The handler’s domains apply to the
+numerator and, by default, the denominator. Use `den_partitions` when
+the denominator requires different domain variables.
 
 To illustrate the power of the ratio estimator, we will provide three
 examples:
@@ -64,7 +65,8 @@ handler |>
   )
 ```
 
-    # A tibble: 1 × 4
+    # Source:   SQL [?? x 4]
+    # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
       var_n    var_d estimate    se
       <chr>    <chr>    <dbl> <dbl>
     1 VOLCFNET prop     1808.  41.9
@@ -101,8 +103,7 @@ dhr_ests <- tree_handler |>
 
 # Prepare readable species labels
 species_labels <- handler@tables$ref_species |>
-  select(SPCD, COMMON_NAME) |>
-  collect()
+  select(SPCD, COMMON_NAME)
 
 dhr <- dhr_ests |>
   arrange(desc(estimate)) |>
@@ -112,15 +113,17 @@ dhr <- dhr_ests |>
 head(dhr)
 ```
 
-    # A tibble: 6 × 7
+    # Source:     SQL [?? x 7]
+    # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
+    # Ordered by: desc(estimate)
       SPCD_n SPCD_d var_n var_d estimate          se COMMON_NAME      
        <dbl>  <dbl> <chr> <chr>    <dbl>       <dbl> <chr>            
-    1     71     71 HT    DIA       6.93 0.000000139 tamarack         
-    2    125    125 HT    DIA       6.91 0.282       red pine         
-    3    901    901 HT    DIA       6.73 0.000000147 black locust     
-    4    402    402 HT    DIA       6.69 0.487       bitternut hickory
-    5    379    379 HT    DIA       6.24 0.779       gray birch       
-    6    743    743 HT    DIA       6.20 0.289       bigtooth aspen   
+    1    823    823 HT    DIA       6    0.000000101 bur oak          
+    2    832    832 HT    DIA       4.59 0.135       chestnut oak     
+    3    833    833 HT    DIA       5.24 0.164       northern red oak 
+    4    901    901 HT    DIA       6.73 0.000000147 black locust     
+    5    951    951 HT    DIA       5.65 0.185       American basswood
+    6    972    972 HT    DIA       5.91 0.245       American elm     
 
 Notice that we filtered the ratio estimates to only include those where
 the species matched between the numerator and denominator. This is
@@ -132,9 +135,9 @@ are discarded outright.
 ## Proportional Representation of Species
 
 It may be of interest to estimate the proportion a species represents
-within a state. This requires an additional feature that allows us to
-specify the domain structure of the denominator. Fortunately, `ratio`
-allows for denominator overrides
+within a state. This requires the denominator to omit the species domain
+inherited from the handler, which can be expressed with a denominator
+override.
 
 ``` r
 # First specify a handler for growing stock trees, partitioned by species
@@ -158,17 +161,19 @@ prop_ests |>
   head()
 ```
 
-    # A tibble: 6 × 4
-      SPCD_n COMMON_NAME    estimate      se
-       <dbl> <chr>             <dbl>   <dbl>
-    1    318 sugar maple      0.161  0.0105 
-    2    531 American beech   0.155  0.00982
-    3     12 balsam fir       0.143  0.0139 
-    4    316 red maple        0.101  0.00691
-    5     97 red spruce       0.0750 0.00797
-    6    371 yellow birch     0.0708 0.00595
+    # Source:     SQL [?? x 4]
+    # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
+    # Ordered by: desc(estimate)
+      SPCD_n COMMON_NAME        estimate        se
+       <dbl> <chr>                 <dbl>     <dbl>
+    1    823 bur oak           0.0000304 0.0000333
+    2    832 chestnut oak      0.000160  0.000113 
+    3    833 northern red oak  0.00879   0.00157  
+    4    837 black oak         0.0000180 0.0000176
+    5    901 black locust      0.000124  0.000131 
+    6    951 American basswood 0.00223   0.000982 
 
 Here, we can see the proportion of each species within the state of
-Vermont for the specific case of growing stock trees. One can imagine
-all types of custom ratios: proportion of trees with defects, static
-mortality proportions, and others.
+Vermont for the specific case of growing stock trees. The same approach
+supports other custom ratios, such as the proportion of trees with
+defects or static mortality proportions.

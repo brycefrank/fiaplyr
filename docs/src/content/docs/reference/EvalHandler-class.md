@@ -37,6 +37,14 @@ Slots
 
 `tree_history_filters`Pending tree-history-level filter quosures.
 
+`plot_augmentations`Pending plot-level external-data join specs.
+
+`tree_augmentations`Pending tree-level external-data join specs.
+
+`cond_augmentations`Pending condition-level external-data join specs.
+
+`tree_history_augmentations`Pending tree-history-level external-data join specs.
+
 `tables`A list of lazy queries for the tables.
 
 `spec`The AnalysisSpec used.

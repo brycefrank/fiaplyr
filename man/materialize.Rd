@@ -21,7 +21,7 @@ A lazy query for the requested table.
 Render the prepared table for a specific slot after any pending subsets,
 transformations, and domain settings have been applied.
 }
-\section{Methods (by class)}{
+\section{Functions}{
 \itemize{
 \item \code{materialize(EvalHandler)}: Materialize a prepared table for EvalHandler
 

@@ -2,65 +2,55 @@ setClass(
   "PostStratifiedEstimator",
   contains = "Estimator",
   slots = list(
-    strata_weights = "ANY"
+    strata_weights = "ANY",
+    var_est = "VarianceEstimator"
   )
 )
 
 #' PostStratifiedEstimator
 #'
 #' Create an object that can be used to make post-stratified estimates. The
-#' estimator is initialized with an `EvalHandler` that defines the evaluation.
+#' estimator can be initialized with an `EvalHandler` that defines the
+#' evaluation, or used as an unbound specification via `pe_post_strat()`.
 #'
-#' @param handler A EvalHandler object.
+#' @param handler An optional EvalHandler object.
+#' @param var_est A variance-estimator specification, or `"auto"` for the
+#'   default non-ratio post-stratified variance estimator.
 #' @export
-PostStratifiedEstimator <- function(handler) {
+PostStratifiedEstimator <- function(handler = NULL, var_est = "auto") {
+  var_est <- .resolve_post_strat_var_est(var_est = var_est, context = "non_ratio")
+
   new(
     "PostStratifiedEstimator",
     handler = handler,
-    strata_weights = get_strata_weights(handler)
+    strata_weights = if (is.null(handler)) NULL else get_strata_weights(handler),
+    var_est = var_est
   )
 }
 
-
-#' Show Method for PostStratifiedEstimator
+#' Configure Post-Stratified Point Estimation
 #'
-#' @param object A PostStratifiedEstimator object.
+#' Creates an estimator specification for use with
+#' `estimate(handler, target, estimator = pe_post_strat())`.
+#'
+#' @param var_est A variance-estimator specification, or `"auto"`.
+#' @return A `PostStratifiedEstimator` specification.
 #' @export
-setMethod("show", "PostStratifiedEstimator", function(object) {
-  cat("PostStratifiedEstimator\n")
-  cat("-----------------------\n")
+pe_post_strat <- function(var_est = "auto") {
+  PostStratifiedEstimator(var_est = var_est)
+}
 
-  s <- summary(object@handler)
-
-  cat("EVALID:         ", object@handler@evalid, "\n")
-
-  descr_label <- "Description:     "
-  descr_text <- if (is.na(s$eval_descr)) "NA" else s$eval_descr
-  wrapped_descr <- strwrap(descr_text, width = 60, indent = 0, exdent = 0)
-  cat(paste0(descr_label, wrapped_descr[1], "\n"))
-  if (length(wrapped_descr) > 1) {
-    indent_space <- paste(rep(" ", nchar(descr_label)), collapse = "")
-    for (i in 2:length(wrapped_descr)) {
-      cat(paste0(indent_space, wrapped_descr[i], "\n"))
-    }
-  }
-
-  cat("\n")
-
-  n_estn_units <- object@handler@tables$pop_estn_unit %>%
-    dplyr::tally() %>%
-    dplyr::collect() %>%
-    dplyr::pull(n)
-
-  n_strata <- object@handler@tables$pop_stratum %>%
-    dplyr::tally() %>%
-    dplyr::collect() %>%
-    dplyr::pull(n)
-
-  cat("Estn Units:     ", n_estn_units, "\n")
-  cat("Strata:         ", n_strata, "\n")
-  cat("Plots:          ", s$n_plots, "\n")
-})
+#' Configure Post-Stratified Ratio Point Estimation
+#'
+#' Creates a ratio-estimator specification for use with
+#' `estimate(handler, ratio(...), estimator = pe_post_strat_ratio())`.
+#'
+#' @param var_est A variance-estimator specification, or `"auto"`.
+#' @return A `PostStratifiedRatioEstimator` specification.
+#' @export
+pe_post_strat_ratio <- function(var_est = "auto") {
+  PostStratifiedRatioEstimator(var_est = var_est)
+}
 
 
 #' Estimate Population Parameters
@@ -74,12 +64,27 @@ setMethod("show", "PostStratifiedEstimator", function(object) {
 #'   strict subset of the active domain variables (including the grand total
 #'   with no domains). Dropped domain columns appear as `NA`. Defaults to
 #'   `FALSE`.
+#' @param estimator Unused for a bound estimator object.
 #' @return A dataframe with estimates.
 #' @export
 setMethod(
   "estimate",
   "PostStratifiedEstimator",
-  function(object, ..., output = "mean", margins = FALSE) {
+  function(
+    object,
+    ...,
+    output = "mean",
+    margins = FALSE,
+    estimator = pe_post_strat(),
+    var_est = "auto"
+  ) {
+    if (is.null(object@handler)) {
+      stop(
+        "This estimator is not bound to a handler. Pass it as `estimate(handler, target, estimator = this_estimator)`.",
+        call. = FALSE
+      )
+    }
+
     args <- list(...)
     if (length(args) != 1) {
       stop(
@@ -130,6 +135,46 @@ setMethod(
     } else {
       stop("Unsupported slot: ", slot_name)
     }
+  }
+)
+
+setMethod(
+  ".estimate_composed",
+  signature(
+    point_estimator = "PostStratifiedEstimator",
+    variance_estimator = "PostStratifiedVarianceEstimator"
+  ),
+  function(
+    point_estimator,
+    variance_estimator,
+    handler,
+    target,
+    ...,
+    output = "mean",
+    margins = FALSE
+  ) {
+    extra_args <- list(...)
+
+    if (inherits(target, "fiaplyr_ratio_intent")) {
+      stop(
+        "A non-ratio estimator requires a ratio point estimator for `ratio(...)` targets. Use `estimator = pe_post_strat_ratio(...)` or `estimator = \"auto\"`.",
+        call. = FALSE
+      )
+    }
+
+    bound_estimator <- PostStratifiedEstimator(
+      handler,
+      var_est = variance_estimator
+    )
+    do.call(
+      estimate,
+      c(
+        list(object = bound_estimator),
+        list(target),
+        extra_args,
+        list(output = output, margins = margins)
+      )
+    )
   }
 )
 

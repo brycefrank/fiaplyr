@@ -20,7 +20,9 @@ Expressions must be wrapped in scoping helpers (\code{tree()}, \code{cond()}, et
 specify their target table.
 }
 \examples{
+\dontrun{
 # Add a basal area column to the tree table
 handler |>
   transform(tree(BA = 0.005454 * DIA^2))
+}
 }

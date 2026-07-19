@@ -18,7 +18,7 @@ A lazy query with strata weights.
 \description{
 Get Strata Weights
 }
-\section{Methods (by class)}{
+\section{Functions}{
 \itemize{
 \item \code{get_strata_weights(EvalHandler)}: Get strata weights for EvalHandler
 
