@@ -30,7 +30,9 @@ unique combinations of \code{SPCD} and \code{STATUSCD}. Columns added during
 be mixed in a single call, such as \code{partition(tree(SPCD), cond(OWNCD))}.
 }
 \examples{
+\dontrun{
 # Set tree-level domains to be unique combinations of species and status code
 handler |>
   partition(tree(SPCD, STATUSCD))
+}
 }

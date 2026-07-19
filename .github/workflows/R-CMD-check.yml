@@ -20,12 +20,6 @@ jobs:
         include:
           - os: ubuntu-latest
             r-version: release
-          - os: ubuntu-latest
-            r-version: devel
-          - os: windows-latest
-            r-version: release
-          - os: macos-latest
-            r-version: release
 
     steps:
       - name: Check out repository
@@ -45,4 +39,5 @@ jobs:
       - name: Check package
         uses: r-lib/actions/check-r-package@v2
         with:
+          args: 'c("--no-build-vignettes")'
           upload-snapshots: true

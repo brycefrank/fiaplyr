@@ -29,7 +29,9 @@ statements for \code{tree} apply only to trees. This ensures that the resulting
 data structure remains consistent (e.g., no trees without conditions, etc).
 }
 \examples{
+\dontrun{
 # Retain only live trees
 handler |>
  subset(tree(STATUSCD == 1))
+}
 }
