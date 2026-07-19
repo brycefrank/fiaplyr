@@ -5,6 +5,7 @@ output: github_document
 # fiaplyr <img src="inst/logo.png" align="right" height="200" />
 
 <!-- badges: start -->
+[![R-CMD-check](https://github.com/brycefrank/fiaplyr/actions/workflows/R-CMD-check.yml/badge.svg)](https://github.com/brycefrank/fiaplyr/actions/workflows/R-CMD-check.yml)
 <!-- badges: end -->
 
 
