@@ -2,13 +2,10 @@
 output: github_document
 ---
 
-# fiaplyr <img src="inst/logo.png" align="right" height="200" />
-
+# fiaplyr <picture><img src="inst/logo.png" alt="fiaplyr logo" height="210" align="right"></picture>
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/brycefrank/fiaplyr/actions/workflows/R-CMD-check.yml/badge.svg)](https://github.com/brycefrank/fiaplyr/actions/workflows/R-CMD-check.yml) [![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](https://github.com/brycefrank/fiaplyr) [![Documentation](https://img.shields.io/badge/docs-brycefrank.com%2Ffiaplyr-blue.svg)](https://brycefrank.com/fiaplyr)
 <!-- badges: end -->
-
-<br clear="all">
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
@@ -25,13 +22,15 @@ facilitates complex database operations while maintaining a concise syntax.
 Estimation and other statistical objectives can be formed in a few lines of
 code.
 
+<br clear="all">
+
 <img src="inst/readme_1.png" width="500" alt="fiaplyr workflow overview">
 
 The verbs `subset`, `partition`, `transform`, `estimate`, and `aggregate` are
 the main tools, allowing users to retain only the data they need, form domains,
 create new variables, and produce estimates and plot-level values, respectively.
-The combination and interaction of these verbs creates a flexible self-documenting
-framework for working with FIA data.
+The interaction of these verbs creates a flexible self-documenting framework for
+working with FIA data.
 
 ## Installation
 
