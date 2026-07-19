@@ -10,9 +10,11 @@
 #' @export
 #'
 #' @examples
+#' \dontrun{
 #' # Aggregate gross volume to the plot level
 #' handler |>
 #'   aggregate(tree(VOLCFGRS))
+#' }
 setGeneric("aggregate", function(handler, ...) standardGeneric("aggregate"))
 
 #' @export
@@ -43,9 +45,11 @@ setGeneric("mutate_cond", function(handler, ...) standardGeneric("mutate_cond"))
 #' @export
 #'
 #' @examples
+#' \dontrun{
 #' # Add a basal area column to the tree table
 #' handler |>
 #'   transform(tree(BA = 0.005454 * DIA^2))
+#' }
 setGeneric("transform", function(handler, ...) standardGeneric("transform"))
 
 #' Subset Inventory Components of a Handler
@@ -67,9 +71,11 @@ setGeneric("transform", function(handler, ...) standardGeneric("transform"))
 #' @return The handler with pending filters queued.
 #' @export
 #' @examples
+#' \dontrun{
 #' # Retain only live trees
 #' handler |>
 #'  subset(tree(STATUSCD == 1))
+#' }
 setGeneric("subset", function(handler, ...) standardGeneric("subset"))
 
 #' Partition a Handler into Domains
@@ -93,9 +99,11 @@ setGeneric("subset", function(handler, ...) standardGeneric("subset"))
 #' @export
 #'
 #' @examples
+#' \dontrun{
 #' # Set tree-level domains to be unique combinations of species and status code
 #' handler |>
 #'   partition(tree(SPCD, STATUSCD))
+#' }
 setGeneric("partition", function(handler, ...) standardGeneric("partition"))
 
 #' Augment a Handler with External Data

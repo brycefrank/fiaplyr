@@ -18,7 +18,9 @@ values to the plot level, which can be used to create dataframes of
 aggregated data, useful for a variety of applications and diagnostics.
 }
 \examples{
+\dontrun{
 # Aggregate gross volume to the plot level
 handler |>
   aggregate(tree(VOLCFGRS))
+}
 }

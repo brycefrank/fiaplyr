@@ -5,6 +5,7 @@ output: github_document
 # fiaplyr <img src="inst/logo.png" align="right" height="200" />
 
 <!-- badges: start -->
+[![R-CMD-check](https://github.com/brycefrank/fiaplyr/actions/workflows/R-CMD-check.yml/badge.svg)](https://github.com/brycefrank/fiaplyr/actions/workflows/R-CMD-check.yml)
 <!-- badges: end -->
 
 
@@ -18,15 +19,17 @@ knitr::opts_chunk$set(
 ```
 
 `fiaplyr` provides a modern, `dplyr`-inspired interface for working with Forest
-Inventory and Analysis (FIA) databases. With `fiaplyr`, you can chain together
-operations to compute plot-level values, modify variables, specify domains,
-and produce estimates. In sum, the package is a flexible tool allowing for a
-broad range of analyses, but does not enforce any guardrails like EVALIDator or
-other tools. Hence, some degree of exposure to FIA data and methods is
-recommended before using `fiaplyr` for analysis.
+Inventory and Analysis (FIA) databases. Users interact with a `handler`, which
+facilitates complex database operations while maintaining a concise syntax. Core
+verbs like `subset`, `transform` and `partition` allow users to refine data
+selections, add variables, and create domains for different analyses while
+maintaining the veracity of the underlying data.
 
-`fiaplyr` is currently in early development, and all outputs should be treated
-as experimental.
+Create estimates for species:
+
+```{r}
+handler |> 
+```
 
 ## Installation
 
