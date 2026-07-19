@@ -12,9 +12,6 @@ setClass("DatabaseMapping",
   )
 )
 
-# Backward-compatible alias kept so the existing namespace export still loads.
-setClass("DatabaseBackend", contains = "DatabaseMapping")
-
 #' Create a Database Mapping
 #'
 #' A database mapping enables the use of alternative schema and table names,
@@ -52,13 +49,6 @@ database_mapping <- function(schema_name = NULL, table_map = list()) {
     schema_name = if (is.null(schema_name)) character(0) else schema_name,
     table_map = table_map
   )
-}
-
-#' Backward-compatible alias for older code.
-#'
-#' @export
-database_backend <- function(schema_name = NULL, table_map = list()) {
-  database_mapping(schema_name = schema_name, table_map = table_map)
 }
 
 #' Get Table Reference

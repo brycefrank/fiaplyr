@@ -37,11 +37,11 @@ Collate:
     'StatusAnalysis.R'
     'GRMAnalysis.R'
     'grm-macros.R'
-    'EvalHandler.R'
     'Estimator.R'
     'post_stratification.R'
     'PostStratifiedEstimator.R'
     'PostStratifiedRatioEstimator.R'
+    'EvalHandler.R'
     'utils.R'
     'explore.R'
 Roxygen: list(markdown = TRUE)

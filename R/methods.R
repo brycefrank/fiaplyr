@@ -160,7 +160,15 @@ setGeneric("get_strata_weights", function(handler) {
 
 #' Estimate Population Parameters
 #'
-#' @param object An estimator object.
+#' Estimates of population parameters are produced using the `estimate()`
+#' function, which takes a handler as the first argument, followed by a series
+#' of scoped helpers specifying the attributes of interest, e.g.,
+#' `tree(VOLCFGRS)` for gross cubic-foot volume. All estimates respect the
+#' current state of the handler including transformations, subsetting, and
+#' partitions. Estimates of ratios can be produced using the `ratio()` helper,
+#' e.g., `estimate(ratio(tree(VOLCFGRS), tree(BA)))`.
+#'
+#' @param object An estimator object or evaluation handler.
 #' @param ... Exactly one scoped target helper specifying the estimation target.
 #' @param output Output scale, either "mean" (default) or "total".
 #' @param margins Logical. If `TRUE`, returns all marginal estimates in addition
@@ -169,7 +177,29 @@ setGeneric("get_strata_weights", function(handler) {
 #'   variables, including the grand total (no domains). Dropped domain columns
 #'   appear as `NA` in the output, indicating aggregation over all values of
 #'   that variable. Defaults to `FALSE`.
+#' @param estimator A point-estimator specification, or `"auto"` (default) to
+#'   use standard estimator defaults based on the target helper.
+#' @param var_est A variance-estimator specification, or `"auto"` (default) to
+#'   use estimator-specific defaults.
+#' @details
+#' When `estimator` is omitted, it is treated as `"auto"`. For an
+#' `EvalHandler`, this selects the standard post-stratified estimator for
+#' ordinary targets and the standard post-stratified ratio estimator for
+#' `ratio()` targets. The `"missing"` method shown by
+#' `methods("estimate")` is an internal S4 dispatch method for this omitted
+#' argument; users do not need to specify `estimator = "missing"`.
 #' @export
-setGeneric("estimate", function(object, ..., output = "mean", margins = FALSE) {
-  standardGeneric("estimate")
-})
+setGeneric(
+  "estimate",
+  function(
+    object,
+    ...,
+    output = "mean",
+    margins = FALSE,
+    estimator = "auto",
+    var_est = "auto"
+  ) {
+    standardGeneric("estimate")
+  },
+  signature = c("object", "estimator")
+)

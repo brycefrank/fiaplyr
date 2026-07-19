@@ -13,5 +13,7 @@ PostStratifiedRatioEstimator Class
 \item{\code{handler}}{An EvalHandler object.}
 
 \item{\code{strata_weights}}{A dataframe containing strata weights.}
+
+\item{\code{var_est}}{A variance-estimator specification.}
 }}
 

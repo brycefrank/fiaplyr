@@ -4,10 +4,13 @@
 \alias{PostStratifiedRatioEstimator}
 \title{Constructor for PostStratifiedRatioEstimator}
 \usage{
-PostStratifiedRatioEstimator(handler)
+PostStratifiedRatioEstimator(handler = NULL, var_est = "auto")
 }
 \arguments{
-\item{handler}{An EvalHandler object.}
+\item{handler}{An optional EvalHandler object.}
+
+\item{var_est}{A variance-estimator specification, or \code{"auto"} for the
+default ratio post-stratified variance estimator.}
 }
 \description{
 Constructor for PostStratifiedRatioEstimator

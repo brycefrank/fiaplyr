@@ -2,25 +2,36 @@
 #'
 #' @slot handler An EvalHandler object.
 #' @slot strata_weights A dataframe containing strata weights.
+#' @slot var_est A variance-estimator specification.
 #' @export
 setClass(
   "PostStratifiedRatioEstimator",
   contains = "Estimator",
   slots = list(
-    handler = "EvalHandler",
-    strata_weights = "ANY"
+    handler = "ANY",
+    strata_weights = "ANY",
+    var_est = "VarianceEstimator"
   )
 )
 
 #' Constructor for PostStratifiedRatioEstimator
 #'
-#' @param handler An EvalHandler object.
+#' @param handler An optional EvalHandler object.
+#' @param var_est A variance-estimator specification, or `"auto"` for the
+#'   default ratio post-stratified variance estimator.
 #' @export
-PostStratifiedRatioEstimator <- function(handler) {
+PostStratifiedRatioEstimator <- function(handler = NULL, var_est = "auto") {
+  var_est <- .resolve_post_strat_var_est(var_est = var_est, context = "ratio")
+
+  if (!is.null(handler) && !inherits(handler, "EvalHandler")) {
+    stop("`handler` must be NULL or an EvalHandler object.", call. = FALSE)
+  }
+
   new(
     "PostStratifiedRatioEstimator",
     handler = handler,
-    strata_weights = get_strata_weights(handler)
+    strata_weights = if (is.null(handler)) NULL else get_strata_weights(handler),
+    var_est = var_est
   )
 }
 
@@ -53,6 +64,13 @@ setMethod(
     domain_pairing = c("all", "matched"),
     include_components = FALSE
   ) {
+    if (is.null(object@handler)) {
+      stop(
+        "This estimator is not bound to a handler. Pass it as `estimate(handler, ratio(...), estimator = this_estimator)`.",
+        call. = FALSE
+      )
+    }
+
     domain_pairing <- match.arg(domain_pairing)
     if (
       !is.logical(include_components) ||
