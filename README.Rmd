@@ -2,12 +2,10 @@
 output: github_document
 ---
 
-# fiaplyr <img src="inst/logo.png" align="right" height="200" />
-
+# fiaplyr <picture><img src="inst/logo.png" alt="fiaplyr logo" height="210" align="right"></picture>
 <!-- badges: start -->
-[![R-CMD-check](https://github.com/brycefrank/fiaplyr/actions/workflows/R-CMD-check.yml/badge.svg)](https://github.com/brycefrank/fiaplyr/actions/workflows/R-CMD-check.yml)
+[![R-CMD-check](https://github.com/brycefrank/fiaplyr/actions/workflows/R-CMD-check.yml/badge.svg)](https://github.com/brycefrank/fiaplyr/actions/workflows/R-CMD-check.yml) [![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](https://github.com/brycefrank/fiaplyr) [![Documentation](https://img.shields.io/badge/docs-brycefrank.com%2Ffiaplyr-blue.svg)](https://brycefrank.com/fiaplyr)
 <!-- badges: end -->
-
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
@@ -20,16 +18,19 @@ knitr::opts_chunk$set(
 
 `fiaplyr` provides a modern, `dplyr`-inspired interface for working with Forest
 Inventory and Analysis (FIA) databases. Users interact with a `handler`, which
-facilitates complex database operations while maintaining a concise syntax. Core
-verbs like `subset`, `transform` and `partition` allow users to refine data
-selections, add variables, and create domains for different analyses while
-maintaining the veracity of the underlying data.
+facilitates complex database operations while maintaining a concise syntax.
+Estimation and other statistical objectives can be formed in a few lines of
+code.
 
-Create estimates for species:
+<br clear="all">
 
-```{r}
-handler |> 
-```
+<img src="inst/readme_1.png" width="500" alt="fiaplyr workflow overview">
+
+The verbs `subset`, `partition`, `transform`, `estimate`, and `aggregate` are
+the main tools, allowing users to retain only the data they need, form domains,
+create new variables, and produce estimates and plot-level values, respectively.
+The interaction of these verbs creates a flexible self-documenting framework for
+working with FIA data.
 
 ## Installation
 

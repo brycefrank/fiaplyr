@@ -27,7 +27,10 @@ The handler with pending mutations queued.
 ## Examples
 
 ```r
+## Not run:
+
 # Add a basal area column to the tree table
 handler |>
   transform(tree(BA = 0.005454 * DIA^2))
+## End(Not run)
 ```

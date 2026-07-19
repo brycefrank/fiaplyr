@@ -28,6 +28,6 @@ A lazy query for the requested table.
 
 ## Additional Details
 
-Methods (by class)
+Functions
 
 `materialize(EvalHandler)`: Materialize a prepared table for EvalHandler
