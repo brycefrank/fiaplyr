@@ -37,7 +37,10 @@ The handler with pending filters queued.
 ## Examples
 
 ```r
+## Not run:
+
 # Retain only live trees
 handler |>
  subset(tree(STATUSCD == 1))
+## End(Not run)
 ```

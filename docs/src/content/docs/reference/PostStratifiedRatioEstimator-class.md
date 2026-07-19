@@ -14,3 +14,5 @@ Slots
 `handler`An EvalHandler object.
 
 `strata_weights`A dataframe containing strata weights.
+
+`var_est`A variance-estimator specification.

@@ -23,7 +23,10 @@ aggregate(handler, ...)
 ## Examples
 
 ```r
+## Not run:
+
 # Aggregate gross volume to the plot level
 handler |>
   aggregate(tree(VOLCFGRS))
+## End(Not run)
 ```

@@ -5,9 +5,10 @@ output: github_document
 # fiaplyr <img src="inst/logo.png" align="right" height="200" />
 
 <!-- badges: start -->
-[![R-CMD-check](https://github.com/brycefrank/fiaplyr/actions/workflows/R-CMD-check.yml/badge.svg)](https://github.com/brycefrank/fiaplyr/actions/workflows/R-CMD-check.yml)
+[![R-CMD-check](https://github.com/brycefrank/fiaplyr/actions/workflows/R-CMD-check.yml/badge.svg)](https://github.com/brycefrank/fiaplyr/actions/workflows/R-CMD-check.yml) [![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](https://github.com/brycefrank/fiaplyr) [![Documentation](https://img.shields.io/badge/docs-brycefrank.com%2Ffiaplyr-blue.svg)](https://brycefrank.com/fiaplyr)
 <!-- badges: end -->
 
+<br clear="all">
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
@@ -20,16 +21,13 @@ knitr::opts_chunk$set(
 
 `fiaplyr` provides a modern, `dplyr`-inspired interface for working with Forest
 Inventory and Analysis (FIA) databases. Users interact with a `handler`, which
-facilitates complex database operations while maintaining a concise syntax. Core
-verbs like `subset`, `transform` and `partition` allow users to refine data
-selections, add variables, and create domains for different analyses while
-maintaining the veracity of the underlying data.
+facilitates complex database operations while maintaining a concise syntax.
+Estimation and other statistical objectives can be formed in a few lines of
+code.
 
-Create estimates for species:
-
-```{r}
-handler |> 
-```
+<div align="center">
+<img src="inst/readme_1.png" width="500" alt="fiaplyr workflow overview">
+</div>
 
 ## Installation
 
