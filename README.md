@@ -104,15 +104,15 @@ plot_vol <- handler |>
 
 head(plot_vol)
 #> # Source:   SQL [?? x 7]
-#> # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/RtmpZNaUl9/temp_libpath316427895bbd/fiaplyr/fiadb_vt_mini.duckdb]
+#> # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//tmp/RtmpWhvfd8/temp_libpath439060e2721e/fiaplyr/fiadb_vt_mini.duckdb]
 #>   PLT_CN         STATECD COUNTYCD INVYR  PLOT net_vol VOLCFGRS
 #>   <chr>            <int>    <int> <int> <int>   <dbl>    <dbl>
-#> 1 55971101010538      50       23  2004  1218  1601.     2058.
-#> 2 55972019010538      50       23  2004   885   997.     1277.
-#> 3 55969641010538      50       21  2004   358  1784.     2800.
-#> 4 55969548010538      50       21  2004   432  2686.     3519.
-#> 5 55952698010538      50       11  2003  1490   677.      917.
-#> 6 73596033010538      50       19  2006    49    98.7     132.
+#> 1 55950424010538      50        7  2003   616    633.     809.
+#> 2 55958436010538      50       25  2003  1130   3972.    4446.
+#> 3 73599700010538      50       21  2006   761    142.     150.
+#> 4 62275386010538      50        5  2005  1072    733.     806.
+#> 5 73594147010538      50       17  2006  1325    920.    1085.
+#> 6 73604584010538      50       25  2006   661   1755.    2937.
 ```
 
 Plot-level values are often used in statistical models and other
@@ -133,15 +133,15 @@ plot_vol_wm <- handler |>
 
 head(plot_vol_wm)
 #> # Source:   SQL [?? x 6]
-#> # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/RtmpZNaUl9/temp_libpath316427895bbd/fiaplyr/fiadb_vt_mini.duckdb]
+#> # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//tmp/RtmpWhvfd8/temp_libpath439060e2721e/fiaplyr/fiadb_vt_mini.duckdb]
 #>   PLT_CN         STATECD COUNTYCD INVYR  PLOT wm_ht
 #>   <chr>            <int>    <int> <int> <int> <dbl>
-#> 1 62284007010538      50       25  2005   887  24.2
-#> 2 62282244010538      50       23  2005    48  30.7
-#> 3 62280355010538      50       19  2005   453  32.6
-#> 4 62279824010538      50       19  2005  1100  24.3
-#> 5 62278627010538      50       15  2005  1007  29.7
-#> 6 73606978010538      50       27  2006   127  50.7
+#> 1 73593196010538      50       15  2006   567  21.4
+#> 2 73616021010538      50        7  2006   890  28.8
+#> 3 73592494010538      50       15  2006   576  24.7
+#> 4 55954280010538      50       17  2003  1196  46.5
+#> 5 73601374010538      50       23  2006  1004  28.2
+#> 6 73610053010538      50        1  2006   325  18.7
 ```
 
 ### Transforms
@@ -163,15 +163,15 @@ plot_ba <- ba_handler |>
 # Verify the output
 head(plot_ba)
 #> # Source:   SQL [?? x 6]
-#> # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/RtmpZNaUl9/temp_libpath316427895bbd/fiaplyr/fiadb_vt_mini.duckdb]
+#> # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//tmp/RtmpWhvfd8/temp_libpath439060e2721e/fiaplyr/fiadb_vt_mini.duckdb]
 #>   PLT_CN         STATECD COUNTYCD INVYR  PLOT    BA
 #>   <chr>            <int>    <int> <int> <int> <dbl>
-#> 1 55965630010538      50       11  2004  1181 136. 
-#> 2 62279824010538      50       19  2005  1100  45.0
-#> 3 73606978010538      50       27  2006   127  55.8
-#> 4 62284007010538      50       25  2005   887  73.4
-#> 5 73598423010538      50       21  2006   108 118. 
-#> 6 73614247010538      50        5  2006   167 131.
+#> 1 55965381010538      50       11  2004   772 190. 
+#> 2 55965630010538      50       11  2004  1181 136. 
+#> 3 73614247010538      50        5  2006   167 131. 
+#> 4 62279824010538      50       19  2005  1100  45.0
+#> 5 73606978010538      50       27  2006   127  55.8
+#> 6 55963314010538      50        5  2004   228  95.8
 ```
 
 ### Partitions
@@ -190,7 +190,7 @@ plot_ba_by_sp <- ba_handler |>
 
 head(plot_ba_by_sp)
 #> # Source:     SQL [?? x 7]
-#> # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/RtmpZNaUl9/temp_libpath316427895bbd/fiaplyr/fiadb_vt_mini.duckdb]
+#> # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//tmp/RtmpWhvfd8/temp_libpath439060e2721e/fiaplyr/fiadb_vt_mini.duckdb]
 #> # Ordered by: desc(BA)
 #>   PLT_CN         STATECD COUNTYCD INVYR  PLOT  SPCD    BA
 #>   <chr>            <int>    <int> <int> <int> <dbl> <dbl>
@@ -219,7 +219,7 @@ plot_ba_balsam <- ba_handler |>
 
 head(plot_ba_balsam)
 #> # Source:     SQL [?? x 6]
-#> # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/RtmpZNaUl9/temp_libpath316427895bbd/fiaplyr/fiadb_vt_mini.duckdb]
+#> # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//tmp/RtmpWhvfd8/temp_libpath439060e2721e/fiaplyr/fiadb_vt_mini.duckdb]
 #> # Ordered by: desc(BA)
 #>   PLT_CN         STATECD COUNTYCD INVYR  PLOT    BA
 #>   <chr>            <int>    <int> <int> <int> <dbl>
@@ -242,7 +242,7 @@ plot_ba_balsam <- ba_handler |>
 
 head(plot_ba_balsam)
 #> # Source:     SQL [?? x 7]
-#> # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-35-generic:R 4.6.0//tmp/RtmpZNaUl9/temp_libpath316427895bbd/fiaplyr/fiadb_vt_mini.duckdb]
+#> # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//tmp/RtmpWhvfd8/temp_libpath439060e2721e/fiaplyr/fiadb_vt_mini.duckdb]
 #> # Ordered by: desc(BA)
 #>   PLT_CN         STATECD COUNTYCD INVYR  PLOT  SPCD    BA
 #>   <chr>            <int>    <int> <int> <int> <dbl> <dbl>
@@ -278,7 +278,8 @@ ba_est <- ba_handler |>
   estimate(tree(ba = BA))
 
 ba_est
-#> # A tibble: 1 × 3
+#> # Source:   SQL [?? x 3]
+#> # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//tmp/RtmpWhvfd8/temp_libpath439060e2721e/fiaplyr/fiadb_vt_mini.duckdb]
 #>   var   estimate    se
 #>   <chr>    <dbl> <dbl>
 #> 1 ba        97.5  1.72
@@ -292,7 +293,8 @@ ba_total_est <- ba_handler |>
   estimate(tree(BA), output = "total")
 
 ba_total_est
-#> # A tibble: 1 × 3
+#> # Source:   SQL [?? x 3]
+#> # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//tmp/RtmpWhvfd8/temp_libpath439060e2721e/fiaplyr/fiadb_vt_mini.duckdb]
 #>   var     estimate        se
 #>   <chr>      <dbl>     <dbl>
 #> 1 BA    577424366. 10152586.
@@ -313,7 +315,9 @@ ba_by_sp_est <- ba_by_sp_handler |>
   arrange(desc(estimate))
 
 head(ba_by_sp_est)
-#> # A tibble: 6 × 4
+#> # Source:     SQL [?? x 4]
+#> # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//tmp/RtmpWhvfd8/temp_libpath439060e2721e/fiaplyr/fiadb_vt_mini.duckdb]
+#> # Ordered by: desc(estimate)
 #>    SPCD var   estimate    se
 #>   <dbl> <chr>    <dbl> <dbl>
 #> 1   318 BA       18.6  0.958
@@ -342,7 +346,9 @@ ba_by_sp_ratio_est <- ba_by_sp_handler |>
 ba_by_sp_ratio_est |>
   arrange(desc(estimate)) |>
   head()
-#> # A tibble: 6 × 5
+#> # Source:     SQL [?? x 5]
+#> # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//tmp/RtmpWhvfd8/temp_libpath439060e2721e/fiaplyr/fiadb_vt_mini.duckdb]
+#> # Ordered by: desc(estimate)
 #>   SPCD_n var_n var_d estimate    se
 #>    <dbl> <chr> <chr>    <dbl> <dbl>
 #> 1    318 BA    prop     24.1  1.01 

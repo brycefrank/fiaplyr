@@ -13,4 +13,5 @@
 - Refactored `estimate` implementation, including direct ratio-intent routing from `EvalHandler`.
 - Simplified `PostStratifiedRatioEstimator` to use a single handler and a ratio intent object.
 - Added support for denominator-only partition overrides via `den_partitions` in ratio estimates.
+- Consolidated same-scope ratio targets into one plot aggregation.
 - Updated README and vignettes to use the new `estimate(..., ratio(...))` workflow.

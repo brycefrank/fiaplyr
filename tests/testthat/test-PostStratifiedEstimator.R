@@ -103,6 +103,23 @@ test_that("estimate() preserves user-defined target names", {
   expect_equal(unique(cond_res$var), "my_prop")
 })
 
+test_that("estimate(tree()) estimates trees per acre by default", {
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001)
+  pe <- PostStratifiedEstimator(handler)
+
+  res <- estimate(pe, tree()) |>
+    dplyr::collect()
+  explicit_res <- estimate(pe, tree(1)) |>
+    dplyr::collect()
+
+  expect_equal(unique(res$var), "tree_count")
+  expect_equal(res$estimate, explicit_res$estimate)
+  expect_equal(res$se, explicit_res$se)
+})
+
 test_that("status tree estimates apply DIA-based adjustment factors for bare targets", {
   con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))

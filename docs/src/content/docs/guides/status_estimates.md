@@ -81,7 +81,8 @@ forested_handler |>
   estimate(cond())
 ```
 
-    # A tibble: 1 × 3
+    # Source:   SQL [?? x 3]
+    # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
       var   estimate      se
       <chr>    <dbl>   <dbl>
     1 prop     0.772 0.00909
@@ -106,7 +107,8 @@ growing_stock_est <- growing_stock_handler |>
 head(growing_stock_est)
 ```
 
-    # A tibble: 6 × 4
+    # Source:   SQL [?? x 4]
+    # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
       COUNTYCD.cond var      estimate    se
               <int> <chr>       <dbl> <dbl>
     1             1 VOLCFGRS     91.1 13.3 
@@ -156,12 +158,14 @@ avg_dia_ests <- avg_dia_handler |>
 head(avg_dia_ests)
 ```
 
-    # A tibble: 6 × 6
+    # Source:     SQL [?? x 6]
+    # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
+    # Ordered by: desc(estimate)
       SPCD_n SPCD_d var_n var_d      estimate    se
        <dbl>  <dbl> <chr> <chr>         <dbl> <dbl>
     1    922    922 DIA   tree_count     26.8 0    
     2    125    125 DIA   tree_count     16.5 0.473
-    3    540    540 DIA   tree_count     15.9 0    
+    3    540    540 DIA   tree_count     15.8 0    
     4    742    742 DIA   tree_count     14.4 3.81 
     5    837    837 DIA   tree_count     13.3 0    
     6    832    832 DIA   tree_count     12.2 0.908

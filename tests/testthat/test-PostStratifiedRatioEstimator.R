@@ -2,9 +2,9 @@ test_that("PostStratifiedRatioEstimator estimates correct ratios", {
   con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
-  # Single handler with per-table domains for numerator and denominator sides
+  # Single handler with numerator domains; denominator domains come from intent
   handler <- eval_handler(con, evalid = 1001) |>
-    partition(tree(SPCD), cond(FORTYPCD))
+    partition(tree(SPCD))
 
   # Create Ratio Estimator
   ratio_est <- PostStratifiedRatioEstimator(handler)
@@ -12,7 +12,10 @@ test_that("PostStratifiedRatioEstimator estimates correct ratios", {
   # Calculate Ratio: Volume per Area (by Species and Forest Type)
   # Num: tree(VOLCFNET)
   # Den: cond() (Implicit Area)
-  res <- estimate_ratio(ratio_est, ratio(tree(VOLCFNET), cond())) |>
+  res <- estimate_ratio(
+    ratio_est,
+    ratio(tree(VOLCFNET), cond(), den_partitions = list(cond(FORTYPCD)))
+  ) |>
     dplyr::collect()
 
   # Verify structure
@@ -63,6 +66,30 @@ test_that("ratio intent can override denominator partitions", {
     c("SPCD_n", "FORTYPCD_d", "estimate", "se") %in% colnames(res)
   ))
   expect_true(nrow(res) > 0)
+  expect_true(all(is.finite(res$estimate)))
+  expect_true(all(is.finite(res$se)))
+})
+
+test_that("same-scope ratio targets share one plot aggregation", {
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001) |>
+    partition(tree(SPCD))
+
+  ratio_est <- PostStratifiedRatioEstimator(handler)
+
+  res <- estimate_ratio(
+    ratio_est,
+    ratio(tree(volume = VOLCFNET), tree(diameter = DIA))
+  ) |>
+    dplyr::collect()
+
+  expect_true(all(
+    c("SPCD_n", "SPCD_d", "estimate", "se") %in% colnames(res)
+  ))
+  expect_equal(unique(res$var_n), "volume")
+  expect_equal(unique(res$var_d), "diameter")
   expect_true(all(is.finite(res$estimate)))
   expect_true(all(is.finite(res$se)))
 })
