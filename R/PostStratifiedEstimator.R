@@ -14,12 +14,11 @@ setClass(
 #' evaluation, or used as an unbound specification via `pe_post_strat()`.
 #'
 #' @param handler An optional EvalHandler object.
-#' @param var_est A variance-estimator specification.
+#' @param var_est A variance-estimator specification, or `"auto"` for the
+#'   default non-ratio post-stratified variance estimator.
 #' @export
-PostStratifiedEstimator <- function(handler = NULL, var_est = ve_taylor()) {
-  if (!inherits(var_est, "VarianceEstimator")) {
-    stop("`var_est` must be a VarianceEstimator object.", call. = FALSE)
-  }
+PostStratifiedEstimator <- function(handler = NULL, var_est = "auto") {
+  var_est <- .resolve_post_strat_var_est(var_est = var_est, context = "non_ratio")
 
   new(
     "PostStratifiedEstimator",
@@ -34,11 +33,23 @@ PostStratifiedEstimator <- function(handler = NULL, var_est = ve_taylor()) {
 #' Creates an estimator specification for use with
 #' `estimate(handler, target, estimator = pe_post_strat())`.
 #'
-#' @param var_est A variance-estimator specification.
+#' @param var_est A variance-estimator specification, or `"auto"`.
 #' @return A `PostStratifiedEstimator` specification.
 #' @export
-pe_post_strat <- function(var_est = ve_taylor()) {
+pe_post_strat <- function(var_est = "auto") {
   PostStratifiedEstimator(var_est = var_est)
+}
+
+#' Configure Post-Stratified Ratio Point Estimation
+#'
+#' Creates a ratio-estimator specification for use with
+#' `estimate(handler, ratio(...), estimator = pe_post_strat_ratio())`.
+#'
+#' @param var_est A variance-estimator specification, or `"auto"`.
+#' @return A `PostStratifiedRatioEstimator` specification.
+#' @export
+pe_post_strat_ratio <- function(var_est = "auto") {
+  PostStratifiedRatioEstimator(var_est = var_est)
 }
 
 
@@ -110,7 +121,8 @@ setMethod(
     ...,
     output = "mean",
     margins = FALSE,
-    estimator = pe_post_strat()
+    estimator = pe_post_strat(),
+    var_est = "auto"
   ) {
     if (is.null(object@handler)) {
       stop(
@@ -176,7 +188,7 @@ setMethod(
   ".estimate_composed",
   signature(
     point_estimator = "PostStratifiedEstimator",
-    variance_estimator = "TaylorVarianceEstimator"
+    variance_estimator = "PostStratifiedVarianceEstimator"
   ),
   function(
     point_estimator,
@@ -190,29 +202,10 @@ setMethod(
     extra_args <- list(...)
 
     if (inherits(target, "fiaplyr_ratio_intent")) {
-      if (is.null(target$numerator) || is.null(target$denominator)) {
-        stop(
-          "`ratio()` must include both numerator and denominator target helpers."
-        )
-      }
-
-      if (!identical(output, "mean") || !identical(margins, FALSE)) {
-        stop(
-          "`output` and `margins` are not supported with `ratio(...)`. Use `estimate_ratio()` options instead."
-        )
-      }
-
-      ratio_est <- PostStratifiedRatioEstimator(
-        handler,
-        var_est = variance_estimator
+      stop(
+        "`ratio(...)` targets require a ratio point estimator. Use `estimator = pe_post_strat_ratio(...)` or `estimator = \"auto\"`.",
+        call. = FALSE
       )
-      return(do.call(
-        estimate_ratio,
-        c(
-          list(object = ratio_est, intent = target),
-          extra_args
-        )
-      ))
     }
 
     bound_estimator <- PostStratifiedEstimator(

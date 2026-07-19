@@ -169,8 +169,10 @@ setGeneric("get_strata_weights", function(handler) {
 #'   variables, including the grand total (no domains). Dropped domain columns
 #'   appear as `NA` in the output, indicating aggregation over all values of
 #'   that variable. Defaults to `FALSE`.
-#' @param estimator A point-estimator specification. Defaults to
-#'   `pe_post_strat()` when `object` is an evaluation handler.
+#' @param estimator A point-estimator specification, or `"auto"` (default) to
+#'   use standard estimator defaults based on the target helper.
+#' @param var_est A variance-estimator specification, or `"auto"` (default) to
+#'   use estimator-specific defaults.
 #' @export
 setGeneric(
   "estimate",
@@ -179,7 +181,8 @@ setGeneric(
     ...,
     output = "mean",
     margins = FALSE,
-    estimator = pe_post_strat()
+    estimator = "auto",
+    var_est = "auto"
   ) {
     standardGeneric("estimate")
   },

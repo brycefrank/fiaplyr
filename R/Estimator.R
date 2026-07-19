@@ -13,19 +13,70 @@ setClass("Estimator",
 #' @export
 setClass("VarianceEstimator", contains = "VIRTUAL")
 
-#' Taylor Variance Estimator
+#' Post-Stratified Variance Estimator
 #'
-#' A variance-estimator specification for Taylor linearization.
+#' A variance-estimator specification for standard non-ratio post-stratified
+#' estimation.
 #'
 #' @export
-setClass("TaylorVarianceEstimator", contains = "VarianceEstimator")
+setClass("PostStratifiedVarianceEstimator", contains = "VarianceEstimator")
 
-#' Configure Taylor Variance Estimation
+#' Post-Stratified Ratio Variance Estimator
 #'
-#' @return A `TaylorVarianceEstimator` object.
+#' A variance-estimator specification for standard ratio post-stratified
+#' estimation.
+#'
 #' @export
-ve_taylor <- function() {
-  new("TaylorVarianceEstimator")
+setClass("PostStratifiedRatioVarianceEstimator", contains = "VarianceEstimator")
+
+#' Configure Post-Stratified Variance Estimation
+#'
+#' @return A `PostStratifiedVarianceEstimator` object.
+#' @export
+ve_post_strat <- function() {
+  new("PostStratifiedVarianceEstimator")
+}
+
+#' Configure Post-Stratified Ratio Variance Estimation
+#'
+#' @return A `PostStratifiedRatioVarianceEstimator` object.
+#' @export
+ve_post_strat_ratio <- function() {
+  new("PostStratifiedRatioVarianceEstimator")
+}
+
+.resolve_post_strat_var_est <- function(var_est = "auto", context = c("non_ratio", "ratio")) {
+  context <- match.arg(context)
+
+  if (is.character(var_est) && length(var_est) == 1) {
+    if (!identical(var_est, "auto")) {
+      stop("`var_est` must be a VarianceEstimator object or the string `\"auto\"`.", call. = FALSE)
+    }
+
+    if (identical(context, "non_ratio")) {
+      return(ve_post_strat())
+    }
+    return(ve_post_strat_ratio())
+  }
+
+  if (!inherits(var_est, "VarianceEstimator")) {
+    stop("`var_est` must be a VarianceEstimator object or the string `\"auto\"`.", call. = FALSE)
+  }
+
+  expected_class <- if (identical(context, "non_ratio")) {
+    "PostStratifiedVarianceEstimator"
+  } else {
+    "PostStratifiedRatioVarianceEstimator"
+  }
+
+  if (!inherits(var_est, expected_class)) {
+    stop(
+      "`var_est` must match estimator context. Use `ve_post_strat()` for non-ratio estimates and `ve_post_strat_ratio()` for ratio estimates.",
+      call. = FALSE
+    )
+  }
+
+  var_est
 }
 
 setGeneric(

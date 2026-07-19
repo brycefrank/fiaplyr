@@ -1,8 +1,8 @@
 test_that("estimator specifications compose through S4 dispatch", {
-  variance_estimator <- ve_taylor()
+  variance_estimator <- ve_post_strat()
   point_estimator <- pe_post_strat(var_est = variance_estimator)
 
-  expect_s4_class(variance_estimator, "TaylorVarianceEstimator")
+  expect_s4_class(variance_estimator, "PostStratifiedVarianceEstimator")
   expect_s4_class(variance_estimator, "VarianceEstimator")
   expect_s4_class(point_estimator, "PostStratifiedEstimator")
   expect_identical(point_estimator@var_est, variance_estimator)
@@ -10,7 +10,7 @@ test_that("estimator specifications compose through S4 dispatch", {
 
   method <- methods::selectMethod(
     ".estimate_composed",
-    c("PostStratifiedEstimator", "TaylorVarianceEstimator")
+    c("PostStratifiedEstimator", "PostStratifiedVarianceEstimator")
   )
   expect_s4_class(method, "MethodDefinition")
 })
@@ -26,14 +26,14 @@ test_that("EvalHandler estimate() accepts an explicit estimator", {
   explicit <- estimate(
     handler,
     tree(VOLCFNET),
-    estimator = pe_post_strat(var_est = ve_taylor())
+    estimator = pe_post_strat(var_est = ve_post_strat())
   ) |>
     dplyr::collect()
 
   expect_equal(explicit, default)
 })
 
-test_that("explicit estimator supports ratio targets", {
+test_that("explicit ratio estimator supports ratio targets", {
   con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
@@ -43,7 +43,7 @@ test_that("explicit estimator supports ratio targets", {
   result <- estimate(
     handler,
     ratio(tree(VOLCFNET), cond()),
-    estimator = pe_post_strat(var_est = ve_taylor()),
+    estimator = pe_post_strat_ratio(var_est = ve_post_strat_ratio()),
     include_components = TRUE
   ) |>
     dplyr::collect()
@@ -51,6 +51,22 @@ test_that("explicit estimator supports ratio targets", {
   expect_true(all(c(
     "estimate", "se", "estimate_n", "se_n", "estimate_d", "se_d"
   ) %in% colnames(result)))
+})
+
+test_that("non-ratio estimator rejects ratio targets", {
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001)
+
+  expect_error(
+    estimate(
+      handler,
+      ratio(tree(VOLCFNET), cond()),
+      estimator = pe_post_strat(var_est = ve_post_strat())
+    ),
+    "requires a ratio point estimator"
+  )
 })
 
 test_that("EvalHandler estimate() forwards ratio-specific options", {
