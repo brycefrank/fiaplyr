@@ -56,10 +56,11 @@ database_mapping <- function(schema_name = NULL, table_map = list()) {
 #' @param backend A DatabaseMapping object
 #' @param standard_name The standard FIA table name
 #' @return A table reference (string or in_schema object)
-#' @export
+#' @noRd
 setGeneric("get_table_ref", function(backend, standard_name) standardGeneric("get_table_ref"))
 
 #' @describeIn get_table_ref Get table reference for DatabaseMapping
+#' @noRd
 setMethod("get_table_ref", "DatabaseMapping", function(backend, standard_name) {
   # Use custom name if provided, otherwise use standard name
   table_name <- if (is.null(backend@table_map[[standard_name]])) {

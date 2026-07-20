@@ -40,9 +40,9 @@ a warning) when joined against a remote table.}
 }
 \examples{
 \dontrun{
-  species_ref <- data.frame(SPCD = c(1, 2), COMMON_NAME = c("Pine", "Oak"))
-  handler |>
-    augment(tree(species_ref, by = "SPCD", type = "left")) |>
-    partition(tree(COMMON_NAME))
+species_ref <- data.frame(SPCD = c(1, 2), COMMON_NAME = c("Pine", "Oak"))
+handler |>
+  augment(tree(species_ref, by = "SPCD", type = "left")) |>
+  partition(tree(COMMON_NAME))
 }
 }

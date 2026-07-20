@@ -46,9 +46,9 @@ The handler with pending augmentations queued.
 ```r
 ## Not run:
 
-  species_ref <- data.frame(SPCD = c(1, 2), COMMON_NAME = c("Pine", "Oak"))
-  handler |>
-    augment(tree(species_ref, by = "SPCD", type = "left")) |>
-    partition(tree(COMMON_NAME))
+species_ref <- data.frame(SPCD = c(1, 2), COMMON_NAME = c("Pine", "Oak"))
+handler |>
+  augment(tree(species_ref, by = "SPCD", type = "left")) |>
+  partition(tree(COMMON_NAME))
 ## End(Not run)
 ```

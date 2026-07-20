@@ -1,30 +1,76 @@
 ---
-title: "R Reference"
+title: "Full API Index"
 description: "Auto-generated reference pages from fiaplyr Rd documentation."
 ---
 
-These pages are generated from `man/*.Rd` during the docs build.
 
-## Functions
+## Handlers
 
-- [`evalid<-`](./evalid-set)
-- [`PostStratifiedEstimator`](./poststratifiedestimator)
-- [`PostStratifiedRatioEstimator`](./poststratifiedratioestimator)
+Create handlers for FIA database analyses.
+
+- [`eval_handler`](./eval_handler)
+
+## Handler Methods
+
+Subset, transform, estimate, and summarize FIA data.
+
 - [`aggregate`](./aggregate)
-- [`aggregate_data`](./aggregate_data)
 - [`augment`](./augment)
-- [`cond`](./cond)
-- [`database_mapping`](./database_mapping)
 - [`estimate`](./estimate)
 - [`estimate_ratio`](./estimate_ratio)
-- [`eval_handler`](./eval_handler)
 - [`evalid`](./evalid)
-- [`explore_evals`](./explore_evals)
-- [`fiadb_vt_mini_path`](./fiadb_vt_mini_path)
-- [`get_strata_weights`](./get_strata_weights)
-- [`get_table_ref`](./get_table_ref)
-- [`grm_accretion`](./grm_accretion)
+- [`materialize`](./materialize)
+- [`partition`](./partition)
+- [`ratio`](./ratio)
+- [`show`](./show)
+- [`subset`](./subset)
+- [`summary`](./summary)
+- [`transform`](./transform)
+
+## Analysis Specifications
+
+Configure the analysis context used by a handler.
+
 - [`grm_analysis`](./grm_analysis)
+- [`status_analysis`](./status_analysis)
+
+## Scoped Helpers
+
+Target particular tables within a handler.
+
+- [`fiadb_vt_mini_path`](./fiadb_vt_mini_path)
+- [`set_fiaplyr_verbosity`](./set_fiaplyr_verbosity)
+- [`cond`](./cond)
+- [`pcond`](./pcond)
+- [`plot`](./plot)
+- [`pplot`](./pplot)
+- [`ptree`](./ptree)
+- [`PostStratifiedEstimator`](./poststratifiedestimator)
+- [`PostStratifiedRatioEstimator`](./poststratifiedratioestimator)
+- [`tree`](./tree)
+- [`tree_history`](./tree_history)
+
+## Estimators
+
+Estimate population totals, ratios, and associated variances.
+
+- [`pe_post_strat`](./pe_post_strat)
+- [`pe_post_strat_ratio`](./pe_post_strat_ratio)
+- [`ve_post_strat`](./ve_post_strat)
+- [`ve_post_strat_ratio`](./ve_post_strat_ratio)
+
+## Database Facilitation
+
+Connect analyses to FIA databases and explore their contents.
+
+- [`database_mapping`](./database_mapping)
+- [`explore_evals`](./explore_evals)
+
+## Growth, Removals and Mortality Macros
+
+Build macros for growth, removals, mortality, and related change components.
+
+- [`grm_accretion`](./grm_accretion)
 - [`grm_diversion`](./grm_diversion)
 - [`grm_gross_growth`](./grm_gross_growth)
 - [`grm_gross_ingrowth`](./grm_gross_ingrowth)
@@ -43,32 +89,10 @@ These pages are generated from `man/*.Rd` during the docs build.
 - [`grm_reversion`](./grm_reversion)
 - [`grm_survivor`](./grm_survivor)
 - [`grom_gross_growth`](./grom_gross_growth)
-- [`initialize_tables`](./initialize_tables)
-- [`materialize`](./materialize)
-- [`mutate_cond`](./mutate_cond)
-- [`mutate_tree`](./mutate_tree)
-- [`parse_formula`](./parse_formula)
-- [`partition`](./partition)
-- [`pcond`](./pcond)
-- [`pe_post_strat`](./pe_post_strat)
-- [`pe_post_strat_ratio`](./pe_post_strat_ratio)
-- [`plot`](./plot)
-- [`pplot`](./pplot)
-- [`ptree`](./ptree)
-- [`ratio`](./ratio)
-- [`set_fiaplyr_verbosity`](./set_fiaplyr_verbosity)
-- [`spec_summary_fields`](./spec_summary_fields)
-- [`status_analysis`](./status_analysis)
-- [`subset`](./subset)
-- [`transform`](./transform)
-- [`tree`](./tree)
-- [`tree_history`](./tree_history)
-- [`ve_post_strat`](./ve_post_strat)
-- [`ve_post_strat_ratio`](./ve_post_strat_ratio)
-- [`show`](./show)
-- [`summary`](./summary)
 
 ## Classes
+
+Core S4 classes used to represent handlers, analyses, mappings, and estimators. These are typically not used directly by uses, and their associated lower-case helpers are used instead.
 
 - [`AnalysisSpec`](./analysisspec-class)
 - [`BaseHandler`](./basehandler-class)
@@ -82,3 +106,4 @@ These pages are generated from `man/*.Rd` during the docs build.
 - [`PostStratifiedVarianceEstimator`](./poststratifiedvarianceestimator-class)
 - [`StatusAnalysis`](./statusanalysis-class)
 - [`VarianceEstimator`](./varianceestimator-class)
+

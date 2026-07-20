@@ -21,7 +21,7 @@ status_analysis <- function() {
 #' @param evalid The evaluation ID.
 #' @param backend Optional DatabaseMapping for custom schema/table names.
 #' @return A list of lazy queries.
-#' @export
+#' @noRd
 setMethod("initialize_tables", "StatusAnalysis", function(spec, db, evalid, backend = NULL) {
   if (is.null(backend)) {
     backend <- database_mapping()
@@ -80,7 +80,7 @@ setMethod("initialize_tables", "StatusAnalysis", function(spec, db, evalid, back
 #' @param handler The EvalHandler object.
 #' @param ... Arguments for aggregation (scoped target helper, sparse, etc.)
 #' @return A lazy query with aggregates.
-#' @export
+#' @noRd
 setMethod("aggregate_data", "StatusAnalysis", function(spec, handler, ...) {
   args <- list(...)
   arg_names <- names(args)
@@ -132,7 +132,7 @@ setMethod("aggregate_data", "StatusAnalysis", function(spec, handler, ...) {
 })
 
 #' @describeIn spec_summary_fields StatusAnalysis-specific summary fields
-#' @export
+#' @noRd
 setMethod("spec_summary_fields", "StatusAnalysis", function(spec, handler) {
   plot_stats <- handler@tables$plot %>%
     dplyr::summarise(

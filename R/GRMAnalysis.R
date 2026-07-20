@@ -54,7 +54,7 @@ grm_analysis <- function(
 #' @param evalid The evaluation ID.
 #' @param backend Optional DatabaseMapping for custom schema/table names.
 #' @return A list of lazy queries.
-#' @export
+#' @noRd
 setMethod(
   "initialize_tables",
   "GRMAnalysis",
@@ -339,7 +339,7 @@ setMethod(
 #' @param handler The EvalHandler object.
 #' @param ... Arguments for aggregation.
 #' @return A lazy query with aggregates.
-#' @export
+#' @noRd
 setMethod("aggregate_data", "GRMAnalysis", function(spec, handler, ...) {
   args <- list(...)
   arg_names <- names(args)
@@ -419,7 +419,7 @@ setMethod("aggregate_data", "GRMAnalysis", function(spec, handler, ...) {
 })
 
 #' @describeIn spec_summary_fields GRMAnalysis-specific summary fields
-#' @export
+#' @noRd
 setMethod("spec_summary_fields", "GRMAnalysis", function(spec, handler) {
   list(
     tree_basis = spec@tree_basis,

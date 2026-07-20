@@ -17,22 +17,6 @@
 #' }
 setGeneric("aggregate", function(handler, ...) standardGeneric("aggregate"))
 
-#' @export
-#' @rdname mutate_tree
-#' @title Mutate Tree Table
-#' @description **Deprecated.** Use `transform(tree(...))` instead.
-#' @param handler A handler object.
-#' @param ... Additional arguments.
-setGeneric("mutate_tree", function(handler, ...) standardGeneric("mutate_tree"))
-
-#' @export
-#' @rdname mutate_cond
-#' @title Mutate Condition Table
-#' @description **Deprecated.** Use `transform(cond(...))` instead.
-#' @param handler A handler object.
-#' @param ... Additional arguments.
-setGeneric("mutate_cond", function(handler, ...) standardGeneric("mutate_cond"))
-
 #' Add or Modify Columns of a Handler
 #'
 #' Add derived columns or modify existing ones on a specific table level
@@ -74,7 +58,7 @@ setGeneric("transform", function(handler, ...) standardGeneric("transform"))
 #' \dontrun{
 #' # Retain only live trees
 #' handler |>
-#'  subset(tree(STATUSCD == 1))
+#'   subset(tree(STATUSCD == 1))
 #' }
 setGeneric("subset", function(handler, ...) standardGeneric("subset"))
 
@@ -90,7 +74,7 @@ setGeneric("subset", function(handler, ...) standardGeneric("subset"))
 #' Domains are specified for a table using the associated helper. For example,
 #' `partition(tree(SPCD, STATUSCD))` would set the tree-level domains to be
 #' unique combinations of `SPCD` and `STATUSCD`. Columns added during
-#' `transform()` can be used as domain variables as well. Multiple helpers can
+#' [transform()][transform] can be used as domain variables as well. Multiple helpers can
 #' be mixed in a single call, such as `partition(tree(SPCD), cond(OWNCD))`.
 #'
 #' @param handler A handler object.
@@ -137,10 +121,10 @@ setGeneric("partition", function(handler, ...) standardGeneric("partition"))
 #'
 #' @examples
 #' \dontrun{
-#'   species_ref <- data.frame(SPCD = c(1, 2), COMMON_NAME = c("Pine", "Oak"))
-#'   handler |>
-#'     augment(tree(species_ref, by = "SPCD", type = "left")) |>
-#'     partition(tree(COMMON_NAME))
+#' species_ref <- data.frame(SPCD = c(1, 2), COMMON_NAME = c("Pine", "Oak"))
+#' handler |>
+#'   augment(tree(species_ref, by = "SPCD", type = "left")) |>
+#'   partition(tree(COMMON_NAME))
 #' }
 setGeneric("augment", function(handler, ...) standardGeneric("augment"))
 
@@ -161,7 +145,7 @@ setGeneric("materialize", function(handler, slot) {
 #'
 #' @param handler A handler object.
 #' @return A lazy query with strata weights.
-#' @export
+#' @noRd
 setGeneric("get_strata_weights", function(handler) {
   standardGeneric("get_strata_weights")
 })

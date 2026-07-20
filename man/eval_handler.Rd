@@ -12,9 +12,9 @@ eval_handler(db, evalid, spec = status_analysis(), backend = NULL)
 \item{evalid}{A numeric identifier for the evaluation.}
 
 \item{spec}{An \link[=AnalysisSpec-class]{AnalysisSpec} object. Defaults to
-\code{\link[=status_analysis]{status_analysis()}}.}
+\link[=status_analysis]{status_analysis()}.}
 
-\item{backend}{Optional DatabaseMapping for custom schema/table names.}
+\item{backend}{An optional \link[=database_mapping]{database_mapping()} for custom schema/table names.}
 }
 \value{
 An object of class \link[=EvalHandler-class]{EvalHandler} connected to the specified evaluation.

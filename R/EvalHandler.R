@@ -59,8 +59,8 @@ setClass(
 #' @param db A DBIConnection object.
 #' @param evalid A numeric identifier for the evaluation.
 #' @param spec An [AnalysisSpec][AnalysisSpec-class] object. Defaults to
-#'   [status_analysis()].
-#' @param backend Optional DatabaseMapping for custom schema/table names.
+#'   [status_analysis()][status_analysis].
+#' @param backend An optional [database_mapping()][database_mapping] for custom schema/table names.
 #'
 #' @return An object of class [EvalHandler][EvalHandler-class] connected to the specified evaluation.
 #' @export
@@ -523,56 +523,6 @@ setMethod("augment", "EvalHandler", function(handler, ...) {
   handler
 })
 
-#' Mutate Tree Table (Deprecated)
-#'
-#' **Deprecated.** Use `transform(tree(...))` instead.
-#'
-#' @param handler A EvalHandler object.
-#' @param ... Name-value pairs of expressions.
-#' @return A EvalHandler object with pending mutations.
-#' @export
-setMethod("mutate_tree", "EvalHandler", function(handler, ...) {
-  lifecycle::deprecate_warn(
-    "0.1.0",
-    "mutate_tree()",
-    details = "Use `handler |> transform(tree(...))` instead of `handler |> mutate_tree(...)` to apply tree-level mutations."
-  )
-
-  # Capture expressions as quosures and wrap them in tree()
-  new_mutations <- dplyr::quos(...)
-  attr(new_mutations, "target_table") <- "tree"
-
-  # Append to existing mutations
-  handler@tree_mutations <- c(handler@tree_mutations, new_mutations)
-
-  return(handler)
-})
-
-#' Mutate Condition Table (Deprecated)
-#'
-#' **Deprecated.** Use `transform(cond(...))` instead.
-#'
-#' @param handler A EvalHandler object.
-#' @param ... Name-value pairs of expressions.
-#' @return A EvalHandler object with pending mutations.
-#' @export
-setMethod("mutate_cond", "EvalHandler", function(handler, ...) {
-  lifecycle::deprecate_warn(
-    "0.1.0",
-    "mutate_cond()",
-    details = "Use `handler |> transform(cond(...))` instead of `handler |> mutate_cond(...)` to apply condition-level mutations."
-  )
-
-  # Capture expressions as quosures and wrap them in cond()
-  new_mutations <- dplyr::quos(...)
-  attr(new_mutations, "target_table") <- "cond"
-
-  # Append to existing mutations
-  handler@cond_mutations <- c(handler@cond_mutations, new_mutations)
-
-  return(handler)
-})
-
 #' Aggregate a Handler to the Plot Level
 #'
 #' Aggregates inventory data to the plot level. The behavior depends on how
@@ -778,6 +728,7 @@ setMethod(
 )
 
 #' @describeIn get_strata_weights Get strata weights for EvalHandler
+#' @noRd
 setMethod("get_strata_weights", "EvalHandler", function(handler) {
   handler@tables$pop_stratum %>%
     dplyr::inner_join(

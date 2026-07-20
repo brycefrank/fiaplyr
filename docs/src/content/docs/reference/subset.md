@@ -41,6 +41,6 @@ The handler with pending filters queued.
 
 # Retain only live trees
 handler |>
- subset(tree(STATUSCD == 1))
+  subset(tree(STATUSCD == 1))
 ## End(Not run)
 ```

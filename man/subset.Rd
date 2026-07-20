@@ -32,6 +32,6 @@ data structure remains consistent (e.g., no trees without conditions, etc).
 \dontrun{
 # Retain only live trees
 handler |>
- subset(tree(STATUSCD == 1))
+  subset(tree(STATUSCD == 1))
 }
 }
