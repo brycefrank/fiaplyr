@@ -17,8 +17,10 @@ project_root <- normalizePath(
 )
 vignette_dir <- file.path(project_root, "vignettes")
 guide_dir <- file.path(project_root, "docs", "src", "content", "docs", "guides")
+public_dir <- file.path(project_root, "docs", "public")
 
 dir.create(guide_dir, recursive = TRUE, showWarnings = FALSE)
+dir.create(public_dir, recursive = TRUE, showWarnings = FALSE)
 
 qmd_files <- list.files(
   vignette_dir,
@@ -93,6 +95,16 @@ rewrite_chunk_fences <- function(lines) {
   )
   lines <- gsub("^```\\{[^}]*\\}$", "```", lines, perl = TRUE)
   lines
+}
+
+rewrite_image_paths <- function(lines) {
+  # Rewrite image paths to assets served from docs/public.
+  gsub(
+    "\\(([^)]*?)inst/([^)]+\\.[Pp][Nn][Gg])\\)",
+    "(../../\\2)",
+    lines,
+    perl = TRUE
+  )
 }
 
 strip_title_heading <- function(lines, title) {
@@ -187,6 +199,7 @@ build_with_quarto <- function(input, title, output_path) {
   body <- readLines(rendered_path, warn = FALSE)
   body <- strip_title_heading(body, title)
   body <- rewrite_links(body)
+  body <- rewrite_image_paths(body)
   body <- trim_leading_blank_lines(body)
 
   final <- c(
@@ -215,15 +228,31 @@ build_one <- function(input) {
 }
 
 normalize_readme_for_guide <- function(lines) {
-  # Drop the README title/logo header and badge comments for docs rendering.
+  # Drop the README title/logo header for docs rendering.
   title_line <- grep("^#\\s+", lines)[1]
   if (!is.na(title_line)) {
     lines <- lines[-seq_len(title_line)]
   }
 
   lines <- trim_leading_blank_lines(lines)
-  lines <- lines[!grepl("^<!-- badges:", lines)]
+  
+  # Remove the entire badge block (from <!-- badges: start --> to <!-- badges: end -->)
+  badge_start <- grep("^<!-- badges: start -->", lines)
+  badge_end <- grep("^<!-- badges: end -->", lines)
+  if (length(badge_start) > 0 && length(badge_end) > 0 && badge_start < badge_end) {
+    lines <- lines[-seq(badge_start, badge_end)]
+  }
+  
   lines <- trim_leading_blank_lines(lines)
+  
+  # Rewrite image paths to assets served from docs/public.
+  lines <- gsub(
+    'src="inst/([^"]+\\.[Pp][Nn][Gg])"',
+    'src="../../\\1"',
+    lines,
+    perl = TRUE
+  )
+  
   rewrite_links(lines)
 }
 
@@ -281,6 +310,26 @@ build_getting_started_from_readme <- function() {
 
   writeLines(final, output_path)
   message("Built ", output_path, " from README.md")
+}
+
+inst_dir <- file.path(project_root, "inst")
+png_files <- list.files(
+  inst_dir,
+  pattern = "\\.png$",
+  recursive = TRUE,
+  full.names = TRUE,
+  ignore.case = TRUE
+)
+for (png_file in png_files) {
+  relative_path <- substring(
+    normalizePath(png_file, winslash = "/"),
+    nchar(normalizePath(inst_dir, winslash = "/")) + 2
+  )
+  destination <- file.path(public_dir, relative_path)
+  dir.create(dirname(destination), recursive = TRUE, showWarnings = FALSE)
+  if (!file.copy(png_file, destination, overwrite = TRUE)) {
+    stop("Unable to copy image into ", destination)
+  }
 }
 
 invisible(lapply(qmd_files, build_one))

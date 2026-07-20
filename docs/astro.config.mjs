@@ -15,10 +15,6 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: 'fiaplyr',
-			logo: {
-				src: './public/logo.png',
-				alt: 'fiaplyr logo',
-			},
 			customCss : [
 				'./src/styles/custom.css'
 			],
