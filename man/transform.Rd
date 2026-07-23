@@ -16,7 +16,7 @@ The handler with pending mutations queued.
 }
 \description{
 Add derived columns or modify existing ones on a specific table level
-Expressions must be wrapped in scoping helpers (\code{tree()}, \code{cond()}, etc) to
+Expressions must be wrapped in scoping helpers (\link[=tree]{tree()}, \link[=cond]{cond()}, etc) to
 specify their target table.
 }
 \examples{

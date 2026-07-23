@@ -21,8 +21,8 @@ level. Expressions must be wrapped in the appropriate scoping helper:
 }
 \examples{
 \dontrun{
-  handler <- eval_handler(con, evalid = 500601)
-  handler |>
-    transform(tree(BA = 0.005454 * DIA^2))
+handler <- eval_handler(con, evalid = 500601)
+handler |>
+  transform(tree(BA = 0.005454 * DIA^2))
 }
 }

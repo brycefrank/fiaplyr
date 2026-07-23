@@ -66,10 +66,9 @@ setClass(
 #' @export
 #'
 #' @examples
-#' if (requireNamespace("duckdb", quietly = TRUE)) {
-#'   con <- DBI::dbConnect(duckdb::duckdb(), fiadb_vt_mini_path())
-#'   handler <- eval_handler(con, evalid = 500601)
-#'   DBI::dbDisconnect(con, shutdown = TRUE)
+#' \dontrun{
+#' con <- DBI::dbConnect(duckdb::duckdb(), fiadb_vt_mini_path())
+#' handler <- eval_handler(con, evalid = 500601)
 #' }
 eval_handler <- function(db, evalid, spec = status_analysis(), backend = NULL) {
   tables <- initialize_tables(spec, db, evalid, backend)
@@ -399,9 +398,9 @@ setMethod("show", "EvalHandler", function(object) {
 #' @export
 #' @examples
 #' \dontrun{
-#'   handler <- eval_handler(con, evalid = 500601)
-#'   handler |>
-#'     transform(tree(BA = 0.005454 * DIA^2))
+#' handler <- eval_handler(con, evalid = 500601)
+#' handler |>
+#'   transform(tree(BA = 0.005454 * DIA^2))
 #' }
 setMethod("transform", "EvalHandler", function(handler, ...) {
   # Get arguments as list - they may be tagged quosure lists from helpers
@@ -426,9 +425,9 @@ setMethod("transform", "EvalHandler", function(handler, ...) {
 #' @export
 #' @examples
 #' \dontrun{
-#'   handler <- eval_handler(con, evalid = 500601)
-#'   handler |>
-#'     subset(tree(STATUSCD == 1))
+#' handler <- eval_handler(con, evalid = 500601)
+#' handler |>
+#'   subset(tree(STATUSCD == 1))
 #' }
 setMethod("subset", "EvalHandler", function(handler, ...) {
   # Get arguments as list - they may be tagged quosure lists from helpers
@@ -453,9 +452,9 @@ setMethod("subset", "EvalHandler", function(handler, ...) {
 #' @export
 #' @examples
 #' \dontrun{
-#'   handler <- eval_handler(con, evalid = 500601)
-#'   handler |>
-#'     partition(tree(SPCD), cond(OWNCD))
+#' handler <- eval_handler(con, evalid = 500601)
+#' handler |>
+#'   partition(tree(SPCD), cond(OWNCD))
 #' }
 setMethod("partition", "EvalHandler", function(handler, ...) {
   # Get arguments as list - they may be tagged quosure lists from helpers
@@ -484,11 +483,11 @@ setMethod("partition", "EvalHandler", function(handler, ...) {
 #' @export
 #' @examples
 #' \dontrun{
-#'   handler <- eval_handler(con, evalid = 500601)
-#'   species_ref <- data.frame(SPCD = c(1, 2), COMMON_NAME = c("Pine", "Oak"))
-#'   handler |>
-#'     augment(tree(species_ref, by = "SPCD")) |>
-#'     partition(tree(COMMON_NAME))
+#' handler <- eval_handler(con, evalid = 500601)
+#' species_ref <- data.frame(SPCD = c(1, 2), COMMON_NAME = c("Pine", "Oak"))
+#' handler |>
+#'   augment(tree(species_ref, by = "SPCD")) |>
+#'   partition(tree(COMMON_NAME))
 #' }
 setMethod("augment", "EvalHandler", function(handler, ...) {
   helpers <- list(...)
@@ -548,14 +547,14 @@ setMethod("augment", "EvalHandler", function(handler, ...) {
 #'
 #' @examples
 #' \dontrun{
-#'   # Standard TPA expansion
-#'   handler |> aggregate(tree(VOLCFGRS))
+#' # Standard TPA expansion
+#' handler |> aggregate(tree(VOLCFGRS))
 #'
-#'   # Raw summarise: mean volume per plot (no TPA expansion)
-#'   handler |> aggregate(tree(mean(VOLCFGRS)))
+#' # Raw summarise: mean volume per plot (no TPA expansion)
+#' handler |> aggregate(tree(mean(VOLCFGRS)))
 #'
-#'   # GRM macro (fiaplyr_macro): encodes its own expansion logic
-#'   handler |> aggregate(tree_history(grm_mortality(VOLCFGRS)))
+#' # GRM macro (fiaplyr_macro): encodes its own expansion logic
+#' handler |> aggregate(tree_history(grm_mortality(VOLCFGRS)))
 #' }
 #' @export
 setMethod("aggregate", "EvalHandler", function(handler, ...) {

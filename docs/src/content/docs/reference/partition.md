@@ -38,10 +38,7 @@ The handler with domain variables set.
 ## Examples
 
 ```r
-## Not run:
-
 # Set tree-level domains to be unique combinations of species and status code
 handler |>
   partition(tree(SPCD, STATUSCD))
-## End(Not run)
 ```

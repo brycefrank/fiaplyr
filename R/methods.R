@@ -1,26 +1,42 @@
-#' Aggregate Data to Plot Level
+#' Aggregate a Handler to Plot Level
 #'
-#' Aggregation is the process of summing tree, condition, or other component
-#' values to the plot level, which can be used to create dataframes of
-#' aggregated data, useful for a variety of applications and diagnostics.
+#' Aggregates inventory data to the plot level. This is useful for creating
+#' plot-level values for statistical models and other applications. Some
+#' analyses, such as state-wide means or totals, do not require an explicit
+#' `aggregate()` step.
+#'
+#' Bare variables (e.g., `tree(VOLCFGRS)`) are expanded using the per-acre
+#' expansion factor, `TPA_UNADJ`, to produce a TPA-weighted sum per plot. This
+#' is the standard FIA expansion. Function calls (e.g., `tree(mean(VOLCFGRS))`)
+#' are passed to `dplyr::summarise()` using the active plot-level groupings,
+#' allowing users to specify arbitrary aggregation functions without TPA
+#' expansion. Functions that return a `fiaplyr_macro` object, such as
+#' [grm_mortality()][grm_mortality] and [grm_ingrowth()][grm_ingrowth], encode
+#' their own variable and expansion logic.
 #'
 #' @param handler A handler object.
-#' @param ... A scoped target helper such as `tree(VOLCFGRS)` or `cond()`, plus
-#'   any method-specific options such as `sparse = TRUE`.
+#' @param ... A scoped target helper such as `tree(VOLCFGRS)`,
+#'   `tree(mean(VOLCFGRS))`, or `tree(grm_mortality(VOLCFGRS))`, plus optional
+#'   arguments such as `sparse = TRUE`.
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' # Aggregate gross volume to the plot level
-#' handler |>
-#'   aggregate(tree(VOLCFGRS))
+#' # Standard TPA expansion
+#' handler |> aggregate(tree(VOLCFGRS))
+#'
+#' # Custom aggregation function without TPA expansion
+#' handler |> aggregate(tree(mean(VOLCFGRS)))
+#'
+#' # Weighted mean using TPA_UNADJ
+#' handler |> aggregate(tree(wm_ht = sum(TPA_UNADJ * HT) / sum(TPA_UNADJ)))
 #' }
 setGeneric("aggregate", function(handler, ...) standardGeneric("aggregate"))
 
 #' Add or Modify Columns of a Handler
 #'
 #' Add derived columns or modify existing ones on a specific table level
-#' Expressions must be wrapped in scoping helpers (`tree()`, `cond()`, etc) to
+#' Expressions must be wrapped in scoping helpers ([tree()][tree], [cond()][cond], etc) to
 #' specify their target table.
 #'
 #' @param handler A handler object.
@@ -96,10 +112,11 @@ setGeneric("partition", function(handler, ...) standardGeneric("partition"))
 #' specific table level of a handler. This is useful for attaching reference
 #' information such as species common names, county names, or plot-level
 #' covariates. Columns added via `augment()` become available to subsequent
-#' `transform()`, `subset()`, `partition()`, and `aggregate()` calls.
+#' [transform()][transform], [subset()][subset], [partition()][partition], and
+#' [aggregate()][aggregate] calls.
 #'
 #' The target table and join are specified using the scoped helpers
-#' (`tree()`, `cond()`, `plot()`, `tree_history()`). The first, unnamed argument
+#' (e.g., [tree()][tree], [cond()][cond], etc.) The first, unnamed argument
 #' to the helper is the data to join; named arguments configure the join:
 #'
 #' \describe{

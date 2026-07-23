@@ -27,11 +27,8 @@ A list of quosures tagged with `target_table = "tree"`.
 ## Examples
 
 ```r
-## Not run:
-
   handler |>
     transform(tree(BA = 0.005454 * DIA^2)) |>
     subset(tree(STATUSCD == 1)) |>
     partition(tree(SPCD))
-## End(Not run)
 ```

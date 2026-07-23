@@ -27,13 +27,10 @@ A list of quosures tagged with `target_table = "cond"`.
 ## Examples
 
 ```r
-## Not run:
-
   handler |>
     subset(cond(COND_STATUS_CD == 1)) |>
     partition(cond(FORTYPCD))
 
   estimator |>
     estimate(cond())
-## End(Not run)
 ```

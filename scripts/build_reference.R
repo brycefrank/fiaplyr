@@ -11,6 +11,15 @@ man_dir <- file.path(project_root, "man")
 reference_dir <- file.path(project_root, "docs", "src", "content", "docs", "reference")
 guides_dir <- file.path(project_root, "docs", "src", "content", "docs", "guides")
 
+if (!requireNamespace("devtools", quietly = TRUE)) {
+  stop(
+    "The devtools package is required to generate documentation before building the reference.",
+    call. = FALSE
+  )
+}
+
+devtools::document(pkg = project_root)
+
 dir.create(reference_dir, recursive = TRUE, showWarnings = FALSE)
 
 if (!dir.exists(man_dir)) {
@@ -165,6 +174,9 @@ rd_section_lines <- function(rd, rd_tag, heading) {
 
   lines <- gsub("^\\s{5}", "", lines)
   lines <- gsub("^\\s+$", "", lines)
+  if (identical(rd_tag, "\\examples")) {
+    lines <- lines[!trim(lines) %in% c("## Not run:", "## End(Not run)")]
+  }
   compact_blank_lines(lines)
 }
 
@@ -202,6 +214,17 @@ render_rd_text <- function(node) {
 
   if (identical(tag, "TEXT")) {
     return(paste(as.character(node), collapse = ""))
+  }
+
+  if (identical(tag, "\\describe")) {
+    items <- node[vapply(node, function(child) {
+      identical(attr(child, "Rd_tag"), "\\item")
+    }, logical(1))]
+    return(paste(vapply(items, function(item) {
+      label <- trim(render_rd_text(item[[1]]))
+      description <- trim(render_rd_text(item[[2]]))
+      paste0("- ", label, ": ", description)
+    }, character(1)), collapse = "\n"))
   }
 
   children <- vapply(as.list(node), render_rd_text, character(1))

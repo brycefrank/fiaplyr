@@ -31,9 +31,6 @@ An object of class [`EvalHandler`](../evalhandler-class) connected to the specif
 ## Examples
 
 ```r
-if (requireNamespace("duckdb", quietly = TRUE)) {
-  con <- DBI::dbConnect(duckdb::duckdb(), fiadb_vt_mini_path())
-  handler <- eval_handler(con, evalid = 500601)
-  DBI::dbDisconnect(con, shutdown = TRUE)
-}
+con <- DBI::dbConnect(duckdb::duckdb(), fiadb_vt_mini_path())
+handler <- eval_handler(con, evalid = 500601)
 ```
