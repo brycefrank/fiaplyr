@@ -286,6 +286,12 @@ render_rd_text <- function(node) {
     return(paste0("**", content, "**"))
   }
 
+  if (tag %in% c("\\eqn", "\\deqn") && length(node) >= 1) {
+    math <- trim(render_rd_text(node[[1]]))
+    delimiter <- if (identical(tag, "\\deqn")) "$$" else "$"
+    return(paste0(delimiter, math, delimiter))
+  }
+
   content
 }
 

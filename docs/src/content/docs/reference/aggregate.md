@@ -1,6 +1,6 @@
 ---
 title: "Aggregate a Handler to Plot Level"
-description: "Aggregates inventory data to the plot level. This is useful for creating plot-level values for statistical models and other applications. Some analyses, such as state-wide means or totals, do not require an explicit `aggregate()` step."
+description: "Aggregates inventory data to the plot level. This is useful for creating plot-level values for statistical models and other applications. Some analyses, such as state-wide means or totals, do not require an explicit [`aggregate()`](../aggregate) step."
 ---
 
 ## Description
@@ -8,7 +8,7 @@ description: "Aggregates inventory data to the plot level. This is useful for cr
 Aggregates inventory data to the plot level. This is useful for creating
 plot-level values for statistical models and other applications. Some
 analyses, such as state-wide means or totals, do not require an explicit
-`aggregate()` step.
+[`aggregate()`](../aggregate) step.
 
 ## Details
 

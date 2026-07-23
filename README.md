@@ -124,7 +124,7 @@ head(plot_vol)
 ```
 
 Plot-level values are often used in statistical models and other
-applications. However, some analyses do not explicitly an `aggregate`
+applications. However, some analyses do not explicitly need an `aggregate`
 step, such as the estimation of state-wide means or totals, so it is not
 always necessary to call `aggregate`. Note that columns can be
 dynamically named, otherwise the stated value is used.

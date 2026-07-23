@@ -3,7 +3,7 @@
 #' Aggregates inventory data to the plot level. This is useful for creating
 #' plot-level values for statistical models and other applications. Some
 #' analyses, such as state-wide means or totals, do not require an explicit
-#' `aggregate()` step.
+#' [aggregate()][aggregate] step.
 #'
 #' Bare variables (e.g., `tree(VOLCFGRS)`) are expanded using the per-acre
 #' expansion factor, `TPA_UNADJ`, to produce a TPA-weighted sum per plot. This
@@ -59,22 +59,27 @@ setGeneric("transform", function(handler, ...) standardGeneric("transform"))
 #' integrity of the inventory structure. Subsetting is encouraged, as it
 #' increases the computation speed of the analysis.
 #'
-#' Subsetting is done using the `tree()` and `cond()` helpers. For
-#' example `subset(tree(STATUSCD == 1))` would retain only live trees in later
-#' analysis. Subsetting is done hierarchically: subset statements for `cond`
-#' apply to the conditions themselves, and trees within them, while subset
-#' statements for `tree` apply only to trees. This ensures that the resulting
-#' data structure remains consistent (e.g., no trees without conditions, etc).
+#' Subsetting is done using the [tree()][tree], [cond()][cond], and other
+#' helpers. For example `subset(tree(STATUSCD == 1))` would retain only live
+#' trees in later analysis. Subsetting is done hierarchically: subset statements
+#' for [cond()][cond] apply to the conditions themselves, and trees within them,
+#' while subset statements for [tree()][tree] apply only to trees. This ensures
+#' that the resulting data structure remains consistent (e.g., no trees without
+#' conditions, etc). Subsetting done higher in the hierarchy (e.g.,
+#' [plot()][plot]) will remove all lower-level components (e.g., conditions and
+#' trees), but retain all plots in [aggregate()][aggregate] and
+#' [estimate()][estimate] calls to preserve the sanctity of the inventory
+#' design.
 #'
 #' @param handler A handler object.
-#' @param ... Scoped logical expressions using `tree()`, `cond()`, or `plot()` helpers.
+#' @param ... Scoped logical expressions using `tree()`, `cond()`, or `plot()`
+#' helpers.
+#'
 #' @return The handler with pending filters queued.
 #' @export
-#' @examples
-#' \dontrun{
+#' @examples \dontrun{
 #' # Retain only live trees
-#' handler |>
-#'   subset(tree(STATUSCD == 1))
+#' handler |> subset(tree(STATUSCD == 1))
 #' }
 setGeneric("subset", function(handler, ...) standardGeneric("subset"))
 
@@ -82,7 +87,7 @@ setGeneric("subset", function(handler, ...) standardGeneric("subset"))
 #'
 #' Broadly, domains are unique subpopulations of inventory components (e.g.,
 #' trees, etc). Domains are formed by unique combinations of domain variables,
-#' which are typically integer- or categorical-values columns in the underlying
+#' which are typically integer- or categorical-valued columns in the underlying
 #' tables. This function allows the users to specify domain variables across
 #' the handler. Canonical examples include species (`SPCD`), ownership (`OWNCD`)
 #' and others.

@@ -17,7 +17,7 @@ arguments such as \code{sparse = TRUE}.}
 Aggregates inventory data to the plot level. This is useful for creating
 plot-level values for statistical models and other applications. Some
 analyses, such as state-wide means or totals, do not require an explicit
-\code{aggregate()} step.
+\link[=aggregate]{aggregate()} step.
 }
 \details{
 Bare variables (e.g., \code{tree(VOLCFGRS)}) are expanded using the per-acre

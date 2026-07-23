@@ -1,13 +1,13 @@
 ---
 title: "Partition a Handler into Domains"
-description: "Broadly, domains are unique subpopulations of inventory components (e.g., trees, etc). Domains are formed by unique combinations of domain variables, which are typically integer- or categorical-values columns in the underlying tables. This function allows the users to specify domain variables across the handler. Canonical examples include species (`SPCD`), ownership (`OWNCD`) and others."
+description: "Broadly, domains are unique subpopulations of inventory components (e.g., trees, etc). Domains are formed by unique combinations of domain variables, which are typically integer- or categorical-valued columns in the underlying tables. This function allows the users to specify domain variables across the handler. Canonical examples include species (`SPCD`), ownership (`OWNCD`) and others."
 ---
 
 ## Description
 
 Broadly, domains are unique subpopulations of inventory components (e.g.,
 trees, etc). Domains are formed by unique combinations of domain variables,
-which are typically integer- or categorical-values columns in the underlying
+which are typically integer- or categorical-valued columns in the underlying
 tables. This function allows the users to specify domain variables across
 the handler. Canonical examples include species (`SPCD`), ownership (`OWNCD`)
 and others.

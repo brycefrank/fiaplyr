@@ -2,7 +2,7 @@
 % Please edit documentation in R/PostStratifiedEstimator.R
 \name{pe_post_strat}
 \alias{pe_post_strat}
-\title{Configure Post-Stratified Point Estimation}
+\title{Post-stratified Point Estimator}
 \usage{
 pe_post_strat(var_est = "auto")
 }
@@ -13,6 +13,24 @@ pe_post_strat(var_est = "auto")
 A \code{PostStratifiedEstimator} specification.
 }
 \description{
-Creates an estimator specification for use with
-\code{estimate(handler, target, estimator = pe_post_strat())}.
+This function implements the standard FIA post-stratified point estimator.
+Astute statistical users will need to forgive a small abuse of nomenclature
+here. Indeed, this estimator is a weighted sum of post-stratified estimators
+across estimation units within an evaluation. We will prefer this simpler
+term at the risk of some confusion, as it is the standard term used in FIA
+documentation. Because the estimator is standard it requires the presence
+of \code{pop_stratum} and \code{pop_estn_unit} tables in the evaluation, which
+encode the post-strata weights among other details.
+}
+\details{
+Post-stratified point estimation computes an estimate within each stratum
+and combines those estimates within an estimation unit using the stratum
+weights:
+\deqn{\hat{Y}_g = \sum_h W_{gh} \hat{Y}_{gh}}{Yhat_g = sum_h W_gh Yhat_gh}
+where \eqn{g}{g} indexes the estimation unit, \eqn{h}{h} indexes a
+post-stratum within that unit, \eqn{\hat{Y}_{gh}}{Yhat_gh} is the
+stratum-specific estimate, and \eqn{W_{gh}}{W_gh} is its population weight.
+The estimator can return either the weighted mean or the corresponding total
+through the
+\code{output} argument to \link[=estimate]{estimate()}.
 }

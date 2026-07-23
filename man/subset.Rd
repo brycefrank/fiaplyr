@@ -9,7 +9,8 @@ subset(handler, ...)
 \arguments{
 \item{handler}{A handler object.}
 
-\item{...}{Scoped logical expressions using \code{tree()}, \code{cond()}, or \code{plot()} helpers.}
+\item{...}{Scoped logical expressions using \code{tree()}, \code{cond()}, or \code{plot()}
+helpers.}
 }
 \value{
 The handler with pending filters queued.
@@ -21,17 +22,21 @@ integrity of the inventory structure. Subsetting is encouraged, as it
 increases the computation speed of the analysis.
 }
 \details{
-Subsetting is done using the \code{tree()} and \code{cond()} helpers. For
-example \code{subset(tree(STATUSCD == 1))} would retain only live trees in later
-analysis. Subsetting is done hierarchically: subset statements for \code{cond}
-apply to the conditions themselves, and trees within them, while subset
-statements for \code{tree} apply only to trees. This ensures that the resulting
-data structure remains consistent (e.g., no trees without conditions, etc).
+Subsetting is done using the \link[=tree]{tree()}, \link[=cond]{cond()}, and other
+helpers. For example \code{subset(tree(STATUSCD == 1))} would retain only live
+trees in later analysis. Subsetting is done hierarchically: subset statements
+for \link[=cond]{cond()} apply to the conditions themselves, and trees within them,
+while subset statements for \link[=tree]{tree()} apply only to trees. This ensures
+that the resulting data structure remains consistent (e.g., no trees without
+conditions, etc). Subsetting done higher in the hierarchy (e.g.,
+\link[=plot]{plot()}) will remove all lower-level components (e.g., conditions and
+trees), but retain all plots in \link[=aggregate]{aggregate()} and
+\link[=estimate]{estimate()} calls to preserve the sanctity of the inventory
+design.
 }
 \examples{
 \dontrun{
 # Retain only live trees
-handler |>
-  subset(tree(STATUSCD == 1))
+handler |> subset(tree(STATUSCD == 1))
 }
 }

@@ -22,6 +22,15 @@ Generally users should seek to employ evaluations ending with \code{01},
 indicating an evaluation engineered for status analysis, but this is not
 strictly enforced.
 }
+\details{
+Internally, this analysis specification builds lazy \code{dplyr} queries for
+evaluation, estimation unit, stratum, plot, condition, and tree tables,
+restricting them to the relevant selection (typically an evalid). Queries
+stored within the handler are used to produce plot-level aggregates, which
+are fed into estimators. Users do not typically interact with the
+specification, although it plays an important role as a layer between the
+handler API and the underlying database tables.
+}
 \examples{
 \dontrun{
 handler <- eval_handler(con, 501103, spec = status_analysis())
