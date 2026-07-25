@@ -288,8 +288,11 @@ render_rd_text <- function(node) {
 
   if (tag %in% c("\\eqn", "\\deqn") && length(node) >= 1) {
     math <- trim(render_rd_text(node[[1]]))
-    delimiter <- if (identical(tag, "\\deqn")) "$$" else "$"
-    return(paste0(delimiter, math, delimiter))
+    if (identical(tag, "\\deqn")) {
+      return(paste0("\n\n$$\n", math, "\n$$\n\n"))
+    }
+
+    return(paste0("$", math, "$"))
   }
 
   content

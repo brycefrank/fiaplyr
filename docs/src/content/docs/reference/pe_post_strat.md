@@ -16,16 +16,28 @@ encode the post-strata weights among other details.
 
 ## Details
 
-Post-stratified point estimation computes an estimate within each stratum
-and combines those estimates within an estimation unit using the stratum
-weights:
-$$\hat{Y}_g = \sum_h W_{gh} \hat{Y}_{gh}$$
-where $g$ indexes the estimation unit, $h$ indexes a
-post-stratum within that unit, $\hat{Y}_{gh}$ is the
-stratum-specific estimate, and $W_{gh}$ is its population weight.
-The estimator can return either the weighted mean or the corresponding total
-through the
-`output` argument to [`estimate()`](../estimate).
+Post-stratified point estimation, in the FIA context, computes estimates for
+each estimation unit using a post-stratified estimator, then sums across the
+set of estimation units (assuming independence) to produce a single estimate
+for the evaluation. For estimation unit $g$ we obtain
+
+$$
+\hat{Y}_g = \sum_h W_{gh} \hat{Y}_{gh}
+$$
+
+where $h$ indexes a post-stratum within estimation unit $$g$$
+that unit, $\hat{Y}_{gh}$ is the stratum-specific estimate, and
+$W_{gh}$ is its post-stratum weight. Then, the overall estimate is
+
+$$
+\hat{Y} = \sum_g K_g \hat{Y}_g
+$$
+
+where $K_g$ is the proportion of the total evaluation area in
+estimation unit $g$. The estimator can return either the weighted
+mean or the corresponding total through the `output` argument to
+[`estimate()`](../estimate), wherein each estimation unit is weighted by its size
+in acres, $A_g$.
 
 ## Usage
 

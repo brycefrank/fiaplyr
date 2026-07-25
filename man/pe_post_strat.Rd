@@ -23,14 +23,18 @@ of \code{pop_stratum} and \code{pop_estn_unit} tables in the evaluation, which
 encode the post-strata weights among other details.
 }
 \details{
-Post-stratified point estimation computes an estimate within each stratum
-and combines those estimates within an estimation unit using the stratum
-weights:
-\deqn{\hat{Y}_g = \sum_h W_{gh} \hat{Y}_{gh}}{Yhat_g = sum_h W_gh Yhat_gh}
-where \eqn{g}{g} indexes the estimation unit, \eqn{h}{h} indexes a
-post-stratum within that unit, \eqn{\hat{Y}_{gh}}{Yhat_gh} is the
-stratum-specific estimate, and \eqn{W_{gh}}{W_gh} is its population weight.
-The estimator can return either the weighted mean or the corresponding total
-through the
-\code{output} argument to \link[=estimate]{estimate()}.
+Post-stratified point estimation, in the FIA context, computes estimates for
+each estimation unit using a post-stratified estimator, then sums across the
+set of estimation units (assuming independence) to produce a single estimate
+for the evaluation. For estimation unit \eqn{g}{g} we obtain
+\deqn{\hat{Y}_g = \sum_h W_{gh} \hat{Y}_{gh}}
+where \eqn{h}{h} indexes a post-stratum within estimation unit $\eqn{g}{g}$
+that unit, \eqn{\hat{Y}_{gh}}{Yhat_gh} is the stratum-specific estimate, and
+\eqn{W_{gh}}{W_gh} is its post-stratum weight. Then, the overall estimate is
+\deqn{\hat{Y} = \sum_g K_g \hat{Y}_g}
+where \eqn{K_g}{K_g} is the proportion of the total evaluation area in
+estimation unit \eqn{g}{g}. The estimator can return either the weighted
+mean or the corresponding total through the \code{output} argument to
+\link[=estimate]{estimate()}, wherein each estimation unit is weighted by its size
+in acres, \eqn{A_g}{A_g}.
 }
