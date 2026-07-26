@@ -11,14 +11,14 @@ man_dir <- file.path(project_root, "man")
 reference_dir <- file.path(project_root, "docs", "src", "content", "docs", "reference")
 guides_dir <- file.path(project_root, "docs", "src", "content", "docs", "guides")
 
-if (!requireNamespace("devtools", quietly = TRUE)) {
+if (!requireNamespace("roxygen2", quietly = TRUE)) {
   stop(
-    "The devtools package is required to generate documentation before building the reference.",
+    "The roxygen2 package is required to generate documentation before building the reference.",
     call. = FALSE
   )
 }
 
-devtools::document(pkg = project_root)
+roxygen2::roxygenise(package.dir = project_root)
 
 dir.create(reference_dir, recursive = TRUE, showWarnings = FALSE)
 

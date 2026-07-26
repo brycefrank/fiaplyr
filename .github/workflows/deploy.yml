@@ -37,6 +37,7 @@ jobs:
             any::pkgload
             any::knitr
             any::rmarkdown
+            any::roxygen2
             local::.
 
       - name: Setup Quarto
