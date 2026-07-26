@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.1 - 2026-07-25
+
+### Highlights
+
+- Expanded estimator documentation with post-stratified variance and ratio
+  variance formulae, including the sparse sufficient-statistic approach.
+- Clarified automatic selection of matching point and variance estimators.
+- Improved the reference documentation site, sidebar organization, and
+  documentation build tooling, including safe rendering of LaTeX formulae.
+
 ## 0.3.0 - 2026-07-19
 
 ### Added
