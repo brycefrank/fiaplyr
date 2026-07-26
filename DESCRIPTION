@@ -1,6 +1,6 @@
 Package: fiaplyr
 Title: Interface to FIA Databases with 'dbplyr'
-Version: 0.3.0
+Version: 0.3.1
 Authors@R:
     person("Bryce", "Frank", email = "bfrank70@gmail.com", role = c("aut", "cre"))
 Author: Bryce Frank [aut, cre]
