@@ -21,8 +21,8 @@ eval_handler(db, evalid, spec = status_analysis(), backend = NULL)
 
 - `db`: A DBIConnection object.
 - `evalid`: A numeric identifier for the evaluation.
-- `spec`: An [`AnalysisSpec`](../analysisspec-class) object. Defaults to `[`status_analysis()`](../status_analysis)`.
-- `backend`: Optional DatabaseMapping for custom schema/table names.
+- `spec`: An [`AnalysisSpec`](../analysisspec-class) object. Defaults to [`status_analysis()`](../status_analysis).
+- `backend`: An optional [`database_mapping()`](../database_mapping) for custom schema/table names.
 
 ## Value
 
@@ -31,9 +31,6 @@ An object of class [`EvalHandler`](../evalhandler-class) connected to the specif
 ## Examples
 
 ```r
-if (requireNamespace("duckdb", quietly = TRUE)) {
-  con <- DBI::dbConnect(duckdb::duckdb(), fiadb_vt_mini_path())
-  handler <- eval_handler(con, evalid = 500601)
-  DBI::dbDisconnect(con, shutdown = TRUE)
-}
+con <- DBI::dbConnect(duckdb::duckdb(), fiadb_vt_mini_path())
+handler <- eval_handler(con, evalid = 500601)
 ```

@@ -81,8 +81,8 @@ forested_handler |>
   estimate(cond())
 ```
 
-    # Source:   SQL [?? x 3]
-    # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
+    # A query:  ?? x 3
+    # Database: DuckDB 1.5.4 [bryce@Linux 7.0.0-28-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
       var   estimate      se
       <chr>    <dbl>   <dbl>
     1 prop     0.772 0.00909
@@ -107,8 +107,8 @@ growing_stock_est <- growing_stock_handler |>
 head(growing_stock_est)
 ```
 
-    # Source:   SQL [?? x 4]
-    # Database: DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
+    # A query:  ?? x 4
+    # Database: DuckDB 1.5.4 [bryce@Linux 7.0.0-28-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
       COUNTYCD.cond var      estimate    se
               <int> <chr>       <dbl> <dbl>
     1             1 VOLCFGRS     91.1 13.3 
@@ -158,8 +158,8 @@ avg_dia_ests <- avg_dia_handler |>
 head(avg_dia_ests)
 ```
 
-    # Source:     SQL [?? x 6]
-    # Database:   DuckDB 1.5.2 [bryce@Linux 6.17.0-40-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
+    # A query:    ?? x 6
+    # Database:   DuckDB 1.5.4 [bryce@Linux 7.0.0-28-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
     # Ordered by: desc(estimate)
       SPCD_n SPCD_d var_n var_d      estimate    se
        <dbl>  <dbl> <chr> <chr>         <dbl> <dbl>

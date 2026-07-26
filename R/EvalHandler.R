@@ -59,17 +59,16 @@ setClass(
 #' @param db A DBIConnection object.
 #' @param evalid A numeric identifier for the evaluation.
 #' @param spec An [AnalysisSpec][AnalysisSpec-class] object. Defaults to
-#'   [status_analysis()].
-#' @param backend Optional DatabaseMapping for custom schema/table names.
+#'   [status_analysis()][status_analysis].
+#' @param backend An optional [database_mapping()][database_mapping] for custom schema/table names.
 #'
 #' @return An object of class [EvalHandler][EvalHandler-class] connected to the specified evaluation.
 #' @export
 #'
 #' @examples
-#' if (requireNamespace("duckdb", quietly = TRUE)) {
-#'   con <- DBI::dbConnect(duckdb::duckdb(), fiadb_vt_mini_path())
-#'   handler <- eval_handler(con, evalid = 500601)
-#'   DBI::dbDisconnect(con, shutdown = TRUE)
+#' \dontrun{
+#' con <- DBI::dbConnect(duckdb::duckdb(), fiadb_vt_mini_path())
+#' handler <- eval_handler(con, evalid = 500601)
 #' }
 eval_handler <- function(db, evalid, spec = status_analysis(), backend = NULL) {
   tables <- initialize_tables(spec, db, evalid, backend)
@@ -399,9 +398,9 @@ setMethod("show", "EvalHandler", function(object) {
 #' @export
 #' @examples
 #' \dontrun{
-#'   handler <- eval_handler(con, evalid = 500601)
-#'   handler |>
-#'     transform(tree(BA = 0.005454 * DIA^2))
+#' handler <- eval_handler(con, evalid = 500601)
+#' handler |>
+#'   transform(tree(BA = 0.005454 * DIA^2))
 #' }
 setMethod("transform", "EvalHandler", function(handler, ...) {
   # Get arguments as list - they may be tagged quosure lists from helpers
@@ -426,9 +425,9 @@ setMethod("transform", "EvalHandler", function(handler, ...) {
 #' @export
 #' @examples
 #' \dontrun{
-#'   handler <- eval_handler(con, evalid = 500601)
-#'   handler |>
-#'     subset(tree(STATUSCD == 1))
+#' handler <- eval_handler(con, evalid = 500601)
+#' handler |>
+#'   subset(tree(STATUSCD == 1))
 #' }
 setMethod("subset", "EvalHandler", function(handler, ...) {
   # Get arguments as list - they may be tagged quosure lists from helpers
@@ -453,9 +452,9 @@ setMethod("subset", "EvalHandler", function(handler, ...) {
 #' @export
 #' @examples
 #' \dontrun{
-#'   handler <- eval_handler(con, evalid = 500601)
-#'   handler |>
-#'     partition(tree(SPCD), cond(OWNCD))
+#' handler <- eval_handler(con, evalid = 500601)
+#' handler |>
+#'   partition(tree(SPCD), cond(OWNCD))
 #' }
 setMethod("partition", "EvalHandler", function(handler, ...) {
   # Get arguments as list - they may be tagged quosure lists from helpers
@@ -484,11 +483,11 @@ setMethod("partition", "EvalHandler", function(handler, ...) {
 #' @export
 #' @examples
 #' \dontrun{
-#'   handler <- eval_handler(con, evalid = 500601)
-#'   species_ref <- data.frame(SPCD = c(1, 2), COMMON_NAME = c("Pine", "Oak"))
-#'   handler |>
-#'     augment(tree(species_ref, by = "SPCD")) |>
-#'     partition(tree(COMMON_NAME))
+#' handler <- eval_handler(con, evalid = 500601)
+#' species_ref <- data.frame(SPCD = c(1, 2), COMMON_NAME = c("Pine", "Oak"))
+#' handler |>
+#'   augment(tree(species_ref, by = "SPCD")) |>
+#'   partition(tree(COMMON_NAME))
 #' }
 setMethod("augment", "EvalHandler", function(handler, ...) {
   helpers <- list(...)
@@ -523,56 +522,6 @@ setMethod("augment", "EvalHandler", function(handler, ...) {
   handler
 })
 
-#' Mutate Tree Table (Deprecated)
-#'
-#' **Deprecated.** Use `transform(tree(...))` instead.
-#'
-#' @param handler A EvalHandler object.
-#' @param ... Name-value pairs of expressions.
-#' @return A EvalHandler object with pending mutations.
-#' @export
-setMethod("mutate_tree", "EvalHandler", function(handler, ...) {
-  lifecycle::deprecate_warn(
-    "0.1.0",
-    "mutate_tree()",
-    details = "Use `handler |> transform(tree(...))` instead of `handler |> mutate_tree(...)` to apply tree-level mutations."
-  )
-
-  # Capture expressions as quosures and wrap them in tree()
-  new_mutations <- dplyr::quos(...)
-  attr(new_mutations, "target_table") <- "tree"
-
-  # Append to existing mutations
-  handler@tree_mutations <- c(handler@tree_mutations, new_mutations)
-
-  return(handler)
-})
-
-#' Mutate Condition Table (Deprecated)
-#'
-#' **Deprecated.** Use `transform(cond(...))` instead.
-#'
-#' @param handler A EvalHandler object.
-#' @param ... Name-value pairs of expressions.
-#' @return A EvalHandler object with pending mutations.
-#' @export
-setMethod("mutate_cond", "EvalHandler", function(handler, ...) {
-  lifecycle::deprecate_warn(
-    "0.1.0",
-    "mutate_cond()",
-    details = "Use `handler |> transform(cond(...))` instead of `handler |> mutate_cond(...)` to apply condition-level mutations."
-  )
-
-  # Capture expressions as quosures and wrap them in cond()
-  new_mutations <- dplyr::quos(...)
-  attr(new_mutations, "target_table") <- "cond"
-
-  # Append to existing mutations
-  handler@cond_mutations <- c(handler@cond_mutations, new_mutations)
-
-  return(handler)
-})
-
 #' Aggregate a Handler to the Plot Level
 #'
 #' Aggregates inventory data to the plot level. The behavior depends on how
@@ -598,14 +547,14 @@ setMethod("mutate_cond", "EvalHandler", function(handler, ...) {
 #'
 #' @examples
 #' \dontrun{
-#'   # Standard TPA expansion
-#'   handler |> aggregate(tree(VOLCFGRS))
+#' # Standard TPA expansion
+#' handler |> aggregate(tree(VOLCFGRS))
 #'
-#'   # Raw summarise: mean volume per plot (no TPA expansion)
-#'   handler |> aggregate(tree(mean(VOLCFGRS)))
+#' # Raw summarise: mean volume per plot (no TPA expansion)
+#' handler |> aggregate(tree(mean(VOLCFGRS)))
 #'
-#'   # GRM macro (fiaplyr_macro): encodes its own expansion logic
-#'   handler |> aggregate(tree_history(grm_mortality(VOLCFGRS)))
+#' # GRM macro (fiaplyr_macro): encodes its own expansion logic
+#' handler |> aggregate(tree_history(grm_mortality(VOLCFGRS)))
 #' }
 #' @export
 setMethod("aggregate", "EvalHandler", function(handler, ...) {
@@ -778,6 +727,7 @@ setMethod(
 )
 
 #' @describeIn get_strata_weights Get strata weights for EvalHandler
+#' @noRd
 setMethod("get_strata_weights", "EvalHandler", function(handler) {
   handler@tables$pop_stratum %>%
     dplyr::inner_join(

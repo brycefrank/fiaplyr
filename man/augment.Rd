@@ -20,11 +20,12 @@ Join external data (a local data frame or a lazy database table) onto a
 specific table level of a handler. This is useful for attaching reference
 information such as species common names, county names, or plot-level
 covariates. Columns added via \code{augment()} become available to subsequent
-\code{transform()}, \code{subset()}, \code{partition()}, and \code{aggregate()} calls.
+\link[=transform]{transform()}, \link[=subset]{subset()}, \link[=partition]{partition()}, and
+\link[=aggregate]{aggregate()} calls.
 }
 \details{
 The target table and join are specified using the scoped helpers
-(\code{tree()}, \code{cond()}, \code{plot()}, \code{tree_history()}). The first, unnamed argument
+(e.g., \link[=tree]{tree()}, \link[=cond]{cond()}, etc.) The first, unnamed argument
 to the helper is the data to join; named arguments configure the join:
 
 \describe{
@@ -40,9 +41,9 @@ a warning) when joined against a remote table.}
 }
 \examples{
 \dontrun{
-  species_ref <- data.frame(SPCD = c(1, 2), COMMON_NAME = c("Pine", "Oak"))
-  handler |>
-    augment(tree(species_ref, by = "SPCD", type = "left")) |>
-    partition(tree(COMMON_NAME))
+species_ref <- data.frame(SPCD = c(1, 2), COMMON_NAME = c("Pine", "Oak"))
+handler |>
+  augment(tree(species_ref, by = "SPCD", type = "left")) |>
+  partition(tree(COMMON_NAME))
 }
 }

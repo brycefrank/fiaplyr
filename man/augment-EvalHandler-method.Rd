@@ -26,10 +26,10 @@ added here become available to later \code{transform()}, \code{subset()},
 }
 \examples{
 \dontrun{
-  handler <- eval_handler(con, evalid = 500601)
-  species_ref <- data.frame(SPCD = c(1, 2), COMMON_NAME = c("Pine", "Oak"))
-  handler |>
-    augment(tree(species_ref, by = "SPCD")) |>
-    partition(tree(COMMON_NAME))
+handler <- eval_handler(con, evalid = 500601)
+species_ref <- data.frame(SPCD = c(1, 2), COMMON_NAME = c("Pine", "Oak"))
+handler |>
+  augment(tree(species_ref, by = "SPCD")) |>
+  partition(tree(COMMON_NAME))
 }
 }

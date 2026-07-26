@@ -27,9 +27,6 @@ An object of class `fiaplyr_ratio_intent`.
 ## Examples
 
 ```r
-## Not run:
-
   handler |> estimate(ratio(tree(VOLCFNET), cond()))
   handler |> estimate(ratio(tree(VOLCFNET), cond(), den_partitions = list(cond(FORTYPCD))))
-## End(Not run)
 ```

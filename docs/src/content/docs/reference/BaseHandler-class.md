@@ -11,4 +11,4 @@ Virtual Parent Class for fiaplyr
 
 Slots
 
-`db`A DBIConnection object.
+- `db`: A DBIConnection object.

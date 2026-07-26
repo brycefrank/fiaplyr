@@ -1,6 +1,6 @@
 ---
 title: "Augment a Handler with External Data"
-description: "Join external data (a local data frame or a lazy database table) onto a specific table level of a handler. This is useful for attaching reference information such as species common names, county names, or plot-level covariates. Columns added via `augment()` become available to subsequent `transform()`, `subset()`, `partition()`, and `aggregate()` calls."
+description: "Join external data (a local data frame or a lazy database table) onto a specific table level of a handler. This is useful for attaching reference information such as species common names, county names, or plot-level covariates. Columns added via `augment()` become available to subsequent [`transform()`](../transform), [`subset()`](../subset), [`partition()`](../partition), and [`aggregate()`](../aggregate) calls."
 ---
 
 ## Description
@@ -9,20 +9,21 @@ Join external data (a local data frame or a lazy database table) onto a
 specific table level of a handler. This is useful for attaching reference
 information such as species common names, county names, or plot-level
 covariates. Columns added via `augment()` become available to subsequent
-`transform()`, `subset()`, `partition()`, and `aggregate()` calls.
+[`transform()`](../transform), [`subset()`](../subset), [`partition()`](../partition), and
+[`aggregate()`](../aggregate) calls.
 
 ## Details
 
 The target table and join are specified using the scoped helpers
-(`tree()`, `cond()`, `plot()`, `tree_history()`). The first, unnamed argument
+(e.g., [`tree()`](../tree), [`cond()`](../cond), etc.) The first, unnamed argument
 to the helper is the data to join; named arguments configure the join:
 
-`by`Join key(s), passed to the underlying `dplyr` join. A character
+- `by`: Join key(s), passed to the underlying `dplyr` join. A character
 vector or a named character vector (e.g. `c("SPCD" = "code")`). If
 omitted, a natural join on common columns is used.
-`type`Join type: one of `"left"` (default), `"inner"`, `"right"`,
+- `type`: Join type: one of `"left"` (default), `"inner"`, `"right"`,
 or `"full"`.
-`copy`Logical controlling whether a local data frame is uploaded to
+- `copy`: Logical controlling whether a local data frame is uploaded to
 the remote database. If omitted, local data is copied automatically (with
 a warning) when joined against a remote table.
 
@@ -44,11 +45,8 @@ The handler with pending augmentations queued.
 ## Examples
 
 ```r
-## Not run:
-
-  species_ref <- data.frame(SPCD = c(1, 2), COMMON_NAME = c("Pine", "Oak"))
-  handler |>
-    augment(tree(species_ref, by = "SPCD", type = "left")) |>
-    partition(tree(COMMON_NAME))
-## End(Not run)
+species_ref <- data.frame(SPCD = c(1, 2), COMMON_NAME = c("Pine", "Oak"))
+handler |>
+  augment(tree(species_ref, by = "SPCD", type = "left")) |>
+  partition(tree(COMMON_NAME))
 ```

@@ -2,7 +2,7 @@
 % Please edit documentation in R/PostStratifiedEstimator.R
 \name{pe_post_strat_ratio}
 \alias{pe_post_strat_ratio}
-\title{Configure Post-Stratified Ratio Point Estimation}
+\title{Post-stratified Ratio Point Estimator}
 \usage{
 pe_post_strat_ratio(var_est = "auto")
 }
@@ -13,6 +13,25 @@ pe_post_strat_ratio(var_est = "auto")
 A \code{PostStratifiedRatioEstimator} specification.
 }
 \description{
-Creates a ratio-estimator specification for use with
-\code{estimate(handler, ratio(...), estimator = pe_post_strat_ratio())}.
+This function implements the FIA post-stratified ratio point estimator, a
+technique commonly used to estimate areal densities subset to some land
+basis of interest, like forested or timberland area. Much like the
+\link[=pe_post_strat]{pe_post_strat()} estimator, this estimator
+computes post-stratified ratios over a set of estimation units. The
+estimator requires the presence of \code{pop_stratum} and \code{pop_estn_unit} tables
+in the handler, typically present when using \link[=eval_handler]{eval_handler()}.
+}
+\details{
+This estimator is composed of a ratio of two \link[=pe_post_strat]{pe_post_strat()}
+estimators, one for the numerator and one for the denominator, yielding a
+ratio estimate for the evaluation:
+\deqn{\hat{R} = \frac{\sum_g K_g \hat{Y}_g}{\sum_g K_g \hat{X}_g}}
+where \eqn{K_g} is the estimation unit weight and \eqn{\hat{Y}_g} and
+\eqn{\hat{X}_g} are two estimators of the same form, documented further in
+\link[=pe_post_strat]{pe_post_strat()}.
+With the default \code{var_est = "auto"}, the standard
+\link[=ve_post_strat_ratio]{ve_post_strat_ratio()} variance estimator is selected
+automatically. This is equivalent to supplying \code{ve_post_strat_ratio()}
+explicitly and provides a convenient default for the standard ratio
+estimator.
 }

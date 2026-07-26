@@ -1,42 +1,42 @@
-#' Aggregate Data to Plot Level
+#' Aggregate a Handler to Plot Level
 #'
-#' Aggregation is the process of summing tree, condition, or other component
-#' values to the plot level, which can be used to create dataframes of
-#' aggregated data, useful for a variety of applications and diagnostics.
+#' Aggregates inventory data to the plot level. This is useful for creating
+#' plot-level values for statistical models and other applications. Some
+#' analyses, such as state-wide means or totals, do not require an explicit
+#' [aggregate()][aggregate] step.
+#'
+#' Bare variables (e.g., `tree(VOLCFGRS)`) are expanded using the per-acre
+#' expansion factor, `TPA_UNADJ`, to produce a TPA-weighted sum per plot. This
+#' is the standard FIA expansion. Function calls (e.g., `tree(mean(VOLCFGRS))`)
+#' are passed to `dplyr::summarise()` using the active plot-level groupings,
+#' allowing users to specify arbitrary aggregation functions without TPA
+#' expansion. Functions that return a `fiaplyr_macro` object, such as
+#' [grm_mortality()][grm_mortality] and [grm_ingrowth()][grm_ingrowth], encode
+#' their own variable and expansion logic.
 #'
 #' @param handler A handler object.
-#' @param ... A scoped target helper such as `tree(VOLCFGRS)` or `cond()`, plus
-#'   any method-specific options such as `sparse = TRUE`.
+#' @param ... A scoped target helper such as `tree(VOLCFGRS)`,
+#'   `tree(mean(VOLCFGRS))`, or `tree(grm_mortality(VOLCFGRS))`, plus optional
+#'   arguments such as `sparse = TRUE`.
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' # Aggregate gross volume to the plot level
-#' handler |>
-#'   aggregate(tree(VOLCFGRS))
+#' # Standard TPA expansion
+#' handler |> aggregate(tree(VOLCFGRS))
+#'
+#' # Custom aggregation function without TPA expansion
+#' handler |> aggregate(tree(mean(VOLCFGRS)))
+#'
+#' # Weighted mean using TPA_UNADJ
+#' handler |> aggregate(tree(wm_ht = sum(TPA_UNADJ * HT) / sum(TPA_UNADJ)))
 #' }
 setGeneric("aggregate", function(handler, ...) standardGeneric("aggregate"))
-
-#' @export
-#' @rdname mutate_tree
-#' @title Mutate Tree Table
-#' @description **Deprecated.** Use `transform(tree(...))` instead.
-#' @param handler A handler object.
-#' @param ... Additional arguments.
-setGeneric("mutate_tree", function(handler, ...) standardGeneric("mutate_tree"))
-
-#' @export
-#' @rdname mutate_cond
-#' @title Mutate Condition Table
-#' @description **Deprecated.** Use `transform(cond(...))` instead.
-#' @param handler A handler object.
-#' @param ... Additional arguments.
-setGeneric("mutate_cond", function(handler, ...) standardGeneric("mutate_cond"))
 
 #' Add or Modify Columns of a Handler
 #'
 #' Add derived columns or modify existing ones on a specific table level
-#' Expressions must be wrapped in scoping helpers (`tree()`, `cond()`, etc) to
+#' Expressions must be wrapped in scoping helpers ([tree()][tree], [cond()][cond], etc) to
 #' specify their target table.
 #'
 #' @param handler A handler object.
@@ -59,22 +59,27 @@ setGeneric("transform", function(handler, ...) standardGeneric("transform"))
 #' integrity of the inventory structure. Subsetting is encouraged, as it
 #' increases the computation speed of the analysis.
 #'
-#' Subsetting is done using the `tree()` and `cond()` helpers. For
-#' example `subset(tree(STATUSCD == 1))` would retain only live trees in later
-#' analysis. Subsetting is done hierarchically: subset statements for `cond`
-#' apply to the conditions themselves, and trees within them, while subset
-#' statements for `tree` apply only to trees. This ensures that the resulting
-#' data structure remains consistent (e.g., no trees without conditions, etc).
+#' Subsetting is done using the [tree()][tree], [cond()][cond], and other
+#' helpers. For example `subset(tree(STATUSCD == 1))` would retain only live
+#' trees in later analysis. Subsetting is done hierarchically: subset statements
+#' for [cond()][cond] apply to the conditions themselves, and trees within them,
+#' while subset statements for [tree()][tree] apply only to trees. This ensures
+#' that the resulting data structure remains consistent (e.g., no trees without
+#' conditions, etc). Subsetting done higher in the hierarchy (e.g.,
+#' [plot()][plot]) will remove all lower-level components (e.g., conditions and
+#' trees), but retain all plots in [aggregate()][aggregate] and
+#' [estimate()][estimate] calls to preserve the sanctity of the inventory
+#' design.
 #'
 #' @param handler A handler object.
-#' @param ... Scoped logical expressions using `tree()`, `cond()`, or `plot()` helpers.
+#' @param ... Scoped logical expressions using `tree()`, `cond()`, or `plot()`
+#' helpers.
+#'
 #' @return The handler with pending filters queued.
 #' @export
-#' @examples
-#' \dontrun{
+#' @examples \dontrun{
 #' # Retain only live trees
-#' handler |>
-#'  subset(tree(STATUSCD == 1))
+#' handler |> subset(tree(STATUSCD == 1))
 #' }
 setGeneric("subset", function(handler, ...) standardGeneric("subset"))
 
@@ -82,7 +87,7 @@ setGeneric("subset", function(handler, ...) standardGeneric("subset"))
 #'
 #' Broadly, domains are unique subpopulations of inventory components (e.g.,
 #' trees, etc). Domains are formed by unique combinations of domain variables,
-#' which are typically integer- or categorical-values columns in the underlying
+#' which are typically integer- or categorical-valued columns in the underlying
 #' tables. This function allows the users to specify domain variables across
 #' the handler. Canonical examples include species (`SPCD`), ownership (`OWNCD`)
 #' and others.
@@ -90,7 +95,7 @@ setGeneric("subset", function(handler, ...) standardGeneric("subset"))
 #' Domains are specified for a table using the associated helper. For example,
 #' `partition(tree(SPCD, STATUSCD))` would set the tree-level domains to be
 #' unique combinations of `SPCD` and `STATUSCD`. Columns added during
-#' `transform()` can be used as domain variables as well. Multiple helpers can
+#' [transform()][transform] can be used as domain variables as well. Multiple helpers can
 #' be mixed in a single call, such as `partition(tree(SPCD), cond(OWNCD))`.
 #'
 #' @param handler A handler object.
@@ -112,10 +117,11 @@ setGeneric("partition", function(handler, ...) standardGeneric("partition"))
 #' specific table level of a handler. This is useful for attaching reference
 #' information such as species common names, county names, or plot-level
 #' covariates. Columns added via `augment()` become available to subsequent
-#' `transform()`, `subset()`, `partition()`, and `aggregate()` calls.
+#' [transform()][transform], [subset()][subset], [partition()][partition], and
+#' [aggregate()][aggregate] calls.
 #'
 #' The target table and join are specified using the scoped helpers
-#' (`tree()`, `cond()`, `plot()`, `tree_history()`). The first, unnamed argument
+#' (e.g., [tree()][tree], [cond()][cond], etc.) The first, unnamed argument
 #' to the helper is the data to join; named arguments configure the join:
 #'
 #' \describe{
@@ -137,10 +143,10 @@ setGeneric("partition", function(handler, ...) standardGeneric("partition"))
 #'
 #' @examples
 #' \dontrun{
-#'   species_ref <- data.frame(SPCD = c(1, 2), COMMON_NAME = c("Pine", "Oak"))
-#'   handler |>
-#'     augment(tree(species_ref, by = "SPCD", type = "left")) |>
-#'     partition(tree(COMMON_NAME))
+#' species_ref <- data.frame(SPCD = c(1, 2), COMMON_NAME = c("Pine", "Oak"))
+#' handler |>
+#'   augment(tree(species_ref, by = "SPCD", type = "left")) |>
+#'   partition(tree(COMMON_NAME))
 #' }
 setGeneric("augment", function(handler, ...) standardGeneric("augment"))
 
@@ -161,7 +167,7 @@ setGeneric("materialize", function(handler, slot) {
 #'
 #' @param handler A handler object.
 #' @return A lazy query with strata weights.
-#' @export
+#' @noRd
 setGeneric("get_strata_weights", function(handler) {
   standardGeneric("get_strata_weights")
 })

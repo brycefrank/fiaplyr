@@ -36,7 +36,7 @@ if (filt_tpa > base_tpa) {
 
 # 3. Mutate then Filter Tree
 handler_mut_filt <- eval_handler(con, evalid) %>%
-  mutate_tree(is_live = ifelse(STATUSCD == 1, 1, 0)) %>%
+  transform(tree(is_live = ifelse(STATUSCD == 1, 1, 0))) %>%
   subset(tree(is_live == 1))
 
 mut_filt_est <- PostStratifiedEstimator(handler_mut_filt) %>%

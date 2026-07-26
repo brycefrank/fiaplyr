@@ -11,6 +11,15 @@ man_dir <- file.path(project_root, "man")
 reference_dir <- file.path(project_root, "docs", "src", "content", "docs", "reference")
 guides_dir <- file.path(project_root, "docs", "src", "content", "docs", "guides")
 
+if (!requireNamespace("devtools", quietly = TRUE)) {
+  stop(
+    "The devtools package is required to generate documentation before building the reference.",
+    call. = FALSE
+  )
+}
+
+devtools::document(pkg = project_root)
+
 dir.create(reference_dir, recursive = TRUE, showWarnings = FALSE)
 
 if (!dir.exists(man_dir)) {
@@ -99,6 +108,7 @@ strip_backspaces <- function(line) {
 }
 
 escape_yaml <- function(x) {
+  x <- gsub("\\", "\\\\", x, fixed = TRUE)
   x <- gsub('"', '\\"', x, fixed = TRUE)
   x
 }
@@ -165,6 +175,9 @@ rd_section_lines <- function(rd, rd_tag, heading) {
 
   lines <- gsub("^\\s{5}", "", lines)
   lines <- gsub("^\\s+$", "", lines)
+  if (identical(rd_tag, "\\examples")) {
+    lines <- lines[!trim(lines) %in% c("## Not run:", "## End(Not run)")]
+  }
   compact_blank_lines(lines)
 }
 
@@ -202,6 +215,17 @@ render_rd_text <- function(node) {
 
   if (identical(tag, "TEXT")) {
     return(paste(as.character(node), collapse = ""))
+  }
+
+  if (identical(tag, "\\describe")) {
+    items <- node[vapply(node, function(child) {
+      identical(attr(child, "Rd_tag"), "\\item")
+    }, logical(1))]
+    return(paste(vapply(items, function(item) {
+      label <- trim(render_rd_text(item[[1]]))
+      description <- trim(render_rd_text(item[[2]]))
+      paste0("- ", label, ": ", description)
+    }, character(1)), collapse = "\n"))
   }
 
   children <- vapply(as.list(node), render_rd_text, character(1))
@@ -261,6 +285,15 @@ render_rd_text <- function(node) {
 
   if (identical(tag, "\\strong")) {
     return(paste0("**", content, "**"))
+  }
+
+  if (tag %in% c("\\eqn", "\\deqn") && length(node) >= 1) {
+    math <- trim(render_rd_text(node[[1]]))
+    if (identical(tag, "\\deqn")) {
+      return(paste0("\n\n$$\n", math, "\n$$\n\n"))
+    }
+
+    return(paste0("$", math, "$"))
   }
 
   content
@@ -500,7 +533,11 @@ pick_rd_for_class <- function(class_name) {
 function_topics <- list()
 missing_functions <- character()
 
-function_symbols <- unique(c(exports$functions, exports$methods))
+reference_excluded_functions <- "evalid<-"
+function_symbols <- setdiff(
+  unique(c(exports$functions, exports$methods)),
+  reference_excluded_functions
+)
 
 for (symbol in function_symbols) {
   rd_path <- pick_rd_for_function(symbol)
@@ -561,24 +598,100 @@ for (topic in c(function_topics, class_topics)) {
 
 index_lines <- c(
   "---",
-  "title: \"R Reference\"",
+  "title: \"Full API Index\"",
   "description: \"Auto-generated reference pages from fiaplyr Rd documentation.\"",
   "---",
   "",
-  "These pages are generated from `man/*.Rd` during the docs build.",
   ""
 )
 
-if (length(function_topics)) {
-  index_lines <- c(index_lines, "## Functions", "")
-  function_links <- vapply(function_topics, function(topic) {
+function_group_symbols <- list(
+  "Handlers" = c("eval_handler"),
+  "Handler Methods" = c(
+    "aggregate", "augment", "estimate", "estimate_ratio",
+    "evalid", "materialize", "partition",
+    "ratio", "show", "subset", "summary", "transform"
+  ),
+  "Analysis Specifications" = c(
+    "grm_analysis", "status_analysis"
+  ),
+  "Scoped Helpers" = c(
+    "fiadb_vt_mini_path",
+    "set_fiaplyr_verbosity", "cond", "pcond", "plot", "pplot", "ptree",
+    "PostStratifiedEstimator", "PostStratifiedRatioEstimator"
+  ),
+  "Estimators" = c(
+    "pe_post_strat", "pe_post_strat_ratio", "ve_post_strat",
+    "ve_post_strat_ratio"
+  ),
+  "Database Facilitation" = c("database_mapping", "explore_evals"),
+  "Growth, Removals and Mortality Macros" = character()
+)
+
+section_descriptions <- c(
+  "Handlers" = "Create handlers for FIA database analyses.",
+  "Handler Methods" = "Subset, transform, estimate, and summarize FIA data.",
+  "Analysis Specifications" = "Configure the analysis context used by a handler.",
+  "Scoped Helpers" = "Target particular tables within a handler.",
+  "Estimators" = "Estimate population totals, ratios, and associated variances.",
+  "Database Facilitation" = "Connect analyses to FIA databases and explore their contents.",
+  "Growth, Removals and Mortality Macros" = "Build macros for growth, removals, mortality, and related change components.",
+  "Classes" = "Core S4 classes used to represent handlers, analyses, mappings, and estimators. These are typically not used directly by uses, and their associated lower-case helpers are used instead."
+)
+
+macro_symbols <- vapply(
+  Filter(
+    function(topic) {
+      grepl("^(grm_|grom_)", topic$symbol) &&
+        !identical(topic$symbol, "grm_analysis")
+    },
+    function_topics
+  ),
+  function(topic) topic$symbol,
+  character(1)
+)
+function_group_symbols[["Growth, Removals and Mortality Macros"]] <- macro_symbols
+
+topic_by_symbol <- setNames(function_topics, vapply(function_topics, function(topic) {
+  topic$symbol
+}, character(1)))
+grouped_symbols <- unique(unlist(function_group_symbols, use.names = FALSE))
+unclassified_symbols <- setdiff(names(topic_by_symbol), grouped_symbols)
+if (length(unclassified_symbols)) {
+  function_group_symbols[["Scoped Helpers"]] <- c(
+    function_group_symbols[["Scoped Helpers"]],
+    unclassified_symbols
+  )
+}
+
+for (group_name in names(function_group_symbols)) {
+  symbols <- function_group_symbols[[group_name]]
+  topics <- unname(topic_by_symbol[intersect(symbols, names(topic_by_symbol))])
+  if (!length(topics)) {
+    next
+  }
+
+  index_lines <- c(
+    index_lines,
+    paste0("## ", group_name),
+    "",
+    section_descriptions[[group_name]],
+    ""
+  )
+  function_links <- vapply(topics, function(topic) {
     paste0("- [`", topic$symbol, "`](", reference_href(route_slug_from_topic_slug(topic$slug), from_index = TRUE), ")")
   }, character(1))
   index_lines <- c(index_lines, function_links, "")
 }
 
 if (length(class_topics)) {
-  index_lines <- c(index_lines, "## Classes", "")
+  index_lines <- c(
+    index_lines,
+    "## Classes",
+    "",
+    section_descriptions[["Classes"]],
+    ""
+  )
   class_links <- vapply(class_topics, function(topic) {
     paste0("- [`", topic$symbol, "`](", reference_href(route_slug_from_topic_slug(topic$slug), from_index = TRUE), ")")
   }, character(1))

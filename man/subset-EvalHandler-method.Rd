@@ -22,8 +22,8 @@ excluded from all subsequent operations.
 }
 \examples{
 \dontrun{
-  handler <- eval_handler(con, evalid = 500601)
-  handler |>
-    subset(tree(STATUSCD == 1))
+handler <- eval_handler(con, evalid = 500601)
+handler |>
+  subset(tree(STATUSCD == 1))
 }
 }

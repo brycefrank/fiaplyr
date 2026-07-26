@@ -36,13 +36,13 @@ both the variable and its expansion logic.
 }
 \examples{
 \dontrun{
-  # Standard TPA expansion
-  handler |> aggregate(tree(VOLCFGRS))
+# Standard TPA expansion
+handler |> aggregate(tree(VOLCFGRS))
 
-  # Raw summarise: mean volume per plot (no TPA expansion)
-  handler |> aggregate(tree(mean(VOLCFGRS)))
+# Raw summarise: mean volume per plot (no TPA expansion)
+handler |> aggregate(tree(mean(VOLCFGRS)))
 
-  # GRM macro (fiaplyr_macro): encodes its own expansion logic
-  handler |> aggregate(tree_history(grm_mortality(VOLCFGRS)))
+# GRM macro (fiaplyr_macro): encodes its own expansion logic
+handler |> aggregate(tree_history(grm_mortality(VOLCFGRS)))
 }
 }

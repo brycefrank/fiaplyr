@@ -2,25 +2,42 @@
 % Please edit documentation in R/methods.R
 \name{aggregate}
 \alias{aggregate}
-\title{Aggregate Data to Plot Level}
+\title{Aggregate a Handler to Plot Level}
 \usage{
 aggregate(handler, ...)
 }
 \arguments{
 \item{handler}{A handler object.}
 
-\item{...}{A scoped target helper such as \code{tree(VOLCFGRS)} or \code{cond()}, plus
-any method-specific options such as \code{sparse = TRUE}.}
+\item{...}{A scoped target helper such as \code{tree(VOLCFGRS)},
+\code{tree(mean(VOLCFGRS))}, or \code{tree(grm_mortality(VOLCFGRS))}, plus optional
+arguments such as \code{sparse = TRUE}.}
 }
 \description{
-Aggregation is the process of summing tree, condition, or other component
-values to the plot level, which can be used to create dataframes of
-aggregated data, useful for a variety of applications and diagnostics.
+Aggregates inventory data to the plot level. This is useful for creating
+plot-level values for statistical models and other applications. Some
+analyses, such as state-wide means or totals, do not require an explicit
+\link[=aggregate]{aggregate()} step.
+}
+\details{
+Bare variables (e.g., \code{tree(VOLCFGRS)}) are expanded using the per-acre
+expansion factor, \code{TPA_UNADJ}, to produce a TPA-weighted sum per plot. This
+is the standard FIA expansion. Function calls (e.g., \code{tree(mean(VOLCFGRS))})
+are passed to \code{dplyr::summarise()} using the active plot-level groupings,
+allowing users to specify arbitrary aggregation functions without TPA
+expansion. Functions that return a \code{fiaplyr_macro} object, such as
+\link[=grm_mortality]{grm_mortality()} and \link[=grm_ingrowth]{grm_ingrowth()}, encode
+their own variable and expansion logic.
 }
 \examples{
 \dontrun{
-# Aggregate gross volume to the plot level
-handler |>
-  aggregate(tree(VOLCFGRS))
+# Standard TPA expansion
+handler |> aggregate(tree(VOLCFGRS))
+
+# Custom aggregation function without TPA expansion
+handler |> aggregate(tree(mean(VOLCFGRS)))
+
+# Weighted mean using TPA_UNADJ
+handler |> aggregate(tree(wm_ht = sum(TPA_UNADJ * HT) / sum(TPA_UNADJ)))
 }
 }

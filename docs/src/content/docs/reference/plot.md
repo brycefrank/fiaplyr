@@ -27,10 +27,7 @@ A list of quosures tagged with `target_table = "plot"`.
 ## Examples
 
 ```r
-## Not run:
-
   handler |>
     subset(plot(STATECD == 50)) |>
     partition(plot(COUNTYCD))
-## End(Not run)
 ```

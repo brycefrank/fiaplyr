@@ -6,7 +6,7 @@
 #' @param f A formula.
 #' @return A list containing the slot name and a character vector of target
 #'  variables.
-#' @export
+#' @noRd
 #' @examples
 #' parse_formula(tree ~ VOLCFGRS | VOLCFNET)
 #' parse_formula(cond ~ 1)

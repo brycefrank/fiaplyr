@@ -17,7 +17,7 @@ The handler with domain variables set.
 \description{
 Broadly, domains are unique subpopulations of inventory components (e.g.,
 trees, etc). Domains are formed by unique combinations of domain variables,
-which are typically integer- or categorical-values columns in the underlying
+which are typically integer- or categorical-valued columns in the underlying
 tables. This function allows the users to specify domain variables across
 the handler. Canonical examples include species (\code{SPCD}), ownership (\code{OWNCD})
 and others.
@@ -26,7 +26,7 @@ and others.
 Domains are specified for a table using the associated helper. For example,
 \code{partition(tree(SPCD, STATUSCD))} would set the tree-level domains to be
 unique combinations of \code{SPCD} and \code{STATUSCD}. Columns added during
-\code{transform()} can be used as domain variables as well. Multiple helpers can
+\link[=transform]{transform()} can be used as domain variables as well. Multiple helpers can
 be mixed in a single call, such as \code{partition(tree(SPCD), cond(OWNCD))}.
 }
 \examples{

@@ -10,5 +10,22 @@ ve_post_strat()
 A \code{PostStratifiedVarianceEstimator} object.
 }
 \description{
-Configure Post-Stratified Variance Estimation
+For each stratum \eqn{h}, the estimator computes the sample mean
+\deqn{\bar{y}_h = \frac{1}{n_h}\sum_i y_{hi}}
+and sample variance
+\deqn{s_h^2 = \frac{\sum_i y_{hi}^2 - n_h\bar{y}_h^2}{n_h(n_h - 1)}.}
+These are combined within estimation unit \eqn{g} using the FIA
+post-stratification variance formula
+\deqn{v_g = \frac{1}{n}\sum_h\left[w_h n_h +
+(1-w_h)\frac{n_h}{n}\right]s_h^2,}
+and then across independent estimation units as
+\deqn{v = \sum_g w_g^2 v_g.}
+For total estimates, the final \eqn{w_g} coefficients are replaced by
+estimation-unit areas. The standard error is \eqn{\sqrt{v}}.
+}
+\details{
+The calculation is sparse: it aggregates only observed plot rows and uses
+\eqn{\sum_i y_{hi}} and \eqn{\sum_i y_{hi}^2} as sufficient statistics. Implicit
+zero-valued rows do not need to be materialized because they contribute zero
+to both sums; \eqn{n_h} remains the full stratum sample size.
 }

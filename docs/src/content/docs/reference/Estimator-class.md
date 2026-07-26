@@ -11,4 +11,4 @@ Base Estimator Class
 
 Slots
 
-`handler`A EvalHandler object.
+- `handler`: A EvalHandler object.

@@ -39,16 +39,36 @@ export default defineConfig({
               items: [
                 {label: 'eval_handler', slug: 'reference/eval_handler' },
                 {label: 'transform', slug: 'reference/transform' },
+                { label: 'augment', slug: 'reference/augment' },
                 {label: 'subset', slug: 'reference/subset' },
                 {label: 'partition', slug: 'reference/partition' },
                 { label: 'aggregate', slug: 'reference/aggregate' },
               ]
             },
             {
+              label: 'Analysis Specifications',
+              items: [
+                {label: 'status_analysis', slug: 'reference/status_analysis'},
+                {label: 'grm_analysis', slug: 'reference/grm_analysis'}
+              ]
+            },
+            {
               label: 'Estimators',
               items: [
-                {label: 'PostStratifiedEstimator', slug: 'reference/poststratifiedestimator' },
-                {label: 'PostStratifiedRatioEstimator', slug: 'reference/poststratifiedratioestimator' }
+                {
+                  label: 'Point Estimators',
+                  items: [
+                    {label: 'pe_post_strat', slug: 'reference/pe_post_strat'},
+                    {label: 'pe_post_strat_ratio', slug: 'reference/pe_post_strat_ratio'}
+                  ]
+                },
+                {
+                  label: 'Variance Estimators',
+                  items: [
+                    {label: 've_post_strat', slug: 'reference/ve_post_strat'},
+                    {label: 've_post_strat_ratio', slug: 'reference/ve_post_strat_ratio'}
+                  ]
+                }
               ]
             }
 					],
