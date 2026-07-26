@@ -21,6 +21,10 @@ term at the risk of some confusion, as it is the standard term used in FIA
 documentation. Because the estimator is standard it requires the presence
 of \code{pop_stratum} and \code{pop_estn_unit} tables in the evaluation, which
 encode the post-strata weights among other details.
+With the default \code{var_est = "auto"}, the standard
+\link[=ve_post_strat]{ve_post_strat()} variance estimator is selected
+automatically. This is equivalent to supplying \code{ve_post_strat()} explicitly
+and provides a convenient default for the standard non-ratio estimator.
 }
 \details{
 Post-stratified point estimation, in the FIA context, computes estimates for

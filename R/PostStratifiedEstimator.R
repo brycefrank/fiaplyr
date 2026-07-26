@@ -38,6 +38,10 @@ PostStratifiedEstimator <- function(handler = NULL, var_est = "auto") {
 #' documentation. Because the estimator is standard it requires the presence
 #' of `pop_stratum` and `pop_estn_unit` tables in the evaluation, which
 #' encode the post-strata weights among other details.
+#' With the default `var_est = "auto"`, the standard
+#' [ve_post_strat()][ve_post_strat] variance estimator is selected
+#' automatically. This is equivalent to supplying `ve_post_strat()` explicitly
+#' and provides a convenient default for the standard non-ratio estimator.
 #'
 #' Post-stratified point estimation, in the FIA context, computes estimates for
 #' each estimation unit using a post-stratified estimator, then sums across the
@@ -64,7 +68,7 @@ pe_post_strat <- function(var_est = "auto") {
   )
 }
 
-#' Post-Stratified Ratio Point Estimation
+#' Post-stratified Ratio Point Estimator
 #'
 #' This function implements the FIA post-stratified ratio point estimator, a
 #' technique commonly used to estimate areal densities subset to some land
@@ -81,6 +85,11 @@ pe_post_strat <- function(var_est = "auto") {
 #' where \eqn{K_g} is the estimation unit weight and \eqn{\hat{Y}_g} and
 #' \eqn{\hat{X}_g} are two estimators of the same form, documented further in
 #' [pe_post_strat()][pe_post_strat].
+#' With the default `var_est = "auto"`, the standard
+#' [ve_post_strat_ratio()][ve_post_strat_ratio] variance estimator is selected
+#' automatically. This is equivalent to supplying `ve_post_strat_ratio()`
+#' explicitly and provides a convenient default for the standard ratio
+#' estimator.
 #'
 #' @param var_est A variance-estimator specification, or `"auto"`.
 #' @return A `PostStratifiedRatioEstimator` specification.

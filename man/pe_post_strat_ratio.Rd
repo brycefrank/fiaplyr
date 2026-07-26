@@ -2,7 +2,7 @@
 % Please edit documentation in R/PostStratifiedEstimator.R
 \name{pe_post_strat_ratio}
 \alias{pe_post_strat_ratio}
-\title{Post-Stratified Ratio Point Estimation}
+\title{Post-stratified Ratio Point Estimator}
 \usage{
 pe_post_strat_ratio(var_est = "auto")
 }
@@ -29,4 +29,9 @@ ratio estimate for the evaluation:
 where \eqn{K_g} is the estimation unit weight and \eqn{\hat{Y}_g} and
 \eqn{\hat{X}_g} are two estimators of the same form, documented further in
 \link[=pe_post_strat]{pe_post_strat()}.
+With the default \code{var_est = "auto"}, the standard
+\link[=ve_post_strat_ratio]{ve_post_strat_ratio()} variance estimator is selected
+automatically. This is equivalent to supplying \code{ve_post_strat_ratio()}
+explicitly and provides a convenient default for the standard ratio
+estimator.
 }
