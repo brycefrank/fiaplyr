@@ -1,22 +1,23 @@
+.pipeline_targets <- c("plot", "cond", "tree", "tree_history")
+
+.new_pipeline <- function() {
+  setNames(
+    lapply(.pipeline_targets, function(target) {
+      list(
+        augment = list(),
+        mutate = list(),
+        filter = list(),
+        domain = list()
+      )
+    }),
+    .pipeline_targets
+  )
+}
+
 #' Class for Evaluation Pipeline
 #'
 #' @slot evalid The evaluation ID (numeric).
-#' @slot plot_mutations Pending plot-level mutation quosures.
-#' @slot plot_filters Pending plot-level filter quosures.
-#' @slot plot_domains Pending plot-level domain quosures.
-#' @slot tree_mutations Pending tree-level mutation quosures.
-#' @slot cond_mutations Pending condition-level mutation quosures.
-#' @slot tree_history_mutations Pending tree-history-level mutation quosures.
-#' @slot tree_domains Pending tree-level domain quosures.
-#' @slot cond_domains Pending condition-level domain quosures.
-#' @slot tree_history_domains Pending tree-history-level domain quosures.
-#' @slot tree_filters Pending tree-level filter quosures.
-#' @slot cond_filters Pending condition-level filter quosures.
-#' @slot tree_history_filters Pending tree-history-level filter quosures.
-#' @slot plot_augmentations Pending plot-level external-data join specs.
-#' @slot tree_augmentations Pending tree-level external-data join specs.
-#' @slot cond_augmentations Pending condition-level external-data join specs.
-#' @slot tree_history_augmentations Pending tree-history-level external-data join specs.
+#' @slot pipeline Pending operations grouped by target table and operation.
 #' @slot tables A list of lazy queries for the tables.
 #' @slot spec The AnalysisSpec used.
 #' @slot internal_cache Environment for caching intermediate results.
@@ -29,22 +30,7 @@ setClass(
     tables = "list",
     spec = "AnalysisSpec",
     internal_cache = "environment",
-    plot_mutations = "list",
-    plot_filters = "list",
-    plot_domains = "ANY",
-    tree_mutations = "list",
-    cond_mutations = "list",
-    tree_history_mutations = "list",
-    tree_domains = "ANY",
-    cond_domains = "ANY",
-    tree_history_domains = "ANY",
-    tree_filters = "list",
-    cond_filters = "list",
-    tree_history_filters = "list",
-    plot_augmentations = "list",
-    tree_augmentations = "list",
-    cond_augmentations = "list",
-    tree_history_augmentations = "list"
+    pipeline = "list"
   )
 )
 
@@ -92,22 +78,7 @@ eval_handler <- function(db, evalid, spec = status_analysis(), backend = NULL) {
     tables = tables,
     spec = spec,
     internal_cache = new.env(parent = emptyenv()),
-    plot_mutations = list(),
-    plot_filters = list(),
-    plot_domains = list(),
-    tree_mutations = list(),
-    cond_mutations = list(),
-    tree_history_mutations = list(),
-    tree_domains = list(),
-    cond_domains = list(),
-    tree_history_domains = list(),
-    tree_filters = list(),
-    cond_filters = list(),
-    tree_history_filters = list(),
-    plot_augmentations = list(),
-    tree_augmentations = list(),
-    cond_augmentations = list(),
-    tree_history_augmentations = list()
+    pipeline = .new_pipeline()
   )
 }
 
@@ -198,9 +169,9 @@ setMethod("show", "EvalHandler", function(object) {
   }
 
   # Display domain variables if set
-  plot_dom_labels <- vapply(object@plot_domains, rlang::as_label, character(1))
-  tree_dom_labels <- vapply(object@tree_domains, rlang::as_label, character(1))
-  cond_dom_labels <- vapply(object@cond_domains, rlang::as_label, character(1))
+  plot_dom_labels <- vapply(object@pipeline$plot$domain, rlang::as_label, character(1))
+  tree_dom_labels <- vapply(object@pipeline$tree$domain, rlang::as_label, character(1))
+  cond_dom_labels <- vapply(object@pipeline$cond$domain, rlang::as_label, character(1))
 
   if (
     length(plot_dom_labels) > 0 ||
@@ -220,10 +191,48 @@ setMethod("show", "EvalHandler", function(object) {
   }
 })
 
+#' Internal: Update the Pipeline Registry
+#'
+#' Add or replace values in one target's pipeline operation.
+#'
+#' @param handler An EvalHandler object.
+#' @param target A pipeline target table.
+#' @param operation One of "augment", "mutate", "filter", or "domain".
+#' @param values Values to add or assign.
+#' @param mode Either "append" or "replace".
+#' @return The modified handler.
+#' @keywords internal
+.pipeline_update <- function(handler, target, operation, values, mode = "append") {
+  if (!target %in% .pipeline_targets) {
+    rlang::abort(sprintf("Invalid target table: '%s'.", target))
+  }
+
+  if (!operation %in% c("augment", "mutate", "filter", "domain")) {
+    rlang::abort(sprintf("Invalid pipeline operation: '%s'.", operation))
+  }
+
+  pipeline <- handler@pipeline
+  if (mode == "append") {
+    pipeline[[target]][[operation]] <-
+      c(pipeline[[target]][[operation]], values)
+  } else if (mode == "replace") {
+    pipeline[[target]][[operation]] <- values
+  } else {
+    rlang::abort(sprintf("Invalid pipeline update mode: '%s'.", mode))
+  }
+
+  handler@pipeline <- pipeline
+  handler
+}
+
+.pipeline_domains <- function(handler, target) {
+  handler@pipeline[[target]]$domain
+}
+
 #' Internal: Route and Queue Scoped Expressions
 #'
 #' Validates that all arguments are scoped via helpers and routes them to the
-#' appropriate handler slots (mutations, filters, or domains).
+#' appropriate pipeline target and operation.
 #'
 #' @param handler An EvalHandler object.
 #' @param args Evaluated arguments from `rlang::list2(...)`.
@@ -239,40 +248,23 @@ setMethod("show", "EvalHandler", function(object) {
     return(handler)
   }
 
-  # Check if the entire args list has a target_table attribute (from scoped helpers)
   list_target_table <- attr(args, "target_table")
 
   if (!is.null(list_target_table)) {
-    # All expressions in this list share the same target
-    if (!list_target_table %in% c("tree", "cond", "plot", "tree_history")) {
-      rlang::abort(
-        sprintf(
-          "Invalid target table: '%s'. Must be 'tree', 'cond', 'plot', or 'tree_history'.",
-          list_target_table
-        )
-      )
-    }
-
-    slot_mutations <- paste0(list_target_table, "_mutations")
-    slot_filters <- paste0(list_target_table, "_filters")
-    slot_domains <- paste0(list_target_table, "_domains")
-
+    target_args <- args
+    target <- list_target_table
     if (operation == "append_mutations") {
-      slot(handler, slot_mutations) <- c(slot(handler, slot_mutations), args)
+      handler <- .pipeline_update(handler, target, "mutate", target_args)
     } else if (operation == "append_filters") {
-      slot(handler, slot_filters) <- c(slot(handler, slot_filters), args)
+      handler <- .pipeline_update(handler, target, "filter", target_args)
     } else if (operation == "set_domains") {
-      slot(handler, slot_domains) <- args
+      handler <- .pipeline_update(handler, target, "domain", target_args, "replace")
+    } else {
+      rlang::abort(sprintf("Unsupported scoped expression operation: '%s'.", operation))
     }
   } else {
-    domain_updates <- list(
-      tree = NULL,
-      cond = NULL,
-      plot = NULL,
-      tree_history = NULL
-    )
+    domain_updates <- list()
 
-    # Multiple expressions with potentially different targets
     for (arg in args) {
       if (is.null(arg)) {
         next
@@ -287,36 +279,31 @@ setMethod("show", "EvalHandler", function(object) {
         )
       }
 
-      if (!target_table %in% c("tree", "cond", "plot", "tree_history")) {
-        rlang::abort(
-          sprintf(
-            "Invalid target table: '%s'. Must be 'tree', 'cond', 'plot', or 'tree_history'.",
-            target_table
-          )
-        )
+      if (!target_table %in% .pipeline_targets) {
+        rlang::abort(sprintf("Invalid target table: '%s'.", target_table))
       }
 
-      slot_mutations <- paste0(target_table, "_mutations")
-      slot_filters <- paste0(target_table, "_filters")
-      slot_domains <- paste0(target_table, "_domains")
-
       if (operation == "append_mutations") {
-        slot(handler, slot_mutations) <- c(slot(handler, slot_mutations), arg)
+        handler <- .pipeline_update(handler, target_table, "mutate", arg)
       } else if (operation == "append_filters") {
-        slot(handler, slot_filters) <- c(slot(handler, slot_filters), arg)
+        handler <- .pipeline_update(handler, target_table, "filter", arg)
       } else if (operation == "set_domains") {
-        domain_updates[[target_table]] <- c(domain_updates[[target_table]], arg)
+        domain_updates[[target_table]] <-
+          c(domain_updates[[target_table]], arg)
+      } else {
+        rlang::abort(sprintf("Unsupported scoped expression operation: '%s'.", operation))
       }
     }
 
     if (operation == "set_domains") {
       for (target_table in names(domain_updates)) {
-        if (is.null(domain_updates[[target_table]])) {
-          next
-        }
-
-        slot_domains <- paste0(target_table, "_domains")
-        slot(handler, slot_domains) <- domain_updates[[target_table]]
+        handler <- .pipeline_update(
+          handler,
+          target_table,
+          "domain",
+          domain_updates[[target_table]],
+          "replace"
+        )
       }
     }
   }
@@ -515,8 +502,7 @@ setMethod("augment", "EvalHandler", function(handler, ...) {
       )
     }
 
-    slot_name <- paste0(spec$target, "_augmentations")
-    slot(handler, slot_name) <- c(slot(handler, slot_name), list(spec))
+    handler <- .pipeline_update(handler, spec$target, "augment", list(spec))
   }
 
   handler

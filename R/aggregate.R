@@ -283,6 +283,22 @@
   res
 }
 
+.apply_level_pipeline <- function(res, object, target) {
+  ops <- object@pipeline[[target]]
+
+  res <- .apply_augmentations(res, ops$augment)
+
+  if (length(ops$mutate) > 0) {
+    res <- res %>% dplyr::mutate(!!!ops$mutate)
+  }
+
+  if (length(ops$filter) > 0) {
+    res <- res %>% dplyr::filter(!!!ops$filter)
+  }
+
+  res
+}
+
 #' Aggregate condition data to plot or subplot levels
 #'
 #' @param object A EvalHandler object.
@@ -292,12 +308,12 @@
 
   plot_keys <- .plot_keys_raw
   plot_domains <- .resolve_partition_domains(
-    object@plot_domains,
+    .pipeline_domains(object, "plot"),
     "plot",
     colnames(res)
   )
   cond_domains <- .resolve_partition_domains(
-    object@cond_domains,
+    .pipeline_domains(object, "cond"),
     "cond",
     colnames(res)
   )
@@ -380,18 +396,7 @@
       suffix = c("", ".cond")
     )
 
-  # Join external data queued via augment(cond(...))
-  res <- .apply_augmentations(res, object@cond_augmentations)
-
-  # Apply pending condition-level mutations
-  if (length(object@cond_mutations) > 0) {
-    res <- res %>% dplyr::mutate(!!!object@cond_mutations)
-  }
-
-  # Apply pending condition-level filters
-  if (length(object@cond_filters) > 0) {
-    res <- res %>% dplyr::filter(!!!object@cond_filters)
-  }
+  res <- .apply_level_pipeline(res, object, "cond")
 
   return(res)
 }
@@ -402,18 +407,7 @@
 .build_plot_data <- function(object) {
   res <- object@tables$plot
 
-  # Join external data queued via augment(plot(...))
-  res <- .apply_augmentations(res, object@plot_augmentations)
-
-  # Apply plot-level mutations
-  if (length(object@plot_mutations) > 0) {
-    res <- res %>% dplyr::mutate(!!!object@plot_mutations)
-  }
-
-  # Apply plot-level filters
-  if (length(object@plot_filters) > 0) {
-    res <- res %>% dplyr::filter(!!!object@plot_filters)
-  }
+  res <- .apply_level_pipeline(res, object, "plot")
 
   return(res)
 }
@@ -466,17 +460,17 @@
 
   plot_keys <- .plot_keys_raw
   plot_domains <- .resolve_partition_domains(
-    object@plot_domains,
+    .pipeline_domains(object, "plot"),
     "plot",
     colnames(res)
   )
   cond_domains <- .resolve_partition_domains(
-    object@cond_domains,
+    .pipeline_domains(object, "cond"),
     "cond",
     colnames(res)
   )
   tree_domains <- .resolve_partition_domains(
-    object@tree_domains,
+    .pipeline_domains(object, "tree"),
     "tree",
     colnames(res)
   )
@@ -626,17 +620,17 @@
 
   plot_keys <- .plot_keys_raw
   plot_domains <- .resolve_partition_domains(
-    object@plot_domains,
+    .pipeline_domains(object, "plot"),
     "plot",
     colnames(res)
   )
   cond_domains <- .resolve_partition_domains(
-    object@cond_domains,
+    .pipeline_domains(object, "cond"),
     "cond",
     colnames(res)
   )
   tree_history_domains <- .resolve_partition_domains(
-    object@tree_history_domains,
+    .pipeline_domains(object, "tree_history"),
     "tree_history",
     colnames(res)
   )
@@ -767,29 +761,8 @@
     )
   }
 
-  # Join external data queued via augment(cond(...)) and augment(tree(...))
-  res <- .apply_augmentations(res, object@cond_augmentations)
-  res <- .apply_augmentations(res, object@tree_augmentations)
-
-  # Apply condition-level mutations (these affect all trees in those conditions)
-  if (length(object@cond_mutations) > 0) {
-    res <- res %>% dplyr::mutate(!!!object@cond_mutations)
-  }
-
-  # Apply tree-level mutations (these affect individual tree records)
-  if (length(object@tree_mutations) > 0) {
-    res <- res %>% dplyr::mutate(!!!object@tree_mutations)
-  }
-
-  # Apply condition-level filters (these remove entire conditions and their trees)
-  if (length(object@cond_filters) > 0) {
-    res <- res %>% dplyr::filter(!!!object@cond_filters)
-  }
-
-  # Apply tree-level filters (these remove individual tree records)
-  if (length(object@tree_filters) > 0) {
-    res <- res %>% dplyr::filter(!!!object@tree_filters)
-  }
+  res <- .apply_level_pipeline(res, object, "cond")
+  res <- .apply_level_pipeline(res, object, "tree")
 
   return(res)
 }
@@ -827,29 +800,8 @@
     )
   }
 
-  # Join external data queued via augment(cond(...)) and augment(tree_history(...))
-  res <- .apply_augmentations(res, object@cond_augmentations)
-  res <- .apply_augmentations(res, object@tree_history_augmentations)
-
-  # Apply condition-level mutations (these affect all trees in those conditions)
-  if (length(object@cond_mutations) > 0) {
-    res <- res %>% dplyr::mutate(!!!object@cond_mutations)
-  }
-
-  # Apply tree-history-level mutations (these affect individual tree history records)
-  if (length(object@tree_history_mutations) > 0) {
-    res <- res %>% dplyr::mutate(!!!object@tree_history_mutations)
-  }
-
-  # Apply condition-level filters (these remove entire conditions and their trees)
-  if (length(object@cond_filters) > 0) {
-    res <- res %>% dplyr::filter(!!!object@cond_filters)
-  }
-
-  # Apply tree-history-level filters (these remove individual tree history records)
-  if (length(object@tree_history_filters) > 0) {
-    res <- res %>% dplyr::filter(!!!object@tree_history_filters)
-  }
+  res <- .apply_level_pipeline(res, object, "cond")
+  res <- .apply_level_pipeline(res, object, "tree_history")
 
   return(res)
 }

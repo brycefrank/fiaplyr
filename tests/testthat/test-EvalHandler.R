@@ -473,7 +473,7 @@ test_that("augment(tree()) joins a local data frame and copies with a warning", 
   augmented <- handler %>%
     augment(tree(species_ref, by = "SPCD"))
 
-  expect_length(augmented@tree_augmentations, 1)
+  expect_length(augmented@pipeline$tree$augment, 1)
 
   expect_warning(
     materialize(augmented, "tree"),

@@ -12,37 +12,7 @@ Class for Evaluation Pipeline
 \describe{
 \item{\code{evalid}}{The evaluation ID (numeric).}
 
-\item{\code{plot_mutations}}{Pending plot-level mutation quosures.}
-
-\item{\code{plot_filters}}{Pending plot-level filter quosures.}
-
-\item{\code{plot_domains}}{Pending plot-level domain quosures.}
-
-\item{\code{tree_mutations}}{Pending tree-level mutation quosures.}
-
-\item{\code{cond_mutations}}{Pending condition-level mutation quosures.}
-
-\item{\code{tree_history_mutations}}{Pending tree-history-level mutation quosures.}
-
-\item{\code{tree_domains}}{Pending tree-level domain quosures.}
-
-\item{\code{cond_domains}}{Pending condition-level domain quosures.}
-
-\item{\code{tree_history_domains}}{Pending tree-history-level domain quosures.}
-
-\item{\code{tree_filters}}{Pending tree-level filter quosures.}
-
-\item{\code{cond_filters}}{Pending condition-level filter quosures.}
-
-\item{\code{tree_history_filters}}{Pending tree-history-level filter quosures.}
-
-\item{\code{plot_augmentations}}{Pending plot-level external-data join specs.}
-
-\item{\code{tree_augmentations}}{Pending tree-level external-data join specs.}
-
-\item{\code{cond_augmentations}}{Pending condition-level external-data join specs.}
-
-\item{\code{tree_history_augmentations}}{Pending tree-history-level external-data join specs.}
+\item{\code{pipeline}}{Pending operations grouped by target table and operation.}
 
 \item{\code{tables}}{A list of lazy queries for the tables.}
 

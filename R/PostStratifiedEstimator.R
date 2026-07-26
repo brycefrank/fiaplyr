@@ -278,7 +278,7 @@ setMethod(
 }
 
 # Run the full post-stratification pipeline for the given handler.
-# The handler's tree_domains and cond_domains determine grouping.
+# The handler's pipeline domains determine grouping.
 .run_tree_estimation <- function(
   handler,
   targets,
@@ -393,12 +393,12 @@ setMethod(
     ))
   }
 
-  n_full <- length(object@handler@cond_domains)
+  n_full <- length(.pipeline_domains(object@handler, "cond"))
   # Iterate over every subset of the active cond domains (includes grand total).
-  cond_subsets <- .all_subsets(object@handler@cond_domains)
+  cond_subsets <- .all_subsets(.pipeline_domains(object@handler, "cond"))
   results <- lapply(cond_subsets, function(dom) {
     h <- object@handler
-    h@cond_domains <- dom
+    h <- .pipeline_update(h, "cond", "domain", dom, "replace")
     is_marg <- length(dom) < n_full
     .run_cond_estimation(
       h,
@@ -429,20 +429,20 @@ setMethod(
     ))
   }
 
-  n_full_tree <- length(object@handler@tree_domains)
-  n_full_cond <- length(object@handler@cond_domains)
+  n_full_tree <- length(.pipeline_domains(object@handler, "tree"))
+  n_full_cond <- length(.pipeline_domains(object@handler, "cond"))
 
   # Iterate over every (tree_domain_subset, cond_domain_subset) combination.
   # bind_rows fills dropped domain columns with NA, which signals "all values".
-  tree_subsets <- .all_subsets(object@handler@tree_domains)
-  cond_subsets <- .all_subsets(object@handler@cond_domains)
+  tree_subsets <- .all_subsets(.pipeline_domains(object@handler, "tree"))
+  cond_subsets <- .all_subsets(.pipeline_domains(object@handler, "cond"))
 
   results <- list()
   for (t in tree_subsets) {
     for (c in cond_subsets) {
       h <- object@handler
-      h@tree_domains <- t
-      h@cond_domains <- c
+      h <- .pipeline_update(h, "tree", "domain", t, "replace")
+      h <- .pipeline_update(h, "cond", "domain", c, "replace")
       is_marg <- !(length(t) == n_full_tree && length(c) == n_full_cond)
       res <- .run_tree_estimation(
         h,
@@ -477,18 +477,18 @@ setMethod(
     ))
   }
 
-  n_full_cond <- length(object@handler@cond_domains)
-  n_full_tree_history <- length(object@handler@tree_history_domains)
+  n_full_cond <- length(.pipeline_domains(object@handler, "cond"))
+  n_full_tree_history <- length(.pipeline_domains(object@handler, "tree_history"))
 
-  cond_subsets <- .all_subsets(object@handler@cond_domains)
-  tree_history_subsets <- .all_subsets(object@handler@tree_history_domains)
+  cond_subsets <- .all_subsets(.pipeline_domains(object@handler, "cond"))
+  tree_history_subsets <- .all_subsets(.pipeline_domains(object@handler, "tree_history"))
 
   results <- list()
   for (c in cond_subsets) {
     for (th in tree_history_subsets) {
       h <- object@handler
-      h@cond_domains <- c
-      h@tree_history_domains <- th
+      h <- .pipeline_update(h, "cond", "domain", c, "replace")
+      h <- .pipeline_update(h, "tree_history", "domain", th, "replace")
       is_marg <- !(length(c) == n_full_cond &&
         length(th) == n_full_tree_history)
       res <- .run_tree_history_estimation(
