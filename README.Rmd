@@ -4,7 +4,7 @@ output: github_document
 
 # fiaplyr <picture><img src="inst/logo.png" alt="fiaplyr logo" height="210" align="right"></picture>
 <!-- badges: start -->
-[![R-CMD-check](https://github.com/brycefrank/fiaplyr/actions/workflows/R-CMD-check.yml/badge.svg)](https://github.com/brycefrank/fiaplyr/actions/workflows/R-CMD-check.yml) [![Version](https://img.shields.io/badge/version-0.3.1-blue.svg)](https://github.com/brycefrank/fiaplyr) [![Documentation](https://img.shields.io/badge/docs-brycefrank.com%2Ffiaplyr-blue.svg)](https://brycefrank.com/fiaplyr)
+[![R-CMD-check](https://github.com/brycefrank/fiaplyr/actions/workflows/R-CMD-check.yml/badge.svg)](https://github.com/brycefrank/fiaplyr/actions/workflows/R-CMD-check.yml) [![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](https://github.com/brycefrank/fiaplyr) [![Documentation](https://img.shields.io/badge/docs-brycefrank.com%2Ffiaplyr-blue.svg)](https://brycefrank.com/fiaplyr)
 <!-- badges: end -->
 
 ```{r setup, include=FALSE}
