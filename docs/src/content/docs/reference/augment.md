@@ -1,6 +1,6 @@
 ---
 title: "Augment a Handler with External Data"
-description: "Join external data (a local data frame or a lazy database table) onto a specific table level of a handler. This is useful for attaching reference information such as species common names, county names, or plot-level covariates. Columns added via `augment()` become available to subsequent [`transform()`](../transform), [`subset()`](../subset), [`partition()`](../partition), and [`aggregate()`](../aggregate) calls."
+description: "Join external data (a local data frame or a lazy database table) onto a specific table level of a handler. This is useful for attaching reference information such as species common names, county names, or plot-level covariates. Columns added via `augment()` become available to subsequent [`transform()`](../transform/), [`subset()`](../subset/), [`partition()`](../partition/), and [`aggregate()`](../aggregate/) calls."
 ---
 
 ## Description
@@ -9,13 +9,13 @@ Join external data (a local data frame or a lazy database table) onto a
 specific table level of a handler. This is useful for attaching reference
 information such as species common names, county names, or plot-level
 covariates. Columns added via `augment()` become available to subsequent
-[`transform()`](../transform), [`subset()`](../subset), [`partition()`](../partition), and
-[`aggregate()`](../aggregate) calls.
+[`transform()`](../transform/), [`subset()`](../subset/), [`partition()`](../partition/), and
+[`aggregate()`](../aggregate/) calls.
 
 ## Details
 
 The target table and join are specified using the scoped helpers
-(e.g., [`tree()`](../tree), [`cond()`](../cond), etc.) The first, unnamed argument
+(e.g., [`tree()`](../tree/), [`cond()`](../cond/), etc.) The first, unnamed argument
 to the helper is the data to join; named arguments configure the join:
 
 - `by`: Join key(s), passed to the underlying `dplyr` join. A character

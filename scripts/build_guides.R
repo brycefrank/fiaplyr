@@ -83,7 +83,7 @@ extract_title <- function(path) {
 }
 
 rewrite_links <- function(lines) {
-  gsub("\\(([^)#]+)\\.qmd(#[^)]+)?\\)", "(\\1\\2)", lines, perl = TRUE)
+  gsub("\\(([^)#]+)\\.qmd(#[^)]+)?\\)", "(../\\1/\\2)", lines, perl = TRUE)
 }
 
 rewrite_chunk_fences <- function(lines) {

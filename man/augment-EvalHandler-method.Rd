@@ -18,7 +18,7 @@ The handler with pending augmentations queued.
 \description{
 Attach external data (a local data frame or a lazy database table) to a
 specific table level via a join. Expressions must be wrapped in the
-appropriate scoping helper: \code{tree()}, \code{cond()}, \code{plot()}, or
+appropriate scoping helper: \code{tree()}, \code{cond()}, \code{plot()}, \code{dwm()}, or
 \code{tree_history()}. The first unnamed argument to the helper is the data to
 join; named arguments \code{by}, \code{type}, and \code{copy} configure the join. Columns
 added here become available to later \code{transform()}, \code{subset()},

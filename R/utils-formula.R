@@ -53,8 +53,20 @@ parse_formula <- function(f) {
 .parse_target_helper <- function(spec) {
   target_table <- attr(spec, "target_table")
 
-  if (is.null(target_table) || !target_table %in% c("tree", "cond", "plot", "tree_history")) {
-    stop("Scoped target helpers must use `tree()`, `cond()`, `plot()`, or `tree_history()`.")
+  if (is.null(target_table) || !target_table %in% c("tree", "cond", "plot", "dwm", "tree_history")) {
+    stop("Scoped target helpers must use `tree()`, `cond()`, `plot()`, `dwm()`, or `tree_history()`.")
+  }
+
+  if (inherits(spec, "fiaplyr_dwm_helper")) {
+    dwm_targets <- unclass(spec)
+    output_names <- vapply(dwm_targets, function(target) target$name, character(1))
+    return(list(
+      slot = "dwm",
+      targets = output_names,
+      target_names = rep("", length(output_names)),
+      quosures = NULL,
+      dwm_targets = dwm_targets
+    ))
   }
 
   targets <- vapply(spec, rlang::as_label, character(1))
@@ -68,7 +80,8 @@ parse_formula <- function(f) {
     slot = target_table,
     targets = targets,
     target_names = target_names,
-    quosures = spec
+    quosures = spec,
+    dwm_targets = NULL
   )
 }
 

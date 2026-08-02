@@ -37,6 +37,7 @@ setClass("DatabaseMapping",
 #'     POP_PLOT_STRATUM_ASSGN = "MY_POP_PLOT_STRAT",
 #'     PLOT = "MY_PLOT",
 #'     COND = "MY_COND",
+#'     COND_DWM_CALC = "MY_COND_DWM_CALC",
 #'     TREE = "MY_TREE",
 #'     REF_SPECIES = "MY_REF_SPECIES",
 #'     SUBP_COND = "MY_SUBP_COND"

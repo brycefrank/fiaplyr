@@ -1,12 +1,12 @@
 ---
 title: "Add or Modify Columns of a Handler"
-description: "Add derived columns or modify existing ones on a specific table level Expressions must be wrapped in scoping helpers ([`tree()`](../tree), [`cond()`](../cond), etc) to specify their target table."
+description: "Add derived columns or modify existing ones on a specific table level Expressions must be wrapped in scoping helpers ([`tree()`](../tree/), [`cond()`](../cond/), etc) to specify their target table."
 ---
 
 ## Description
 
 Add derived columns or modify existing ones on a specific table level
-Expressions must be wrapped in scoping helpers ([`tree()`](../tree), [`cond()`](../cond), etc) to
+Expressions must be wrapped in scoping helpers ([`tree()`](../tree/), [`cond()`](../cond/), etc) to
 specify their target table.
 
 ## Usage

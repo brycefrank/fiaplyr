@@ -1,4 +1,4 @@
-.pipeline_targets <- c("plot", "cond", "tree", "tree_history")
+.pipeline_targets <- c("plot", "cond", "dwm", "tree", "tree_history")
 
 .new_pipeline <- function() {
   setNames(
@@ -172,11 +172,13 @@ setMethod("show", "EvalHandler", function(object) {
   plot_dom_labels <- vapply(object@pipeline$plot$domain, rlang::as_label, character(1))
   tree_dom_labels <- vapply(object@pipeline$tree$domain, rlang::as_label, character(1))
   cond_dom_labels <- vapply(object@pipeline$cond$domain, rlang::as_label, character(1))
+  dwm_dom_labels <- vapply(object@pipeline$dwm$domain, rlang::as_label, character(1))
 
   if (
     length(plot_dom_labels) > 0 ||
       length(tree_dom_labels) > 0 ||
-      length(cond_dom_labels) > 0
+      length(cond_dom_labels) > 0 ||
+      length(dwm_dom_labels) > 0
   ) {
     cat("\n")
     if (length(plot_dom_labels) > 0) {
@@ -187,6 +189,9 @@ setMethod("show", "EvalHandler", function(object) {
     }
     if (length(cond_dom_labels) > 0) {
       cat("Cond domains:   ", paste(cond_dom_labels, collapse = ", "), "\n")
+    }
+    if (length(dwm_dom_labels) > 0) {
+      cat("DWM domains:    ", paste(dwm_dom_labels, collapse = ", "), "\n")
     }
   }
 })
@@ -274,7 +279,7 @@ setMethod("show", "EvalHandler", function(object) {
 
       if (is.null(target_table)) {
         rlang::abort(
-          "All expressions must be explicitly scoped using `tree()`, `cond()`, `plot()`, or `tree_history()`.",
+          "All expressions must be explicitly scoped using `tree()`, `cond()`, `plot()`, `dwm()`, or `tree_history()`.",
           class = "fiaplyr_unscoped_expr"
         )
       }
@@ -375,12 +380,12 @@ setMethod("show", "EvalHandler", function(object) {
 
 #' Transform: Add Derived Columns or Modify Values
 #'
-#' Add derived columns or modify existing ones at the plot, condition, or tree
+#' Add derived columns or modify existing ones at the plot, condition, DWM, or tree
 #' level. Expressions must be wrapped in the appropriate scoping helper:
-#' `tree()`, `cond()`, or `plot()`.
+#' `tree()`, `cond()`, `dwm()`, or `plot()`.
 #'
 #' @param handler An EvalHandler object.
-#' @param ... Scoped expressions using `tree()`, `cond()`, or `plot()` helpers.
+#' @param ... Scoped expressions using `tree()`, `cond()`, `dwm()`, or `plot()` helpers.
 #' @return The handler with pending mutations queued.
 #' @export
 #' @examples
@@ -401,13 +406,13 @@ setMethod("transform", "EvalHandler", function(handler, ...) {
 
 #' Subset: Apply Scoped Filters
 #'
-#' Filter rows at the plot, condition, or tree level using logical predicates.
+#' Filter rows at the plot, condition, DWM, or tree level using logical predicates.
 #' Expressions must be wrapped in the appropriate scoping helper:
-#' `tree()`, `cond()`, or `plot()`. Rows that do not satisfy conditions are
+#' `tree()`, `cond()`, `dwm()`, or `plot()`. Rows that do not satisfy conditions are
 #' excluded from all subsequent operations.
 #'
 #' @param handler An EvalHandler object.
-#' @param ... Scoped logical expressions using `tree()`, `cond()`, or `plot()` helpers.
+#' @param ... Scoped logical expressions using `tree()`, `cond()`, `dwm()`, or `plot()` helpers.
 #' @return The handler with pending filters queued.
 #' @export
 #' @examples
@@ -428,13 +433,13 @@ setMethod("subset", "EvalHandler", function(handler, ...) {
 
 #' Partition: Specify Domain Variables
 #'
-#' Set domain (grouping) variables at the plot, condition, or tree level.
+#' Set domain (grouping) variables at the plot, condition, DWM, or tree level.
 #' Domain variables define how aggregation and estimation results are partitioned.
 #' Unlike `subset()`, partitions do not discard data. Expressions must be wrapped
-#' in the appropriate scoping helper: `tree()`, `cond()`, or `plot()`.
+#' in the appropriate scoping helper: `tree()`, `cond()`, `dwm()`, or `plot()`.
 #'
 #' @param handler An EvalHandler object.
-#' @param ... Scoped domain variable names using `tree()`, `cond()`, or `plot()` helpers.
+#' @param ... Scoped domain variable names using `tree()`, `cond()`, `dwm()`, or `plot()` helpers.
 #' @return The handler with domain variables set.
 #' @export
 #' @examples
@@ -457,7 +462,7 @@ setMethod("partition", "EvalHandler", function(handler, ...) {
 #'
 #' Attach external data (a local data frame or a lazy database table) to a
 #' specific table level via a join. Expressions must be wrapped in the
-#' appropriate scoping helper: `tree()`, `cond()`, `plot()`, or
+#' appropriate scoping helper: `tree()`, `cond()`, `plot()`, `dwm()`, or
 #' `tree_history()`. The first unnamed argument to the helper is the data to
 #' join; named arguments `by`, `type`, and `copy` configure the join. Columns
 #' added here become available to later `transform()`, `subset()`,
@@ -486,17 +491,17 @@ setMethod("augment", "EvalHandler", function(handler, ...) {
   for (helper in helpers) {
     if (!.has_scoped_helper_target(helper)) {
       rlang::abort(
-        "All arguments to `augment()` must be scoped using `tree()`, `cond()`, `plot()`, or `tree_history()`.",
+        "All arguments to `augment()` must be scoped using `tree()`, `cond()`, `plot()`, `dwm()`, or `tree_history()`.",
         class = "fiaplyr_unscoped_expr"
       )
     }
 
     spec <- .parse_augment_helper(helper)
 
-    if (!spec$target %in% c("tree", "cond", "plot", "tree_history")) {
+    if (!spec$target %in% c("tree", "cond", "plot", "dwm", "tree_history")) {
       rlang::abort(
         sprintf(
-          "Invalid target table: '%s'. Must be 'tree', 'cond', 'plot', or 'tree_history'.",
+          "Invalid target table: '%s'. Must be 'tree', 'cond', 'plot', 'dwm', or 'tree_history'.",
           spec$target
         )
       )
@@ -525,6 +530,9 @@ setMethod("augment", "EvalHandler", function(handler, ...) {
 #' [grm_ingrowth()], etc.) are also expanded correctly - the macro encodes
 #' both the variable and its expansion logic.
 #'
+#' DWM handlers use component helpers such as [dwm_cwd()] and [dwm_fwd()].
+#' Their source fields are already per-acre loadings and are not tree-expanded.
+#'
 #' @param handler A EvalHandler object.
 #' @param ... A scoped target helper such as `tree(VOLCFGRS)`,
 #'   `tree(mean(VOLCFGRS))`, or `tree(grm_mortality(VOLCFGRS))`, and optional
@@ -541,6 +549,9 @@ setMethod("augment", "EvalHandler", function(handler, ...) {
 #'
 #' # GRM macro (fiaplyr_macro): encodes its own expansion logic
 #' handler |> aggregate(tree_history(grm_mortality(VOLCFGRS)))
+#'
+#' # DWM per-acre loading
+#' dwm_handler |> aggregate(dwm_cwd(CARBON))
 #' }
 #' @export
 setMethod("aggregate", "EvalHandler", function(handler, ...) {
@@ -744,7 +755,7 @@ setMethod("materialize", "EvalHandler", function(handler, slot) {
     )
   }
 
-  if (!slot %in% c("plot", "cond", "tree", "tree_history")) {
+  if (!slot %in% c("plot", "cond", "dwm", "tree", "tree_history")) {
     stop("Unsupported slot: ", slot, call. = FALSE)
   }
 
@@ -759,7 +770,14 @@ setMethod("materialize", "EvalHandler", function(handler, slot) {
   }
 
   if (slot == "tree") {
+    if (is.null(handler@tables$tree)) {
+      stop("`tree` is not available for this analysis spec.", call. = FALSE)
+    }
     return(.build_tree_data(handler))
+  }
+
+  if (slot == "dwm") {
+    return(.build_dwm_data(handler))
   }
 
   if (slot == "cond") {

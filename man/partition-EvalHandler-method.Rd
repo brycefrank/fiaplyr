@@ -9,16 +9,16 @@
 \arguments{
 \item{handler}{An EvalHandler object.}
 
-\item{...}{Scoped domain variable names using \code{tree()}, \code{cond()}, or \code{plot()} helpers.}
+\item{...}{Scoped domain variable names using \code{tree()}, \code{cond()}, \code{dwm()}, or \code{plot()} helpers.}
 }
 \value{
 The handler with domain variables set.
 }
 \description{
-Set domain (grouping) variables at the plot, condition, or tree level.
+Set domain (grouping) variables at the plot, condition, DWM, or tree level.
 Domain variables define how aggregation and estimation results are partitioned.
 Unlike \code{subset()}, partitions do not discard data. Expressions must be wrapped
-in the appropriate scoping helper: \code{tree()}, \code{cond()}, or \code{plot()}.
+in the appropriate scoping helper: \code{tree()}, \code{cond()}, \code{dwm()}, or \code{plot()}.
 }
 \examples{
 \dontrun{

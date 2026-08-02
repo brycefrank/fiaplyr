@@ -80,6 +80,7 @@
     scope,
     plot = "",
     cond = ".cond",
+    dwm = ".dwm",
     tree = ".tree",
     tree_history = ".tree_history",
     rlang::abort(sprintf("Unknown partition scope: '%s'.", scope))
@@ -399,6 +400,130 @@
   res <- .apply_level_pipeline(res, object, "cond")
 
   return(res)
+}
+
+#' Prepare joined condition-level DWM data
+#'
+#' @param object A DWM EvalHandler object.
+#' @return A lazy query containing plot, condition, and DWM columns.
+#' @keywords internal
+.build_dwm_data <- function(object) {
+  if (is.null(object@tables$cond_dwm_calc)) {
+    stop("`COND_DWM_CALC` is not available for this analysis spec.", call. = FALSE)
+  }
+
+  res <- .build_plot_data(object) %>%
+    dplyr::inner_join(
+      object@tables$cond,
+      by = c("CN" = "PLT_CN"),
+      suffix = c("", ".cond")
+    ) %>%
+    dplyr::inner_join(
+      object@tables$cond_dwm_calc,
+      by = c("CN" = "PLT_CN", "CONDID"),
+      suffix = c("", ".dwm")
+    )
+
+  res <- .apply_level_pipeline(res, object, "cond")
+  .apply_level_pipeline(res, object, "dwm")
+}
+
+#' Aggregate downed woody material to plots
+#'
+#' @param object A DWM EvalHandler object.
+#' @param targets Structured DWM targets.
+#' @param adjusted Use adjusted source fields.
+#' @param sparse Return only observed domain combinations.
+#' @return A lazy plot-level query.
+#' @keywords internal
+.make_dwm_aggregates <- function(
+  object,
+  targets,
+  adjusted = FALSE,
+  sparse = FALSE
+) {
+  if (!inherits(object@spec, "DWMAnalysis")) {
+    stop("DWM aggregation requires a `dwm_analysis()` handler.", call. = FALSE)
+  }
+  if (length(targets) == 0 || !all(vapply(
+    targets,
+    inherits,
+    logical(1),
+    what = "fiaplyr_dwm_target"
+  ))) {
+    stop("At least one valid DWM component target is required.", call. = FALSE)
+  }
+
+  res <- .build_dwm_data(object)
+  plot_keys <- .plot_keys_raw
+  plot_domains <- .resolve_partition_domains(
+    .pipeline_domains(object, "plot"),
+    "plot",
+    colnames(res)
+  )
+  cond_domains <- .resolve_partition_domains(
+    .pipeline_domains(object, "cond"),
+    "cond",
+    colnames(res)
+  )
+  dwm_domains <- .resolve_partition_domains(
+    .pipeline_domains(object, "dwm"),
+    "dwm",
+    colnames(res)
+  )
+
+  if (length(plot_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!plot_domains)
+  }
+  if (length(cond_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!cond_domains, .add = TRUE)
+  }
+  if (length(dwm_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!dwm_domains, .add = TRUE)
+  }
+  res <- .group_by_missing_vars(res, plot_keys)
+
+  output_names <- vapply(targets, function(target) target$name, character(1))
+  if (anyDuplicated(output_names)) {
+    stop("DWM target output names must be unique.", call. = FALSE)
+  }
+
+  source_columns <- lapply(targets, .resolve_dwm_columns, adjusted = adjusted)
+  missing_columns <- setdiff(unique(unlist(source_columns)), colnames(res))
+  if (length(missing_columns) > 0) {
+    stop(
+      "`COND_DWM_CALC` is missing required DWM column(s): ",
+      paste(missing_columns, collapse = ", "),
+      ".",
+      call. = FALSE
+    )
+  }
+
+  agg_exprs <- lapply(seq_along(source_columns), function(i) {
+    columns <- source_columns[[i]]
+    scale <- .dwm_target_scale(targets[[i]])
+    terms <- lapply(rlang::syms(columns), function(column) {
+      rlang::expr(dplyr::coalesce(!!column, 0) * !!scale)
+    })
+    row_total <- Reduce(function(x, y) rlang::expr((!!x) + (!!y)), terms)
+    rlang::expr(sum(!!row_total, na.rm = TRUE))
+  })
+  names(agg_exprs) <- output_names
+
+  aggregated <- res %>%
+    dplyr::summarise(!!!agg_exprs) %>%
+    dplyr::ungroup()
+
+  domain_vars <- setdiff(dplyr::group_vars(res), plot_keys)
+  .complete_scaffold(
+    plot_qry = .build_plot_data(object),
+    aggregated_qry = aggregated,
+    plot_keys = plot_keys,
+    domain_vars = domain_vars,
+    sparse = sparse,
+    zero_fill_vars = output_names
+  ) %>%
+    dplyr::rename(PLT_CN = CN)
 }
 
 #' Prepare plot-level data with mutations and filters applied

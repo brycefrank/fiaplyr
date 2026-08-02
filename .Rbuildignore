@@ -3,6 +3,7 @@ inst/fiadb_vt_mini.db
 ^db$
 ^\.github$
 ^README\.Rmd$
+^dwm_plan\.md$
 ^TODO\.md$
 ^margins\.md$
 ^ref$

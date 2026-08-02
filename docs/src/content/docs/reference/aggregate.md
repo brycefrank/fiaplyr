@@ -1,6 +1,6 @@
 ---
 title: "Aggregate a Handler to Plot Level"
-description: "Aggregates inventory data to the plot level. This is useful for creating plot-level values for statistical models and other applications. Some analyses, such as state-wide means or totals, do not require an explicit [`aggregate()`](../aggregate) step."
+description: "Aggregates inventory data to the plot level. This is useful for creating plot-level values for statistical models and other applications. Some analyses, such as state-wide means or totals, do not require an explicit [`aggregate()`](../aggregate/) step."
 ---
 
 ## Description
@@ -8,7 +8,7 @@ description: "Aggregates inventory data to the plot level. This is useful for cr
 Aggregates inventory data to the plot level. This is useful for creating
 plot-level values for statistical models and other applications. Some
 analyses, such as state-wide means or totals, do not require an explicit
-[`aggregate()`](../aggregate) step.
+[`aggregate()`](../aggregate/) step.
 
 ## Details
 
@@ -18,7 +18,7 @@ is the standard FIA expansion. Function calls (e.g., `tree(mean(VOLCFGRS))`)
 are passed to `dplyr::summarise()` using the active plot-level groupings,
 allowing users to specify arbitrary aggregation functions without TPA
 expansion. Functions that return a `fiaplyr_macro` object, such as
-[`grm_mortality()`](../grm_mortality) and [`grm_ingrowth()`](../grm_ingrowth), encode
+[`grm_mortality()`](../grm_mortality/) and [`grm_ingrowth()`](../grm_ingrowth/), encode
 their own variable and expansion logic.
 
 ## Usage

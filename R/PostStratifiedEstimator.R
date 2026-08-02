@@ -178,6 +178,22 @@ setMethod(
         output = output,
         margins = margins
       ))
+    } else if (slot_name == "dwm") {
+      if (!inherits(object@handler@spec, "DWMAnalysis")) {
+        stop("DWM estimation requires a `dwm_analysis()` handler.", call. = FALSE)
+      }
+      if (is.null(parsed$dwm_targets)) {
+        stop(
+          "DWM estimation requires a component helper such as `dwm_cwd(CARBON)`.",
+          call. = FALSE
+        )
+      }
+      return(.estimate_dwm_internal(
+        object,
+        parsed$dwm_targets,
+        output = output,
+        margins = margins
+      ))
     } else {
       stop("Unsupported slot: ", slot_name)
     }
@@ -370,6 +386,67 @@ setMethod(
   strata_stats <- .ps_strata_stats(strata_data, cond_target)
   eu_stats <- .ps_eu_stats(strata_stats, cond_target)
   .ps_pop_stats(eu_stats, handler, cond_target, output)
+}
+
+.run_dwm_estimation <- function(handler, targets, output = "mean") {
+  resolved_targets <- vapply(targets, function(target) target$name, character(1))
+  plot_data <- .make_dwm_aggregates(
+    handler,
+    targets,
+    adjusted = TRUE,
+    sparse = TRUE
+  )
+  strata_data <- .ps_join_strata(plot_data, handler)
+  strata_stats <- .ps_strata_stats(strata_data, resolved_targets)
+  eu_stats <- .ps_eu_stats(strata_stats, resolved_targets)
+  .ps_pop_stats(eu_stats, handler, resolved_targets, output)
+}
+
+# Internal helper for DWM estimation
+.estimate_dwm_internal <- function(
+  object,
+  targets,
+  output = "mean",
+  margins = FALSE
+) {
+  if (!margins) {
+    return(.run_dwm_estimation(object@handler, targets, output = output))
+  }
+
+  scopes <- c("plot", "cond", "dwm")
+  full_counts <- vapply(
+    scopes,
+    function(scope) length(.pipeline_domains(object@handler, scope)),
+    integer(1)
+  )
+  subsets <- lapply(
+    scopes,
+    function(scope) .all_subsets(.pipeline_domains(object@handler, scope))
+  )
+
+  results <- list()
+  for (p in subsets[[1]]) {
+    for (c in subsets[[2]]) {
+      for (d in subsets[[3]]) {
+        handler <- object@handler
+        handler <- .pipeline_update(handler, "plot", "domain", p, "replace")
+        handler <- .pipeline_update(handler, "cond", "domain", c, "replace")
+        handler <- .pipeline_update(handler, "dwm", "domain", d, "replace")
+        is_marginal <- !identical(
+          c(length(p), length(c), length(d)),
+          unname(full_counts)
+        )
+        results[[length(results) + 1]] <- .run_dwm_estimation(
+          handler,
+          targets,
+          output = output
+        ) %>%
+          dplyr::mutate(is_marginal = !!is_marginal)
+      }
+    }
+  }
+
+  .lazy_bind_rows(results)
 }
 
 # Internal helper for condition estimation

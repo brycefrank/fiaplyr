@@ -36,7 +36,7 @@ guide_slug_lookup <- new.env(parent = emptyenv())
 
 reference_href <- function(route_slug, from_index = FALSE) {
   prefix <- if (from_index) "./" else "../"
-  paste0(prefix, route_slug)
+  paste0(prefix, route_slug, "/")
 }
 
 guide_href <- function(guide_slug) {
