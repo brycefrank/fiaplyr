@@ -1,18 +1,27 @@
 # Changelog
 
-## 0.4.0 - [fill date later]
+## 0.4.0 - 2026-08-02
 
 ### Added
 
-- Support for down woody material analysis with a
-  - `dwm_analysis()` specification
-  - `dwm_*` macros to facilitate common down woody material attributes
-- A down woody material analysis vignette with example data and workflow
+- Support for down woody material (DWM) analysis:
+  - `dwm_analysis()` evaluation specification
+  - `dwm()` scoped pipeline helper for transforming, subsetting, and
+    partitioning DWM data
+  - `dwm_cwd()`, `dwm_fwd()`, `dwm_pile()`, `dwm_fuel()`, `dwm_duff()`,
+    and `dwm_litter()` component macros, each with documented attributes
+    and units
+  - Plot-level aggregation plus post-stratified point, total, margin, and
+    ratio estimation for DWM targets
+  - Multiple scoped targets in a single `estimate()` or `aggregate()` call,
+    including named DWM targets
+- A down woody material vignette demonstrating the DWM workflow
+- Tests validating DWM estimates against the FIADB `fullreport` API
 
 ### Changed
 
-- Internal restructuring of how `transform`, `subset`, `augment` and `partition`
-  are implemented in handlers to allow greater extensibility
+- Internal restructuring of how `transform`, `subset`, `augment` and
+  `partition` are implemented in handlers to allow greater extensibility
 
 ## 0.3.1 - 2026-07-25
 
