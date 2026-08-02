@@ -1,5 +1,5 @@
 ---
-title: Growth, Removals, and Mortality"
+title: Growth, Removals, and Mortality
 knitr:
   opts_chunk:
     echo: true
