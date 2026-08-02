@@ -132,57 +132,98 @@ setMethod(
     }
 
     args <- list(...)
-    if (length(args) != 1) {
+    if (length(args) == 0) {
       stop(
-        "Must provide exactly one scoped target helper, such as `tree(VOLCFGRS)` or `cond()`."
+        "Must provide at least one scoped target helper, such as `tree(VOLCFGRS)`, `cond()`, or `dwm(dwm_cwd(CARBON))`."
       )
     }
     output <- match.arg(output, c("mean", "total"))
 
-    parsed <- .parse_target_spec(args[[1]], "estimate")
-    slot_name <- parsed$slot
-    targets <- parsed$targets
-    target_names <- parsed$target_names
-
-    if (slot_name == "cond") {
-      if (length(targets) > 0 && !all(targets == "1")) {
-        stop(
-          "Only `estimate(cond())` or `estimate(cond(1))` is currently supported for condition estimates."
-        )
-      }
-      return(.estimate_cond_internal(
-        object,
-        targets = targets,
-        target_names = target_names,
-        output = output,
-        margins = margins
-      ))
-    } else if (slot_name == "tree") {
-      return(.estimate_tree_internal(
-        object,
-        targets,
-        target_names = target_names,
-        target_quos = parsed$quosures,
-        output = output,
-        margins = margins
-      ))
-    } else if (slot_name == "tree_history") {
-      if (!inherits(object@handler@spec, "GRMAnalysis")) {
-        stop("`estimate(tree_history(...))` requires a GRMAnalysis handler.")
-      }
-      return(.estimate_tree_history_internal(
-        object,
-        targets,
-        target_names = target_names,
-        target_quos = parsed$quosures,
-        output = output,
-        margins = margins
-      ))
-    } else {
-      stop("Unsupported slot: ", slot_name)
+    if (any(vapply(args, inherits, logical(1), "fiaplyr_ratio_intent"))) {
+      stop(
+        "A non-ratio estimator requires a ratio point estimator for `ratio(...)` targets. Use `estimator = pe_post_strat_ratio(...)` or `estimator = \"auto\"`.",
+        call. = FALSE
+      )
     }
+
+    parsed_list <- lapply(args, .parse_target_spec, caller = "estimate")
+
+    results <- lapply(parsed_list, function(parsed) {
+      .estimate_parsed_target(object, parsed, output = output, margins = margins)
+    })
+
+    .lazy_bind_rows(results)
   }
 )
+
+# Internal helper: run one parsed target through the appropriate per-scope
+# estimation pipeline. Multiple targets are handled by the caller, which stacks
+# the results row-wise with `.lazy_bind_rows()`.
+.estimate_parsed_target <- function(object, parsed, output = "mean", margins = FALSE) {
+  slot_name <- parsed$slot
+  targets <- parsed$targets
+  target_names <- parsed$target_names
+
+  if (slot_name == "cond") {
+    if (length(targets) > 0 && !all(targets == "1")) {
+      stop(
+        "Only `estimate(cond())` or `estimate(cond(1))` is currently supported for condition estimates."
+      )
+    }
+    return(.estimate_cond_internal(
+      object,
+      targets = targets,
+      target_names = target_names,
+      output = output,
+      margins = margins
+    ))
+  } else if (slot_name == "tree") {
+    if (inherits(object@handler@spec, "DWMAnalysis")) {
+      stop(
+        "`dwm_analysis()` does not support `estimate(tree(...))` targets; use DWM component helpers wrapped in `dwm()`.",
+        call. = FALSE
+      )
+    }
+    return(.estimate_tree_internal(
+      object,
+      targets,
+      target_names = target_names,
+      target_quos = parsed$quosures,
+      output = output,
+      margins = margins
+    ))
+  } else if (slot_name == "tree_history") {
+    if (!inherits(object@handler@spec, "GRMAnalysis")) {
+      stop("`estimate(tree_history(...))` requires a GRMAnalysis handler.")
+    }
+    return(.estimate_tree_history_internal(
+      object,
+      targets,
+      target_names = target_names,
+      target_quos = parsed$quosures,
+      output = output,
+      margins = margins
+    ))
+  } else if (slot_name == "dwm") {
+    if (!inherits(object@handler@spec, "DWMAnalysis")) {
+      stop("DWM estimation requires a `dwm_analysis()` handler.", call. = FALSE)
+    }
+    if (is.null(parsed$dwm_targets)) {
+      stop(
+        "DWM estimation requires a component helper wrapped in `dwm()`, such as `dwm(dwm_cwd(CARBON))`.",
+        call. = FALSE
+      )
+    }
+    return(.estimate_dwm_internal(
+      object,
+      parsed$dwm_targets,
+      output = output,
+      margins = margins
+    ))
+  } else {
+    stop("Unsupported slot: ", slot_name)
+  }
+}
 
 setMethod(
   ".estimate_composed",
@@ -200,8 +241,9 @@ setMethod(
     margins = FALSE
   ) {
     extra_args <- list(...)
+    all_targets <- c(list(target), extra_args)
 
-    if (inherits(target, "fiaplyr_ratio_intent")) {
+    if (any(vapply(all_targets, inherits, logical(1), "fiaplyr_ratio_intent"))) {
       stop(
         "A non-ratio estimator requires a ratio point estimator for `ratio(...)` targets. Use `estimator = pe_post_strat_ratio(...)` or `estimator = \"auto\"`.",
         call. = FALSE
@@ -278,7 +320,7 @@ setMethod(
 }
 
 # Run the full post-stratification pipeline for the given handler.
-# The handler's tree_domains and cond_domains determine grouping.
+# The handler's pipeline domains determine grouping.
 .run_tree_estimation <- function(
   handler,
   targets,
@@ -372,6 +414,67 @@ setMethod(
   .ps_pop_stats(eu_stats, handler, cond_target, output)
 }
 
+.run_dwm_estimation <- function(handler, targets, output = "mean") {
+  resolved_targets <- vapply(targets, function(target) target$name, character(1))
+  plot_data <- .make_dwm_aggregates(
+    handler,
+    targets,
+    adjusted = TRUE,
+    sparse = TRUE
+  )
+  strata_data <- .ps_join_strata(plot_data, handler)
+  strata_stats <- .ps_strata_stats(strata_data, resolved_targets)
+  eu_stats <- .ps_eu_stats(strata_stats, resolved_targets)
+  .ps_pop_stats(eu_stats, handler, resolved_targets, output)
+}
+
+# Internal helper for DWM estimation
+.estimate_dwm_internal <- function(
+  object,
+  targets,
+  output = "mean",
+  margins = FALSE
+) {
+  if (!margins) {
+    return(.run_dwm_estimation(object@handler, targets, output = output))
+  }
+
+  scopes <- c("plot", "cond", "dwm")
+  full_counts <- vapply(
+    scopes,
+    function(scope) length(.pipeline_domains(object@handler, scope)),
+    integer(1)
+  )
+  subsets <- lapply(
+    scopes,
+    function(scope) .all_subsets(.pipeline_domains(object@handler, scope))
+  )
+
+  results <- list()
+  for (p in subsets[[1]]) {
+    for (c in subsets[[2]]) {
+      for (d in subsets[[3]]) {
+        handler <- object@handler
+        handler <- .pipeline_update(handler, "plot", "domain", p, "replace")
+        handler <- .pipeline_update(handler, "cond", "domain", c, "replace")
+        handler <- .pipeline_update(handler, "dwm", "domain", d, "replace")
+        is_marginal <- !identical(
+          c(length(p), length(c), length(d)),
+          unname(full_counts)
+        )
+        results[[length(results) + 1]] <- .run_dwm_estimation(
+          handler,
+          targets,
+          output = output
+        ) %>%
+          dplyr::mutate(is_marginal = !!is_marginal)
+      }
+    }
+  }
+
+  .lazy_bind_rows(results)
+}
+
 # Internal helper for condition estimation
 .estimate_cond_internal <- function(
   object,
@@ -393,12 +496,12 @@ setMethod(
     ))
   }
 
-  n_full <- length(object@handler@cond_domains)
+  n_full <- length(.pipeline_domains(object@handler, "cond"))
   # Iterate over every subset of the active cond domains (includes grand total).
-  cond_subsets <- .all_subsets(object@handler@cond_domains)
+  cond_subsets <- .all_subsets(.pipeline_domains(object@handler, "cond"))
   results <- lapply(cond_subsets, function(dom) {
     h <- object@handler
-    h@cond_domains <- dom
+    h <- .pipeline_update(h, "cond", "domain", dom, "replace")
     is_marg <- length(dom) < n_full
     .run_cond_estimation(
       h,
@@ -429,20 +532,20 @@ setMethod(
     ))
   }
 
-  n_full_tree <- length(object@handler@tree_domains)
-  n_full_cond <- length(object@handler@cond_domains)
+  n_full_tree <- length(.pipeline_domains(object@handler, "tree"))
+  n_full_cond <- length(.pipeline_domains(object@handler, "cond"))
 
   # Iterate over every (tree_domain_subset, cond_domain_subset) combination.
   # bind_rows fills dropped domain columns with NA, which signals "all values".
-  tree_subsets <- .all_subsets(object@handler@tree_domains)
-  cond_subsets <- .all_subsets(object@handler@cond_domains)
+  tree_subsets <- .all_subsets(.pipeline_domains(object@handler, "tree"))
+  cond_subsets <- .all_subsets(.pipeline_domains(object@handler, "cond"))
 
   results <- list()
   for (t in tree_subsets) {
     for (c in cond_subsets) {
       h <- object@handler
-      h@tree_domains <- t
-      h@cond_domains <- c
+      h <- .pipeline_update(h, "tree", "domain", t, "replace")
+      h <- .pipeline_update(h, "cond", "domain", c, "replace")
       is_marg <- !(length(t) == n_full_tree && length(c) == n_full_cond)
       res <- .run_tree_estimation(
         h,
@@ -477,18 +580,18 @@ setMethod(
     ))
   }
 
-  n_full_cond <- length(object@handler@cond_domains)
-  n_full_tree_history <- length(object@handler@tree_history_domains)
+  n_full_cond <- length(.pipeline_domains(object@handler, "cond"))
+  n_full_tree_history <- length(.pipeline_domains(object@handler, "tree_history"))
 
-  cond_subsets <- .all_subsets(object@handler@cond_domains)
-  tree_history_subsets <- .all_subsets(object@handler@tree_history_domains)
+  cond_subsets <- .all_subsets(.pipeline_domains(object@handler, "cond"))
+  tree_history_subsets <- .all_subsets(.pipeline_domains(object@handler, "tree_history"))
 
   results <- list()
   for (c in cond_subsets) {
     for (th in tree_history_subsets) {
       h <- object@handler
-      h@cond_domains <- c
-      h@tree_history_domains <- th
+      h <- .pipeline_update(h, "cond", "domain", c, "replace")
+      h <- .pipeline_update(h, "tree_history", "domain", th, "replace")
       is_marg <- !(length(c) == n_full_cond &&
         length(th) == n_full_tree_history)
       res <- .run_tree_history_estimation(

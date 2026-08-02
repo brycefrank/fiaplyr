@@ -9,15 +9,15 @@
 \arguments{
 \item{handler}{An EvalHandler object.}
 
-\item{...}{Scoped logical expressions using \code{tree()}, \code{cond()}, or \code{plot()} helpers.}
+\item{...}{Scoped logical expressions using \code{tree()}, \code{cond()}, \code{dwm()}, or \code{plot()} helpers.}
 }
 \value{
 The handler with pending filters queued.
 }
 \description{
-Filter rows at the plot, condition, or tree level using logical predicates.
+Filter rows at the plot, condition, DWM, or tree level using logical predicates.
 Expressions must be wrapped in the appropriate scoping helper:
-\code{tree()}, \code{cond()}, or \code{plot()}. Rows that do not satisfy conditions are
+\code{tree()}, \code{cond()}, \code{dwm()}, or \code{plot()}. Rows that do not satisfy conditions are
 excluded from all subsequent operations.
 }
 \examples{

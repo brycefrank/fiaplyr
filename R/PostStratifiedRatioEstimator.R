@@ -386,6 +386,39 @@ setMethod(
     return(list(numerator = numerator, denominator = denominator))
   }
 
+  if (parsed_num$slot == "dwm") {
+    targets_num <- parsed_num$dwm_targets
+    targets_den <- parsed_den$dwm_targets
+    names_num <- paste0(".psr_num_", seq_along(targets_num))
+    names_den <- paste0(".psr_den_", seq_along(targets_den))
+
+    for (i in seq_along(targets_num)) {
+      targets_num[[i]]$name <- names_num[[i]]
+    }
+    for (i in seq_along(targets_den)) {
+      targets_den[[i]]$name <- names_den[[i]]
+    }
+
+    aggregate_data <- .make_dwm_aggregates(
+      handler,
+      c(targets_num, targets_den),
+      adjusted = TRUE,
+      sparse = TRUE
+    )
+    aggregate_data <- .psr_compute_aggregate(aggregate_data)
+    internal_names <- c(names_num, names_den)
+    domains <- setdiff(colnames(aggregate_data), c(.plot_keys, internal_names))
+
+    numerator <- aggregate_data %>%
+      dplyr::select(dplyr::all_of(c(.plot_keys, domains, names_num))) %>%
+      dplyr::rename(!!!stats::setNames(rlang::syms(names_num), vals_num))
+    denominator <- aggregate_data %>%
+      dplyr::select(dplyr::all_of(c(.plot_keys, domains, names_den))) %>%
+      dplyr::rename(!!!stats::setNames(rlang::syms(names_den), vals_den))
+
+    return(list(numerator = numerator, denominator = denominator))
+  }
+
   quos_num <- .psr_target_quos(parsed_num)
   quos_den <- .psr_target_quos(parsed_den)
   names_num <- paste0(".psr_num_", seq_along(quos_num))
@@ -504,6 +537,19 @@ setMethod(
         dplyr::rename(!!parsed$target_names[[1]] := prop)
     }
     cond_data
+  } else if (parsed$slot == "dwm") {
+    if (is.null(parsed$dwm_targets)) {
+      stop(
+        "DWM ratio targets require a component helper wrapped in `dwm()`, such as `dwm(dwm_cwd(CARBON))`.",
+        call. = FALSE
+      )
+    }
+    .make_dwm_aggregates(
+      handler,
+      parsed$dwm_targets,
+      adjusted = TRUE,
+      sparse = TRUE
+    )
   } else {
     stop("Unsupported slot: ", parsed$slot)
   }

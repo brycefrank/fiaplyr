@@ -2,9 +2,6 @@
 title: "Growth, Removals, and Mortality"
 ---
 
-# Growth, Removals, and Mortality”
-
-
 Growth, removals, and mortality (GRM) refers to a set of estimation
 procedures used by the FIA to quantify forest change. Broadly, trees are
 assigned to change classes, which we refer to as transitions. Then,
@@ -204,7 +201,7 @@ handler |>
 
 Change estimates also need to be expressed as ratios in many settings,
 especially when normalizing to forested area. Estimates of this kind
-proceed along the same lines as [ratio estimates](ratio_estimates).
+proceed along the same lines as [ratio estimates](../ratio_estimates/).
 The only modification, of course, is the specification of the GRM
 estimates themselves.
 

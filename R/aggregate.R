@@ -80,6 +80,7 @@
     scope,
     plot = "",
     cond = ".cond",
+    dwm = ".dwm",
     tree = ".tree",
     tree_history = ".tree_history",
     rlang::abort(sprintf("Unknown partition scope: '%s'.", scope))
@@ -283,6 +284,256 @@
   res
 }
 
+.apply_level_pipeline <- function(res, object, target) {
+  ops <- object@pipeline[[target]]
+
+  res <- .apply_augmentations(res, ops$augment)
+
+  if (length(ops$mutate) > 0) {
+    res <- res %>% dplyr::mutate(!!!ops$mutate)
+  }
+
+  if (length(ops$filter) > 0) {
+    res <- res %>% dplyr::filter(!!!ops$filter)
+  }
+
+  res
+}
+
+# Parse and validate the arguments to `aggregate()`, producing one parsed
+# target spec per scoped helper. Scope availability is validated against the
+# analysis spec (e.g. `tree_history()` requires GRM, `dwm()` requires DWM).
+.aggregate_prepare <- function(args, spec) {
+  arg_names <- names(args)
+  unnamed <- if (is.null(arg_names)) {
+    rep(TRUE, length(args))
+  } else {
+    arg_names == ""
+  }
+
+  named_args <- if (is.null(arg_names)) {
+    character(0)
+  } else {
+    arg_names[!unnamed & nzchar(arg_names)]
+  }
+  unknown_named <- setdiff(named_args, "sparse")
+  if (length(unknown_named) > 0) {
+    stop(
+      "Unknown named argument(s) for `aggregate()`: ",
+      paste(unknown_named, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  sparse <- if ("sparse" %in% names(args)) args[["sparse"]] else FALSE
+
+  if (!any(unnamed)) {
+    stop(
+      "Must provide at least one scoped target helper such as `tree(VOLCFGRS)`, `cond()`, or `tree_history(...)`."
+    )
+  }
+
+  parsed_list <- lapply(args[unnamed], .parse_target_spec, caller = "aggregate")
+  .validate_aggregate_scopes(spec, parsed_list)
+
+  list(parsed_list = parsed_list, sparse = sparse)
+}
+
+.supported_aggregate_scopes <- function(spec) {
+  if (inherits(spec, "DWMAnalysis")) {
+    return(c("cond", "dwm"))
+  }
+  if (inherits(spec, "GRMAnalysis")) {
+    return(c("tree", "cond", "tree_history"))
+  }
+  c("tree", "cond")
+}
+
+.validate_aggregate_scopes <- function(spec, parsed_list) {
+  slots <- vapply(parsed_list, `[[`, character(1), "slot")
+  supported <- .supported_aggregate_scopes(spec)
+  for (slot in slots) {
+    if (!slot %in% supported) {
+      .stop_unsupported_aggregate_scope(spec, slot)
+    }
+  }
+  invisible(parsed_list)
+}
+
+.stop_unsupported_aggregate_scope <- function(spec, slot) {
+  if (inherits(spec, "DWMAnalysis")) {
+    stop(
+      "`dwm_analysis()` supports DWM component helpers and `cond()` aggregation, not `",
+      slot,
+      "()`.",
+      call. = FALSE
+    )
+  }
+  stop("Unsupported slot: ", slot, call. = FALSE)
+}
+
+# Build a combined plot-level aggregate for a set of scoped target helpers.
+# Targets on the same scope are merged into a single aggregate; different
+# scopes are combined with a full join on plot keys and shared domain columns.
+.aggregate_combined <- function(handler, parsed_list, sparse) {
+  slots <- vapply(parsed_list, `[[`, character(1), "slot")
+  groups <- split(seq_along(parsed_list), slots)
+
+  scope_info <- lapply(groups, function(idx) {
+    group <- parsed_list[idx]
+    list(
+      table = .aggregate_scope(handler, group, sparse),
+      target_cols = .scope_target_cols(group)
+    )
+  })
+
+  .combine_scope_tables(scope_info)
+}
+
+.aggregate_scope <- function(handler, group, sparse) {
+  slot <- group[[1]]$slot
+
+  if (slot == "cond") {
+    if (length(group) > 1) {
+      stop(
+        "`aggregate()` does not support multiple `cond()` helpers in one call.",
+        call. = FALSE
+      )
+    }
+    parsed <- group[[1]]
+    if (length(parsed$targets) > 0 && !all(parsed$targets == "1")) {
+      stop(
+        "Only `aggregate(cond())` or `aggregate(cond(1))` is currently supported for condition aggregation."
+      )
+    }
+    res <- .make_cond_aggregates(handler, sparse = sparse)
+    if (length(parsed$target_names) == 1 && nzchar(parsed$target_names[[1]])) {
+      res <- res %>% dplyr::rename(!!parsed$target_names[[1]] := prop)
+    }
+    return(res)
+  }
+
+  if (slot == "tree") {
+    quosures <- .merge_tree_quosures(group)
+    if (length(quosures) == 0) {
+      return(.make_tree_aggregates(handler, sparse = sparse))
+    }
+    return(.make_tree_aggregates(handler, !!!quosures, sparse = sparse))
+  }
+
+  if (slot == "tree_history") {
+    quosures <- .merge_tree_quosures(group)
+    if (length(quosures) == 0) {
+      return(.make_tree_history_aggregates(handler, sparse = sparse))
+    }
+    return(.make_tree_history_aggregates(handler, !!!quosures, sparse = sparse))
+  }
+
+  if (slot == "dwm") {
+    dwm_targets <- unlist(lapply(group, `[[`, "dwm_targets"), recursive = FALSE)
+    return(.make_dwm_aggregates(handler, dwm_targets, sparse = sparse))
+  }
+
+  stop("Unsupported slot: ", slot)
+}
+
+# Merge the quosures of multiple same-scope target helpers into one list.
+# A literal `1` target (implicit stem density) is named `tree_count` so it
+# survives merging and matches the empty-target column name.
+.merge_tree_quosures <- function(group) {
+  parts <- lapply(group, function(parsed) {
+    qs <- parsed$quosures
+    if (is.null(qs)) {
+      qs <- rlang::syms(parsed$targets)
+    }
+    qs
+  })
+  quosures <- unlist(parts, recursive = FALSE)
+  if (length(quosures) == 0) {
+    return(quosures)
+  }
+
+  nm <- names(quosures)
+  if (is.null(nm)) {
+    nm <- rep("", length(quosures))
+  }
+  for (i in seq_along(quosures)) {
+    expr <- rlang::quo_get_expr(quosures[[i]])
+    if (is.numeric(expr) && length(expr) == 1 && !is.na(expr) && expr == 1) {
+      nm[i] <- "tree_count"
+    }
+  }
+  names(quosures) <- nm
+  quosures
+}
+
+# Compute the output value-column names produced by an aggregate scope group.
+# Used to identify domain columns and to guard against cross-scope collisions.
+.scope_target_cols <- function(group) {
+  slot <- group[[1]]$slot
+
+  if (slot == "cond") {
+    parsed <- group[[1]]
+    if (length(parsed$target_names) == 1 && nzchar(parsed$target_names[[1]])) {
+      return(parsed$target_names[[1]])
+    }
+    return("prop")
+  }
+
+  if (slot == "dwm") {
+    targets <- unlist(lapply(group, `[[`, "dwm_targets"), recursive = FALSE)
+    return(unname(vapply(targets, function(t) t$name, character(1))))
+  }
+
+  if (slot %in% c("tree", "tree_history")) {
+    quosures <- .merge_tree_quosures(group)
+    if (length(quosures) == 0) {
+      return("tree_count")
+    }
+    return(.resolve_tree_target_names(quosures))
+  }
+
+  character(0)
+}
+
+.combine_scope_tables <- function(scope_info) {
+  if (length(scope_info) == 1) {
+    return(scope_info[[1]]$table)
+  }
+
+  all_targets <- unlist(lapply(scope_info, `[[`, "target_cols"))
+  dupes <- unique(all_targets[duplicated(all_targets)])
+  if (length(dupes) > 0) {
+    stop(
+      "Conflicting target column name(s) across scopes: ",
+      paste(dupes, collapse = ", "),
+      ". Rename one of the targets.",
+      call. = FALSE
+    )
+  }
+
+  Reduce(.join_scope_tables, scope_info)$table
+}
+
+.join_scope_tables <- function(acc_info, next_info) {
+  acc <- acc_info$table
+  next_tbl <- next_info$table
+
+  domains_acc <- setdiff(colnames(acc), c(.plot_keys, acc_info$target_cols))
+  domains_next <- setdiff(colnames(next_tbl), c(.plot_keys, next_info$target_cols))
+  shared_domains <- intersect(domains_acc, domains_next)
+
+  joined <- dplyr::full_join(
+    acc,
+    next_tbl,
+    by = c(.plot_keys, shared_domains)
+  )
+
+  list(
+    table = joined,
+    target_cols = c(acc_info$target_cols, next_info$target_cols)
+  )
+}
+
 #' Aggregate condition data to plot or subplot levels
 #'
 #' @param object A EvalHandler object.
@@ -292,12 +543,12 @@
 
   plot_keys <- .plot_keys_raw
   plot_domains <- .resolve_partition_domains(
-    object@plot_domains,
+    .pipeline_domains(object, "plot"),
     "plot",
     colnames(res)
   )
   cond_domains <- .resolve_partition_domains(
-    object@cond_domains,
+    .pipeline_domains(object, "cond"),
     "cond",
     colnames(res)
   )
@@ -380,20 +631,133 @@
       suffix = c("", ".cond")
     )
 
-  # Join external data queued via augment(cond(...))
-  res <- .apply_augmentations(res, object@cond_augmentations)
-
-  # Apply pending condition-level mutations
-  if (length(object@cond_mutations) > 0) {
-    res <- res %>% dplyr::mutate(!!!object@cond_mutations)
-  }
-
-  # Apply pending condition-level filters
-  if (length(object@cond_filters) > 0) {
-    res <- res %>% dplyr::filter(!!!object@cond_filters)
-  }
+  res <- .apply_level_pipeline(res, object, "cond")
 
   return(res)
+}
+
+#' Prepare joined condition-level DWM data
+#'
+#' @param object A DWM EvalHandler object.
+#' @return A lazy query containing plot, condition, and DWM columns.
+#' @keywords internal
+.build_dwm_data <- function(object) {
+  if (is.null(object@tables$cond_dwm_calc)) {
+    stop("`COND_DWM_CALC` is not available for this analysis spec.", call. = FALSE)
+  }
+
+  res <- .build_plot_data(object) %>%
+    dplyr::inner_join(
+      object@tables$cond,
+      by = c("CN" = "PLT_CN"),
+      suffix = c("", ".cond")
+    ) %>%
+    dplyr::inner_join(
+      object@tables$cond_dwm_calc,
+      by = c("CN" = "PLT_CN", "CONDID"),
+      suffix = c("", ".dwm")
+    )
+
+  res <- .apply_level_pipeline(res, object, "cond")
+  .apply_level_pipeline(res, object, "dwm")
+}
+
+#' Aggregate downed woody material to plots
+#'
+#' @param object A DWM EvalHandler object.
+#' @param targets Structured DWM targets.
+#' @param adjusted Use adjusted source fields.
+#' @param sparse Return only observed domain combinations.
+#' @return A lazy plot-level query.
+#' @keywords internal
+.make_dwm_aggregates <- function(
+  object,
+  targets,
+  adjusted = FALSE,
+  sparse = FALSE
+) {
+  if (!inherits(object@spec, "DWMAnalysis")) {
+    stop("DWM aggregation requires a `dwm_analysis()` handler.", call. = FALSE)
+  }
+  if (length(targets) == 0 || !all(vapply(
+    targets,
+    inherits,
+    logical(1),
+    what = "fiaplyr_dwm_target"
+  ))) {
+    stop("At least one valid DWM component target is required.", call. = FALSE)
+  }
+
+  res <- .build_dwm_data(object)
+  plot_keys <- .plot_keys_raw
+  plot_domains <- .resolve_partition_domains(
+    .pipeline_domains(object, "plot"),
+    "plot",
+    colnames(res)
+  )
+  cond_domains <- .resolve_partition_domains(
+    .pipeline_domains(object, "cond"),
+    "cond",
+    colnames(res)
+  )
+  dwm_domains <- .resolve_partition_domains(
+    .pipeline_domains(object, "dwm"),
+    "dwm",
+    colnames(res)
+  )
+
+  if (length(plot_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!plot_domains)
+  }
+  if (length(cond_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!cond_domains, .add = TRUE)
+  }
+  if (length(dwm_domains) > 0) {
+    res <- res %>% dplyr::group_by(!!!dwm_domains, .add = TRUE)
+  }
+  res <- .group_by_missing_vars(res, plot_keys)
+
+  output_names <- vapply(targets, function(target) target$name, character(1))
+  if (anyDuplicated(output_names)) {
+    stop("DWM target output names must be unique.", call. = FALSE)
+  }
+
+  source_columns <- lapply(targets, .resolve_dwm_columns, adjusted = adjusted)
+  missing_columns <- setdiff(unique(unlist(source_columns)), colnames(res))
+  if (length(missing_columns) > 0) {
+    stop(
+      "`COND_DWM_CALC` is missing required DWM column(s): ",
+      paste(missing_columns, collapse = ", "),
+      ".",
+      call. = FALSE
+    )
+  }
+
+  agg_exprs <- lapply(seq_along(source_columns), function(i) {
+    columns <- source_columns[[i]]
+    scale <- .dwm_target_scale(targets[[i]])
+    terms <- lapply(rlang::syms(columns), function(column) {
+      rlang::expr(dplyr::coalesce(!!column, 0) * !!scale)
+    })
+    row_total <- Reduce(function(x, y) rlang::expr((!!x) + (!!y)), terms)
+    rlang::expr(sum(!!row_total, na.rm = TRUE))
+  })
+  names(agg_exprs) <- output_names
+
+  aggregated <- res %>%
+    dplyr::summarise(!!!agg_exprs) %>%
+    dplyr::ungroup()
+
+  domain_vars <- setdiff(dplyr::group_vars(res), plot_keys)
+  .complete_scaffold(
+    plot_qry = .build_plot_data(object),
+    aggregated_qry = aggregated,
+    plot_keys = plot_keys,
+    domain_vars = domain_vars,
+    sparse = sparse,
+    zero_fill_vars = output_names
+  ) %>%
+    dplyr::rename(PLT_CN = CN)
 }
 
 #' Prepare plot-level data with mutations and filters applied
@@ -402,18 +766,7 @@
 .build_plot_data <- function(object) {
   res <- object@tables$plot
 
-  # Join external data queued via augment(plot(...))
-  res <- .apply_augmentations(res, object@plot_augmentations)
-
-  # Apply plot-level mutations
-  if (length(object@plot_mutations) > 0) {
-    res <- res %>% dplyr::mutate(!!!object@plot_mutations)
-  }
-
-  # Apply plot-level filters
-  if (length(object@plot_filters) > 0) {
-    res <- res %>% dplyr::filter(!!!object@plot_filters)
-  }
+  res <- .apply_level_pipeline(res, object, "plot")
 
   return(res)
 }
@@ -466,17 +819,17 @@
 
   plot_keys <- .plot_keys_raw
   plot_domains <- .resolve_partition_domains(
-    object@plot_domains,
+    .pipeline_domains(object, "plot"),
     "plot",
     colnames(res)
   )
   cond_domains <- .resolve_partition_domains(
-    object@cond_domains,
+    .pipeline_domains(object, "cond"),
     "cond",
     colnames(res)
   )
   tree_domains <- .resolve_partition_domains(
-    object@tree_domains,
+    .pipeline_domains(object, "tree"),
     "tree",
     colnames(res)
   )
@@ -626,17 +979,17 @@
 
   plot_keys <- .plot_keys_raw
   plot_domains <- .resolve_partition_domains(
-    object@plot_domains,
+    .pipeline_domains(object, "plot"),
     "plot",
     colnames(res)
   )
   cond_domains <- .resolve_partition_domains(
-    object@cond_domains,
+    .pipeline_domains(object, "cond"),
     "cond",
     colnames(res)
   )
   tree_history_domains <- .resolve_partition_domains(
-    object@tree_history_domains,
+    .pipeline_domains(object, "tree_history"),
     "tree_history",
     colnames(res)
   )
@@ -767,29 +1120,8 @@
     )
   }
 
-  # Join external data queued via augment(cond(...)) and augment(tree(...))
-  res <- .apply_augmentations(res, object@cond_augmentations)
-  res <- .apply_augmentations(res, object@tree_augmentations)
-
-  # Apply condition-level mutations (these affect all trees in those conditions)
-  if (length(object@cond_mutations) > 0) {
-    res <- res %>% dplyr::mutate(!!!object@cond_mutations)
-  }
-
-  # Apply tree-level mutations (these affect individual tree records)
-  if (length(object@tree_mutations) > 0) {
-    res <- res %>% dplyr::mutate(!!!object@tree_mutations)
-  }
-
-  # Apply condition-level filters (these remove entire conditions and their trees)
-  if (length(object@cond_filters) > 0) {
-    res <- res %>% dplyr::filter(!!!object@cond_filters)
-  }
-
-  # Apply tree-level filters (these remove individual tree records)
-  if (length(object@tree_filters) > 0) {
-    res <- res %>% dplyr::filter(!!!object@tree_filters)
-  }
+  res <- .apply_level_pipeline(res, object, "cond")
+  res <- .apply_level_pipeline(res, object, "tree")
 
   return(res)
 }
@@ -827,29 +1159,8 @@
     )
   }
 
-  # Join external data queued via augment(cond(...)) and augment(tree_history(...))
-  res <- .apply_augmentations(res, object@cond_augmentations)
-  res <- .apply_augmentations(res, object@tree_history_augmentations)
-
-  # Apply condition-level mutations (these affect all trees in those conditions)
-  if (length(object@cond_mutations) > 0) {
-    res <- res %>% dplyr::mutate(!!!object@cond_mutations)
-  }
-
-  # Apply tree-history-level mutations (these affect individual tree history records)
-  if (length(object@tree_history_mutations) > 0) {
-    res <- res %>% dplyr::mutate(!!!object@tree_history_mutations)
-  }
-
-  # Apply condition-level filters (these remove entire conditions and their trees)
-  if (length(object@cond_filters) > 0) {
-    res <- res %>% dplyr::filter(!!!object@cond_filters)
-  }
-
-  # Apply tree-history-level filters (these remove individual tree history records)
-  if (length(object@tree_history_filters) > 0) {
-    res <- res %>% dplyr::filter(!!!object@tree_history_filters)
-  }
+  res <- .apply_level_pipeline(res, object, "cond")
+  res <- .apply_level_pipeline(res, object, "tree_history")
 
   return(res)
 }

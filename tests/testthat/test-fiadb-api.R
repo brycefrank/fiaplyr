@@ -229,3 +229,77 @@ test_that("fiaplyr agrees with FIADB API for a GRM net change total", {
 
   expect_true(rel_diff < 0.001, info = sprintf("rel_diff = %.10f (threshold = 0.001)", rel_diff))
 })
+
+test_that("fiaplyr agrees with FIADB API for a DWM CWD carbon total", {
+  skip_if_not_installed("rvalidator")
+
+  con <- DBI::dbConnect(duckdb::duckdb(), fiadb_vt_mini_path())
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, 501007, spec = dwm_analysis())
+
+  ests <- handler |>
+    PostStratifiedEstimator() |>
+    estimate(dwm(dwm_cwd(CARBON)), output = "total")
+
+  fiaplyr_total <- dplyr::pull(ests, estimate)[[1]]
+
+  report <- rvalidator::fullreport(
+    list(
+      snum = 116,
+      wc = 502010,
+      rselected = "All live stocking",
+      cselected = "All live stocking"
+    )
+  )
+
+  api_total <- report$totals$ESTIMATE[[1]]
+  rel_diff <- abs(fiaplyr_total - api_total) / api_total
+
+  expect_true(rel_diff < 0.001, info = sprintf("rel_diff = %.10f (threshold = 0.001)", rel_diff))
+})
+
+test_that("fiaplyr agrees with FIADB API for DWM component totals", {
+  skip_if_not_installed("rvalidator")
+
+  cases <- list(
+    list(snum = 114, target = quote(dwm_cwd(VOLCF)), label = "CWD volume"),
+    list(snum = 113, target = quote(dwm_cwd(LPA)), label = "CWD pieces"),
+    list(snum = 120, target = quote(dwm_fwd(VOLCF, size = "ALL")), label = "FWD volume (all sizes)"),
+    list(snum = 105, target = quote(dwm_fwd(DRYBIO, size = "SM")), label = "FWD biomass (small)"),
+    list(snum = 112, target = quote(dwm_fwd(CARBON, size = "LG")), label = "FWD carbon (large)")
+  )
+
+  con <- DBI::dbConnect(duckdb::duckdb(), fiadb_vt_mini_path())
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  for (case in cases) {
+    handler <- eval_handler(con, 501007, spec = dwm_analysis())
+
+    ests <- handler |>
+      PostStratifiedEstimator() |>
+      estimate(dwm(!!case$target), output = "total")
+
+    fiaplyr_total <- dplyr::pull(ests, estimate)[[1]]
+
+    report <- rvalidator::fullreport(
+      list(
+        snum = case$snum,
+        wc = 502010,
+        rselected = "All live stocking",
+        cselected = "All live stocking"
+      )
+    )
+
+    api_total <- report$totals$ESTIMATE[[1]]
+    rel_diff <- abs(fiaplyr_total - api_total) / api_total
+
+    expect_true(
+      rel_diff < 0.001,
+      info = sprintf(
+        "%s (snum %s): rel_diff = %.10f (threshold = 0.001)",
+        case$label, case$snum, rel_diff
+      )
+    )
+  }
+})

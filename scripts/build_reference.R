@@ -36,7 +36,7 @@ guide_slug_lookup <- new.env(parent = emptyenv())
 
 reference_href <- function(route_slug, from_index = FALSE) {
   prefix <- if (from_index) "./" else "../"
-  paste0(prefix, route_slug)
+  paste0(prefix, route_slug, "/")
 }
 
 guide_href <- function(guide_slug) {
@@ -613,7 +613,7 @@ function_group_symbols <- list(
     "ratio", "show", "subset", "summary", "transform"
   ),
   "Analysis Specifications" = c(
-    "grm_analysis", "status_analysis"
+    "grm_analysis", "status_analysis", "dwm_analysis"
   ),
   "Scoped Helpers" = c(
     "fiadb_vt_mini_path",
@@ -636,6 +636,7 @@ section_descriptions <- c(
   "Estimators" = "Estimate population totals, ratios, and associated variances.",
   "Database Facilitation" = "Connect analyses to FIA databases and explore their contents.",
   "Growth, Removals and Mortality Macros" = "Build macros for growth, removals, mortality, and related change components.",
+  "Down Woody Material Macros" = "Build macros for downed woody material components.",
   "Classes" = "Core S4 classes used to represent handlers, analyses, mappings, and estimators. These are typically not used directly by uses, and their associated lower-case helpers are used instead."
 )
 
@@ -651,6 +652,19 @@ macro_symbols <- vapply(
   character(1)
 )
 function_group_symbols[["Growth, Removals and Mortality Macros"]] <- macro_symbols
+
+dwm_macro_symbols <- vapply(
+  Filter(
+    function(topic) {
+      grepl("^dwm_", topic$symbol) &&
+        !identical(topic$symbol, "dwm_analysis")
+    },
+    function_topics
+  ),
+  function(topic) topic$symbol,
+  character(1)
+)
+function_group_symbols[["Down Woody Material Macros"]] <- dwm_macro_symbols
 
 topic_by_symbol <- setNames(function_topics, vapply(function_topics, function(topic) {
   topic$symbol

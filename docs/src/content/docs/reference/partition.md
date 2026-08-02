@@ -17,7 +17,7 @@ and others.
 Domains are specified for a table using the associated helper. For example,
 `partition(tree(SPCD, STATUSCD))` would set the tree-level domains to be
 unique combinations of `SPCD` and `STATUSCD`. Columns added during
-[`transform()`](../transform) can be used as domain variables as well. Multiple helpers can
+[`transform()`](../transform/) can be used as domain variables as well. Multiple helpers can
 be mixed in a single call, such as `partition(tree(SPCD), cond(OWNCD))`.
 
 ## Usage

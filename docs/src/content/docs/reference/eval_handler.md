@@ -21,12 +21,12 @@ eval_handler(db, evalid, spec = status_analysis(), backend = NULL)
 
 - `db`: A DBIConnection object.
 - `evalid`: A numeric identifier for the evaluation.
-- `spec`: An [`AnalysisSpec`](../analysisspec-class) object. Defaults to [`status_analysis()`](../status_analysis).
-- `backend`: An optional [`database_mapping()`](../database_mapping) for custom schema/table names.
+- `spec`: An [`AnalysisSpec`](../analysisspec-class/) object. Defaults to [`status_analysis()`](../status_analysis/).
+- `backend`: An optional [`database_mapping()`](../database_mapping/) for custom schema/table names.
 
 ## Value
 
-An object of class [`EvalHandler`](../evalhandler-class) connected to the specified evaluation.
+An object of class [`EvalHandler`](../evalhandler-class/) connected to the specified evaluation.
 
 ## Examples
 

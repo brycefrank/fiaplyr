@@ -46,6 +46,29 @@ cond <- function(...) {
   qs
 }
 
+#' Scoped Helper for Downed Woody Material Expressions
+#'
+#' Captures expressions to apply to the joined `COND_DWM_CALC` data during
+#' [transform()], [subset()], [partition()], or [augment()]. Use the
+#' component-specific `dwm_*()` helpers instead when selecting an aggregation
+#' or estimation target.
+#'
+#' @param ... Zero or more named or unnamed expressions.
+#' @return A list of quosures tagged with `target_table = "dwm"`.
+#' @export
+#' @examples
+#' \dontrun{
+#' handler |>
+#'   transform(dwm(total_carbon = CWD_CARBON_ADJ + FWD_SM_CARBON_ADJ)) |>
+#'   subset(dwm(total_carbon > 0)) |>
+#'   partition(dwm(PHASE))
+#' }
+dwm <- function(...) {
+  qs <- rlang::enquos(...)
+  attr(qs, "target_table") <- "dwm"
+  qs
+}
+
 #' Scoped Helper for Plot-Level Expressions
 #'
 #' Captures one or more expressions and tags them to be applied at the plot

@@ -1,12 +1,12 @@
 ---
 title: "Create a Database Mapping"
-description: "A database mapping enables the use of alternative schema and table names, and is passed to the [`EvalHandler`](../evalhandler-class). When interacting with a standard FIADB, a mapping is not necessary. However, if your database uses different schema and table names, then a database mapping can be used to construct the handler. Users provide a schema name and an optional list that maps standard table names to custom table names, with the standard names as keys. `fiaplyr` only interacts with a handful of tables, see the example for the entire set."
+description: "A database mapping enables the use of alternative schema and table names, and is passed to the [`EvalHandler`](../evalhandler-class/). When interacting with a standard FIADB, a mapping is not necessary. However, if your database uses different schema and table names, then a database mapping can be used to construct the handler. Users provide a schema name and an optional list that maps standard table names to custom table names, with the standard names as keys. `fiaplyr` only interacts with a handful of tables, see the example for the entire set."
 ---
 
 ## Description
 
 A database mapping enables the use of alternative schema and table names,
-and is passed to the [`EvalHandler`](../evalhandler-class). When interacting with
+and is passed to the [`EvalHandler`](../evalhandler-class/). When interacting with
 a standard FIADB, a mapping is not necessary. However, if your database uses
 different schema and table names, then a database mapping can be used to
 construct the handler. Users provide a schema name and an optional list that
@@ -27,7 +27,7 @@ database_mapping(schema_name = NULL, table_map = list())
 
 ## Value
 
-A [`DatabaseMapping`](../databasemapping-class) object
+A [`DatabaseMapping`](../databasemapping-class/) object
 
 ## Examples
 
@@ -41,6 +41,7 @@ custom_mapping <- database_mapping(
     POP_PLOT_STRATUM_ASSGN = "MY_POP_PLOT_STRAT",
     PLOT = "MY_PLOT",
     COND = "MY_COND",
+    COND_DWM_CALC = "MY_COND_DWM_CALC",
     TREE = "MY_TREE",
     REF_SPECIES = "MY_REF_SPECIES",
     SUBP_COND = "MY_SUBP_COND"

@@ -174,4 +174,4 @@ Note that the domain specifications are crossed between the numerator
 and denominator (generating dia x density estimates for all pairs of
 species, a behavior that is useful for other purposes), hence we filter
 only to those that match. More expressive examples of ratio estimation
-is given in the [ratio estimates](ratio_estimates) vignette.
+is given in the [ratio estimates](../ratio_estimates/) vignette.

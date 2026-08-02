@@ -1,6 +1,6 @@
 ---
 title: "Post-stratified Ratio Point Estimator"
-description: "This function implements the FIA post-stratified ratio point estimator, a technique commonly used to estimate areal densities subset to some land basis of interest, like forested or timberland area. Much like the [`pe_post_strat()`](../pe_post_strat) estimator, this estimator computes post-stratified ratios over a set of estimation units. The estimator requires the presence of `pop_stratum` and `pop_estn_unit` tables in the handler, typically present when using [`eval_handler()`](../eval_handler)."
+description: "This function implements the FIA post-stratified ratio point estimator, a technique commonly used to estimate areal densities subset to some land basis of interest, like forested or timberland area. Much like the [`pe_post_strat()`](../pe_post_strat/) estimator, this estimator computes post-stratified ratios over a set of estimation units. The estimator requires the presence of `pop_stratum` and `pop_estn_unit` tables in the handler, typically present when using [`eval_handler()`](../eval_handler/)."
 ---
 
 ## Description
@@ -8,14 +8,14 @@ description: "This function implements the FIA post-stratified ratio point estim
 This function implements the FIA post-stratified ratio point estimator, a
 technique commonly used to estimate areal densities subset to some land
 basis of interest, like forested or timberland area. Much like the
-[`pe_post_strat()`](../pe_post_strat) estimator, this estimator
+[`pe_post_strat()`](../pe_post_strat/) estimator, this estimator
 computes post-stratified ratios over a set of estimation units. The
 estimator requires the presence of `pop_stratum` and `pop_estn_unit` tables
-in the handler, typically present when using [`eval_handler()`](../eval_handler).
+in the handler, typically present when using [`eval_handler()`](../eval_handler/).
 
 ## Details
 
-This estimator is composed of a ratio of two [`pe_post_strat()`](../pe_post_strat)
+This estimator is composed of a ratio of two [`pe_post_strat()`](../pe_post_strat/)
 estimators, one for the numerator and one for the denominator, yielding a
 ratio estimate for the evaluation:
 
@@ -25,9 +25,9 @@ $$
 
 where $K_g$ is the estimation unit weight and $\hat{Y}_g$ and
 $\hat{X}_g$ are two estimators of the same form, documented further in
-[`pe_post_strat()`](../pe_post_strat).
+[`pe_post_strat()`](../pe_post_strat/).
 With the default `var_est = "auto"`, the standard
-[`ve_post_strat_ratio()`](../ve_post_strat_ratio) variance estimator is selected
+[`ve_post_strat_ratio()`](../ve_post_strat_ratio/) variance estimator is selected
 automatically. This is equivalent to supplying `ve_post_strat_ratio()`
 explicitly and provides a convenient default for the standard ratio
 estimator.

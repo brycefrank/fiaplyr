@@ -9,15 +9,15 @@
 \arguments{
 \item{handler}{An EvalHandler object.}
 
-\item{...}{Scoped expressions using \code{tree()}, \code{cond()}, or \code{plot()} helpers.}
+\item{...}{Scoped expressions using \code{tree()}, \code{cond()}, \code{dwm()}, or \code{plot()} helpers.}
 }
 \value{
 The handler with pending mutations queued.
 }
 \description{
-Add derived columns or modify existing ones at the plot, condition, or tree
+Add derived columns or modify existing ones at the plot, condition, DWM, or tree
 level. Expressions must be wrapped in the appropriate scoping helper:
-\code{tree()}, \code{cond()}, or \code{plot()}.
+\code{tree()}, \code{cond()}, \code{dwm()}, or \code{plot()}.
 }
 \examples{
 \dontrun{

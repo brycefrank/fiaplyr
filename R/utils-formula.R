@@ -53,8 +53,19 @@ parse_formula <- function(f) {
 .parse_target_helper <- function(spec) {
   target_table <- attr(spec, "target_table")
 
-  if (is.null(target_table) || !target_table %in% c("tree", "cond", "plot", "tree_history")) {
-    stop("Scoped target helpers must use `tree()`, `cond()`, `plot()`, or `tree_history()`.")
+  if (is.null(target_table) || !target_table %in% c("tree", "cond", "plot", "dwm", "tree_history")) {
+    stop("Scoped target helpers must use `tree()`, `cond()`, `plot()`, `dwm()`, or `tree_history()`.")
+  }
+
+  if (inherits(spec, "fiaplyr_dwm_helper")) {
+    stop(
+      "DWM component helpers must be wrapped in `dwm()`, e.g. `dwm(dwm_cwd(CARBON))`.",
+      call. = FALSE
+    )
+  }
+
+  if (target_table == "dwm") {
+    return(.parse_dwm_scoped_spec(spec))
   }
 
   targets <- vapply(spec, rlang::as_label, character(1))
@@ -68,7 +79,57 @@ parse_formula <- function(f) {
     slot = target_table,
     targets = targets,
     target_names = target_names,
-    quosures = spec
+    quosures = spec,
+    dwm_targets = NULL
+  )
+}
+
+.parse_dwm_scoped_spec <- function(spec) {
+  if (length(spec) == 0) {
+    stop(
+      "`dwm()` requires a DWM component helper such as `dwm_cwd(CARBON)`, e.g. `dwm(dwm_cwd(CARBON))`.",
+      call. = FALSE
+    )
+  }
+
+  exprs <- lapply(spec, rlang::quo_get_expr)
+  is_component <- vapply(
+    exprs,
+    function(e) rlang::is_call(e) && rlang::call_name(e) %in% .dwm_component_helpers,
+    logical(1)
+  )
+  if (!all(is_component)) {
+    stop(
+      "`dwm()` must contain only DWM component helpers such as `dwm_cwd(CARBON)`, not raw expressions.",
+      call. = FALSE
+    )
+  }
+
+  helpers <- lapply(spec, rlang::eval_tidy)
+  supplied_names <- names(spec)
+  if (is.null(supplied_names)) {
+    supplied_names <- rep("", length(spec))
+  }
+
+  targets_by_helper <- lapply(seq_along(helpers), function(i) {
+    targets <- unclass(helpers[[i]])
+    if (nzchar(supplied_names[[i]])) {
+      targets <- lapply(targets, function(target) {
+        target$name <- supplied_names[[i]]
+        target
+      })
+    }
+    targets
+  })
+  dwm_targets <- unname(unlist(targets_by_helper, recursive = FALSE))
+  output_names <- unname(vapply(dwm_targets, function(target) target$name, character(1)))
+
+  list(
+    slot = "dwm",
+    targets = output_names,
+    target_names = rep("", length(output_names)),
+    quosures = NULL,
+    dwm_targets = dwm_targets
   )
 }
 

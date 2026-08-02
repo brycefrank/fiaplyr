@@ -112,6 +112,38 @@ estimation of state-wide means or totals, so it is not always necessary to call
 `aggregate`. Note that columns can be dynamically named, otherwise the stated
 value is used.
 
+### Downed Woody Material
+
+Evaluations with a `COND_DWM_CALC` table can be analyzed with
+`dwm_analysis()`. Component helpers select verified DWM attributes, while
+`dwm()` scopes transformations, filters, and domains to the joined DWM table.
+Plot aggregation uses unadjusted columns and population estimation uses
+adjusted columns; these per-acre loadings are never multiplied by tree
+expansion factors.
+
+```{r eval=FALSE}
+dwm_handler <- eval_handler(con, 501007, spec = dwm_analysis()) |>
+  subset(cond(COND_STATUS_CD == 1))
+
+# Cubic feet per acre by plot, using CWD_VOLCF_UNADJ
+dwm_plot_volume <- dwm_handler |>
+  aggregate(dwm_cwd(cwd_volume = VOLCF))
+
+# Short tons of carbon per acre, using all adjusted FWD size classes
+dwm_carbon <- dwm_handler |>
+  estimate(dwm_fwd(fwd_carbon = CARBON, size = "ALL"))
+
+# CWD carbon per forested acre
+dwm_carbon_per_forest_acre <- dwm_handler |>
+  estimate(ratio(dwm_cwd(CARBON), cond()))
+```
+
+Supported components are coarse woody debris, fine woody debris, piles, fuels,
+duff, and litter. `VOLCF` is returned in cubic feet per acre; `DRYBIO` and
+`CARBON` are converted from FIADB pounds to short tons per acre; and CWD `LPA`
+is pieces per acre. Fuel, duff, and litter biomass/carbon columns are unsuffixed
+in FIADB and therefore use their stored values for both aggregation modes.
+
 Implicitly, `aggregate` uses a weighted sum based on trees per acre (i.e., the
 `TPA_UNADJ` column), but users can specify arbitrary functions. For example,
 the weighted mean of a variable can be used instead

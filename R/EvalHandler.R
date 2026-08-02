@@ -1,22 +1,23 @@
+.pipeline_targets <- c("plot", "cond", "dwm", "tree", "tree_history")
+
+.new_pipeline <- function() {
+  setNames(
+    lapply(.pipeline_targets, function(target) {
+      list(
+        augment = list(),
+        mutate = list(),
+        filter = list(),
+        domain = list()
+      )
+    }),
+    .pipeline_targets
+  )
+}
+
 #' Class for Evaluation Pipeline
 #'
 #' @slot evalid The evaluation ID (numeric).
-#' @slot plot_mutations Pending plot-level mutation quosures.
-#' @slot plot_filters Pending plot-level filter quosures.
-#' @slot plot_domains Pending plot-level domain quosures.
-#' @slot tree_mutations Pending tree-level mutation quosures.
-#' @slot cond_mutations Pending condition-level mutation quosures.
-#' @slot tree_history_mutations Pending tree-history-level mutation quosures.
-#' @slot tree_domains Pending tree-level domain quosures.
-#' @slot cond_domains Pending condition-level domain quosures.
-#' @slot tree_history_domains Pending tree-history-level domain quosures.
-#' @slot tree_filters Pending tree-level filter quosures.
-#' @slot cond_filters Pending condition-level filter quosures.
-#' @slot tree_history_filters Pending tree-history-level filter quosures.
-#' @slot plot_augmentations Pending plot-level external-data join specs.
-#' @slot tree_augmentations Pending tree-level external-data join specs.
-#' @slot cond_augmentations Pending condition-level external-data join specs.
-#' @slot tree_history_augmentations Pending tree-history-level external-data join specs.
+#' @slot pipeline Pending operations grouped by target table and operation.
 #' @slot tables A list of lazy queries for the tables.
 #' @slot spec The AnalysisSpec used.
 #' @slot internal_cache Environment for caching intermediate results.
@@ -29,22 +30,7 @@ setClass(
     tables = "list",
     spec = "AnalysisSpec",
     internal_cache = "environment",
-    plot_mutations = "list",
-    plot_filters = "list",
-    plot_domains = "ANY",
-    tree_mutations = "list",
-    cond_mutations = "list",
-    tree_history_mutations = "list",
-    tree_domains = "ANY",
-    cond_domains = "ANY",
-    tree_history_domains = "ANY",
-    tree_filters = "list",
-    cond_filters = "list",
-    tree_history_filters = "list",
-    plot_augmentations = "list",
-    tree_augmentations = "list",
-    cond_augmentations = "list",
-    tree_history_augmentations = "list"
+    pipeline = "list"
   )
 )
 
@@ -92,22 +78,7 @@ eval_handler <- function(db, evalid, spec = status_analysis(), backend = NULL) {
     tables = tables,
     spec = spec,
     internal_cache = new.env(parent = emptyenv()),
-    plot_mutations = list(),
-    plot_filters = list(),
-    plot_domains = list(),
-    tree_mutations = list(),
-    cond_mutations = list(),
-    tree_history_mutations = list(),
-    tree_domains = list(),
-    cond_domains = list(),
-    tree_history_domains = list(),
-    tree_filters = list(),
-    cond_filters = list(),
-    tree_history_filters = list(),
-    plot_augmentations = list(),
-    tree_augmentations = list(),
-    cond_augmentations = list(),
-    tree_history_augmentations = list()
+    pipeline = .new_pipeline()
   )
 }
 
@@ -198,14 +169,16 @@ setMethod("show", "EvalHandler", function(object) {
   }
 
   # Display domain variables if set
-  plot_dom_labels <- vapply(object@plot_domains, rlang::as_label, character(1))
-  tree_dom_labels <- vapply(object@tree_domains, rlang::as_label, character(1))
-  cond_dom_labels <- vapply(object@cond_domains, rlang::as_label, character(1))
+  plot_dom_labels <- vapply(object@pipeline$plot$domain, rlang::as_label, character(1))
+  tree_dom_labels <- vapply(object@pipeline$tree$domain, rlang::as_label, character(1))
+  cond_dom_labels <- vapply(object@pipeline$cond$domain, rlang::as_label, character(1))
+  dwm_dom_labels <- vapply(object@pipeline$dwm$domain, rlang::as_label, character(1))
 
   if (
     length(plot_dom_labels) > 0 ||
       length(tree_dom_labels) > 0 ||
-      length(cond_dom_labels) > 0
+      length(cond_dom_labels) > 0 ||
+      length(dwm_dom_labels) > 0
   ) {
     cat("\n")
     if (length(plot_dom_labels) > 0) {
@@ -217,13 +190,54 @@ setMethod("show", "EvalHandler", function(object) {
     if (length(cond_dom_labels) > 0) {
       cat("Cond domains:   ", paste(cond_dom_labels, collapse = ", "), "\n")
     }
+    if (length(dwm_dom_labels) > 0) {
+      cat("DWM domains:    ", paste(dwm_dom_labels, collapse = ", "), "\n")
+    }
   }
 })
+
+#' Internal: Update the Pipeline Registry
+#'
+#' Add or replace values in one target's pipeline operation.
+#'
+#' @param handler An EvalHandler object.
+#' @param target A pipeline target table.
+#' @param operation One of "augment", "mutate", "filter", or "domain".
+#' @param values Values to add or assign.
+#' @param mode Either "append" or "replace".
+#' @return The modified handler.
+#' @keywords internal
+.pipeline_update <- function(handler, target, operation, values, mode = "append") {
+  if (!target %in% .pipeline_targets) {
+    rlang::abort(sprintf("Invalid target table: '%s'.", target))
+  }
+
+  if (!operation %in% c("augment", "mutate", "filter", "domain")) {
+    rlang::abort(sprintf("Invalid pipeline operation: '%s'.", operation))
+  }
+
+  pipeline <- handler@pipeline
+  if (mode == "append") {
+    pipeline[[target]][[operation]] <-
+      c(pipeline[[target]][[operation]], values)
+  } else if (mode == "replace") {
+    pipeline[[target]][[operation]] <- values
+  } else {
+    rlang::abort(sprintf("Invalid pipeline update mode: '%s'.", mode))
+  }
+
+  handler@pipeline <- pipeline
+  handler
+}
+
+.pipeline_domains <- function(handler, target) {
+  handler@pipeline[[target]]$domain
+}
 
 #' Internal: Route and Queue Scoped Expressions
 #'
 #' Validates that all arguments are scoped via helpers and routes them to the
-#' appropriate handler slots (mutations, filters, or domains).
+#' appropriate pipeline target and operation.
 #'
 #' @param handler An EvalHandler object.
 #' @param args Evaluated arguments from `rlang::list2(...)`.
@@ -239,40 +253,23 @@ setMethod("show", "EvalHandler", function(object) {
     return(handler)
   }
 
-  # Check if the entire args list has a target_table attribute (from scoped helpers)
   list_target_table <- attr(args, "target_table")
 
   if (!is.null(list_target_table)) {
-    # All expressions in this list share the same target
-    if (!list_target_table %in% c("tree", "cond", "plot", "tree_history")) {
-      rlang::abort(
-        sprintf(
-          "Invalid target table: '%s'. Must be 'tree', 'cond', 'plot', or 'tree_history'.",
-          list_target_table
-        )
-      )
-    }
-
-    slot_mutations <- paste0(list_target_table, "_mutations")
-    slot_filters <- paste0(list_target_table, "_filters")
-    slot_domains <- paste0(list_target_table, "_domains")
-
+    target_args <- args
+    target <- list_target_table
     if (operation == "append_mutations") {
-      slot(handler, slot_mutations) <- c(slot(handler, slot_mutations), args)
+      handler <- .pipeline_update(handler, target, "mutate", target_args)
     } else if (operation == "append_filters") {
-      slot(handler, slot_filters) <- c(slot(handler, slot_filters), args)
+      handler <- .pipeline_update(handler, target, "filter", target_args)
     } else if (operation == "set_domains") {
-      slot(handler, slot_domains) <- args
+      handler <- .pipeline_update(handler, target, "domain", target_args, "replace")
+    } else {
+      rlang::abort(sprintf("Unsupported scoped expression operation: '%s'.", operation))
     }
   } else {
-    domain_updates <- list(
-      tree = NULL,
-      cond = NULL,
-      plot = NULL,
-      tree_history = NULL
-    )
+    domain_updates <- list()
 
-    # Multiple expressions with potentially different targets
     for (arg in args) {
       if (is.null(arg)) {
         next
@@ -282,41 +279,36 @@ setMethod("show", "EvalHandler", function(object) {
 
       if (is.null(target_table)) {
         rlang::abort(
-          "All expressions must be explicitly scoped using `tree()`, `cond()`, `plot()`, or `tree_history()`.",
+          "All expressions must be explicitly scoped using `tree()`, `cond()`, `plot()`, `dwm()`, or `tree_history()`.",
           class = "fiaplyr_unscoped_expr"
         )
       }
 
-      if (!target_table %in% c("tree", "cond", "plot", "tree_history")) {
-        rlang::abort(
-          sprintf(
-            "Invalid target table: '%s'. Must be 'tree', 'cond', 'plot', or 'tree_history'.",
-            target_table
-          )
-        )
+      if (!target_table %in% .pipeline_targets) {
+        rlang::abort(sprintf("Invalid target table: '%s'.", target_table))
       }
 
-      slot_mutations <- paste0(target_table, "_mutations")
-      slot_filters <- paste0(target_table, "_filters")
-      slot_domains <- paste0(target_table, "_domains")
-
       if (operation == "append_mutations") {
-        slot(handler, slot_mutations) <- c(slot(handler, slot_mutations), arg)
+        handler <- .pipeline_update(handler, target_table, "mutate", arg)
       } else if (operation == "append_filters") {
-        slot(handler, slot_filters) <- c(slot(handler, slot_filters), arg)
+        handler <- .pipeline_update(handler, target_table, "filter", arg)
       } else if (operation == "set_domains") {
-        domain_updates[[target_table]] <- c(domain_updates[[target_table]], arg)
+        domain_updates[[target_table]] <-
+          c(domain_updates[[target_table]], arg)
+      } else {
+        rlang::abort(sprintf("Unsupported scoped expression operation: '%s'.", operation))
       }
     }
 
     if (operation == "set_domains") {
       for (target_table in names(domain_updates)) {
-        if (is.null(domain_updates[[target_table]])) {
-          next
-        }
-
-        slot_domains <- paste0(target_table, "_domains")
-        slot(handler, slot_domains) <- domain_updates[[target_table]]
+        handler <- .pipeline_update(
+          handler,
+          target_table,
+          "domain",
+          domain_updates[[target_table]],
+          "replace"
+        )
       }
     }
   }
@@ -388,12 +380,12 @@ setMethod("show", "EvalHandler", function(object) {
 
 #' Transform: Add Derived Columns or Modify Values
 #'
-#' Add derived columns or modify existing ones at the plot, condition, or tree
+#' Add derived columns or modify existing ones at the plot, condition, DWM, or tree
 #' level. Expressions must be wrapped in the appropriate scoping helper:
-#' `tree()`, `cond()`, or `plot()`.
+#' `tree()`, `cond()`, `dwm()`, or `plot()`.
 #'
 #' @param handler An EvalHandler object.
-#' @param ... Scoped expressions using `tree()`, `cond()`, or `plot()` helpers.
+#' @param ... Scoped expressions using `tree()`, `cond()`, `dwm()`, or `plot()` helpers.
 #' @return The handler with pending mutations queued.
 #' @export
 #' @examples
@@ -414,13 +406,13 @@ setMethod("transform", "EvalHandler", function(handler, ...) {
 
 #' Subset: Apply Scoped Filters
 #'
-#' Filter rows at the plot, condition, or tree level using logical predicates.
+#' Filter rows at the plot, condition, DWM, or tree level using logical predicates.
 #' Expressions must be wrapped in the appropriate scoping helper:
-#' `tree()`, `cond()`, or `plot()`. Rows that do not satisfy conditions are
+#' `tree()`, `cond()`, `dwm()`, or `plot()`. Rows that do not satisfy conditions are
 #' excluded from all subsequent operations.
 #'
 #' @param handler An EvalHandler object.
-#' @param ... Scoped logical expressions using `tree()`, `cond()`, or `plot()` helpers.
+#' @param ... Scoped logical expressions using `tree()`, `cond()`, `dwm()`, or `plot()` helpers.
 #' @return The handler with pending filters queued.
 #' @export
 #' @examples
@@ -441,13 +433,13 @@ setMethod("subset", "EvalHandler", function(handler, ...) {
 
 #' Partition: Specify Domain Variables
 #'
-#' Set domain (grouping) variables at the plot, condition, or tree level.
+#' Set domain (grouping) variables at the plot, condition, DWM, or tree level.
 #' Domain variables define how aggregation and estimation results are partitioned.
 #' Unlike `subset()`, partitions do not discard data. Expressions must be wrapped
-#' in the appropriate scoping helper: `tree()`, `cond()`, or `plot()`.
+#' in the appropriate scoping helper: `tree()`, `cond()`, `dwm()`, or `plot()`.
 #'
 #' @param handler An EvalHandler object.
-#' @param ... Scoped domain variable names using `tree()`, `cond()`, or `plot()` helpers.
+#' @param ... Scoped domain variable names using `tree()`, `cond()`, `dwm()`, or `plot()` helpers.
 #' @return The handler with domain variables set.
 #' @export
 #' @examples
@@ -470,7 +462,7 @@ setMethod("partition", "EvalHandler", function(handler, ...) {
 #'
 #' Attach external data (a local data frame or a lazy database table) to a
 #' specific table level via a join. Expressions must be wrapped in the
-#' appropriate scoping helper: `tree()`, `cond()`, `plot()`, or
+#' appropriate scoping helper: `tree()`, `cond()`, `plot()`, `dwm()`, or
 #' `tree_history()`. The first unnamed argument to the helper is the data to
 #' join; named arguments `by`, `type`, and `copy` configure the join. Columns
 #' added here become available to later `transform()`, `subset()`,
@@ -499,24 +491,23 @@ setMethod("augment", "EvalHandler", function(handler, ...) {
   for (helper in helpers) {
     if (!.has_scoped_helper_target(helper)) {
       rlang::abort(
-        "All arguments to `augment()` must be scoped using `tree()`, `cond()`, `plot()`, or `tree_history()`.",
+        "All arguments to `augment()` must be scoped using `tree()`, `cond()`, `plot()`, `dwm()`, or `tree_history()`.",
         class = "fiaplyr_unscoped_expr"
       )
     }
 
     spec <- .parse_augment_helper(helper)
 
-    if (!spec$target %in% c("tree", "cond", "plot", "tree_history")) {
+    if (!spec$target %in% c("tree", "cond", "plot", "dwm", "tree_history")) {
       rlang::abort(
         sprintf(
-          "Invalid target table: '%s'. Must be 'tree', 'cond', 'plot', or 'tree_history'.",
+          "Invalid target table: '%s'. Must be 'tree', 'cond', 'plot', 'dwm', or 'tree_history'.",
           spec$target
         )
       )
     }
 
-    slot_name <- paste0(spec$target, "_augmentations")
-    slot(handler, slot_name) <- c(slot(handler, slot_name), list(spec))
+    handler <- .pipeline_update(handler, spec$target, "augment", list(spec))
   }
 
   handler
@@ -539,6 +530,9 @@ setMethod("augment", "EvalHandler", function(handler, ...) {
 #' [grm_ingrowth()], etc.) are also expanded correctly - the macro encodes
 #' both the variable and its expansion logic.
 #'
+#' DWM handlers use component helpers such as [dwm_cwd()] and [dwm_fwd()].
+#' Their source fields are already per-acre loadings and are not tree-expanded.
+#'
 #' @param handler A EvalHandler object.
 #' @param ... A scoped target helper such as `tree(VOLCFGRS)`,
 #'   `tree(mean(VOLCFGRS))`, or `tree(grm_mortality(VOLCFGRS))`, and optional
@@ -555,6 +549,9 @@ setMethod("augment", "EvalHandler", function(handler, ...) {
 #'
 #' # GRM macro (fiaplyr_macro): encodes its own expansion logic
 #' handler |> aggregate(tree_history(grm_mortality(VOLCFGRS)))
+#'
+#' # DWM per-acre loading
+#' dwm_handler |> aggregate(dwm_cwd(CARBON))
 #' }
 #' @export
 setMethod("aggregate", "EvalHandler", function(handler, ...) {
@@ -606,8 +603,27 @@ setMethod(
       stop("`estimator` must be an estimator object or the string `\"auto\"`.", call. = FALSE)
     }
 
-    first <- args[[1]]
-    resolved_estimator <- if (inherits(first, "fiaplyr_ratio_intent")) {
+    arg_names <- names(args)
+    unnamed <- if (is.null(arg_names)) {
+      rep(TRUE, length(args))
+    } else {
+      arg_names == ""
+    }
+
+    has_ratio <- any(vapply(
+      args[unnamed],
+      inherits,
+      logical(1),
+      "fiaplyr_ratio_intent"
+    ))
+    if (has_ratio && sum(unnamed) > 1) {
+      stop(
+        "`ratio(...)` targets cannot be combined with other targets in a single `estimate()` call.",
+        call. = FALSE
+      )
+    }
+
+    resolved_estimator <- if (has_ratio) {
       pe_post_strat_ratio(var_est = var_est)
     } else {
       pe_post_strat(var_est = var_est)
@@ -689,16 +705,31 @@ setMethod(
     }
 
     args <- list(...)
-    if (length(args) == 0) {
+
+    arg_names <- names(args)
+    unnamed <- if (is.null(arg_names)) {
+      rep(TRUE, length(args))
+    } else {
+      arg_names == ""
+    }
+
+    if (!any(unnamed)) {
       stop(
         "Must provide at least one target helper, such as `tree(VOLCFNET)`, `cond()`, or `ratio(...)`."
       )
     }
 
-    first <- args[[1]]
+    first <- args[[which(unnamed)[1]]]
     if (!inherits(first, "fiaplyr_ratio_intent")) {
       stop(
         "`PostStratifiedRatioEstimator` requires a `ratio(...)` target.",
+        call. = FALSE
+      )
+    }
+
+    if (sum(unnamed) > 1) {
+      stop(
+        "`ratio(...)` targets cannot be combined with other targets in a single `estimate()` call.",
         call. = FALSE
       )
     }
@@ -758,7 +789,7 @@ setMethod("materialize", "EvalHandler", function(handler, slot) {
     )
   }
 
-  if (!slot %in% c("plot", "cond", "tree", "tree_history")) {
+  if (!slot %in% c("plot", "cond", "dwm", "tree", "tree_history")) {
     stop("Unsupported slot: ", slot, call. = FALSE)
   }
 
@@ -773,7 +804,14 @@ setMethod("materialize", "EvalHandler", function(handler, slot) {
   }
 
   if (slot == "tree") {
+    if (is.null(handler@tables$tree)) {
+      stop("`tree` is not available for this analysis spec.", call. = FALSE)
+    }
     return(.build_tree_data(handler))
+  }
+
+  if (slot == "dwm") {
+    return(.build_dwm_data(handler))
   }
 
   if (slot == "cond") {

@@ -184,6 +184,53 @@ test_that("aggregate() preserves user-defined output names", {
   expect_false("prop" %in% colnames(cond_res))
 })
 
+test_that("aggregate() accepts multiple scoped target helpers", {
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, evalid = 1001)
+
+  combined <- handler %>%
+    aggregate(cond(), tree(VOLCFGRS)) %>%
+    dplyr::collect() %>%
+    dplyr::arrange(PLT_CN, PLOT)
+
+  expect_true(all(c("prop", "VOLCFGRS") %in% colnames(combined)))
+
+  cond_res <- handler %>%
+    aggregate(cond()) %>%
+    dplyr::collect() %>%
+    dplyr::arrange(PLT_CN, PLOT)
+  tree_res <- handler %>%
+    aggregate(tree(VOLCFGRS)) %>%
+    dplyr::collect() %>%
+    dplyr::arrange(PLT_CN, PLOT)
+
+  expect_equal(combined$prop, cond_res$prop)
+  expect_equal(combined$VOLCFGRS, tree_res$VOLCFGRS)
+})
+
+test_that("aggregate() merges multiple same-scope targets", {
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  res <- eval_handler(con, evalid = 1001) %>%
+    aggregate(tree(VOLCFGRS), tree(VOLCFNET)) %>%
+    dplyr::collect()
+
+  expect_true(all(c("VOLCFGRS", "VOLCFNET") %in% colnames(res)))
+})
+
+test_that("aggregate() rejects multiple cond() helpers", {
+  con <- setup_status_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  expect_error(
+    eval_handler(con, evalid = 1001) %>% aggregate(cond(), cond()),
+    "multiple `cond"
+  )
+})
+
 test_that("partition() accepts multiple scoped helpers in one call", {
   con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
@@ -473,7 +520,7 @@ test_that("augment(tree()) joins a local data frame and copies with a warning", 
   augmented <- handler %>%
     augment(tree(species_ref, by = "SPCD"))
 
-  expect_length(augmented@tree_augmentations, 1)
+  expect_length(augmented@pipeline$tree$augment, 1)
 
   expect_warning(
     materialize(augmented, "tree"),

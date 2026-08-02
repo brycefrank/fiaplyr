@@ -104,53 +104,8 @@ setMethod("initialize_tables", "StatusAnalysis", function(spec, db, evalid, back
 #' @return A lazy query with aggregates.
 #' @noRd
 setMethod("aggregate_data", "StatusAnalysis", function(spec, handler, ...) {
-  args <- list(...)
-  arg_names <- names(args)
-  unnamed <- if (is.null(arg_names)) rep(TRUE, length(args)) else arg_names == ""
-
-  named_args <- if (is.null(arg_names)) character(0) else arg_names[!unnamed & nzchar(arg_names)]
-  unknown_named <- setdiff(named_args, "sparse")
-  if (length(unknown_named) > 0) {
-    stop("Unknown named argument(s) for `aggregate()`: ", paste(unknown_named, collapse = ", "), call. = FALSE)
-  }
-
-  if (!any(unnamed)) {
-    stop("Must provide exactly one scoped target helper such as `tree(VOLCFGRS)` or `cond()`.")
-  }
-
-  if (sum(unnamed) != 1) {
-    stop("`aggregate()` accepts exactly one scoped target helper per call.")
-  }
-
-  target_spec <- args[[which(unnamed)]]
-  sparse <- if ("sparse" %in% names(args)) args[["sparse"]] else FALSE
-
-  parsed <- .parse_target_spec(target_spec, "aggregate")
-  slot_name <- parsed$slot
-  targets <- parsed$targets
-  target_names <- parsed$target_names
-  target_quos <- parsed$quosures
-
-  if (slot_name == "tree") {
-    if (length(targets) == 0 || (length(targets) == 1 && targets == "1")) {
-      return(.make_tree_aggregates(handler, sparse = sparse))
-    }
-    if (is.null(target_quos)) {
-      target_quos <- rlang::syms(targets)
-    }
-    return(.make_tree_aggregates(handler, !!!target_quos, sparse = sparse))
-  } else if (slot_name == "cond") {
-    if (length(targets) > 0 && !all(targets == "1")) {
-      stop("Only `aggregate(cond())` or `aggregate(cond(1))` is currently supported for condition aggregation.")
-    }
-    res <- .make_cond_aggregates(handler, sparse = sparse)
-    if (length(target_names) == 1 && nzchar(target_names[[1]])) {
-      res <- res %>% dplyr::rename(!!target_names[[1]] := prop)
-    }
-    return(res)
-  } else {
-    stop("Unsupported slot: ", slot_name)
-  }
+  prep <- .aggregate_prepare(list(...), spec)
+  .aggregate_combined(handler, prep$parsed_list, prep$sparse)
 })
 
 #' @describeIn spec_summary_fields StatusAnalysis-specific summary fields

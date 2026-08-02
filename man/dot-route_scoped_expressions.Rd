@@ -18,6 +18,6 @@ The modified handler.
 }
 \description{
 Validates that all arguments are scoped via helpers and routes them to the
-appropriate handler slots (mutations, filters, or domains).
+appropriate pipeline target and operation.
 }
 \keyword{internal}

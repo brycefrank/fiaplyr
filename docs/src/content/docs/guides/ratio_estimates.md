@@ -6,7 +6,7 @@ The oft overlooked ratio estimator is a powerful component of FIA
 analyses, enabling the estimation of ratios that can normalize estimates
 to forested areas, yield averages of tree-level quantities, estimate
 mortality rates, and more. An understanding of the more basic [status
-estimates](status_estimates) vignette is also required.
+estimates](../status_estimates/) vignette is also required.
 
 As the name suggests, the ratio estimator is formed by dividing a
 numerator estimate by a denominator estimate, making an analysis

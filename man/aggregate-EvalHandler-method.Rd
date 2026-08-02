@@ -33,6 +33,9 @@ This mirrors \code{dplyr::summarise()} semantics - you control the aggregation.
 Functions that return a \code{fiaplyr_macro} object (such as \code{\link[=grm_mortality]{grm_mortality()}},
 \code{\link[=grm_ingrowth]{grm_ingrowth()}}, etc.) are also expanded correctly - the macro encodes
 both the variable and its expansion logic.
+
+DWM handlers use component helpers such as \code{\link[=dwm_cwd]{dwm_cwd()}} and \code{\link[=dwm_fwd]{dwm_fwd()}}.
+Their source fields are already per-acre loadings and are not tree-expanded.
 }
 \examples{
 \dontrun{
@@ -44,5 +47,8 @@ handler |> aggregate(tree(mean(VOLCFGRS)))
 
 # GRM macro (fiaplyr_macro): encodes its own expansion logic
 handler |> aggregate(tree_history(grm_mortality(VOLCFGRS)))
+
+# DWM per-acre loading
+dwm_handler |> aggregate(dwm_cwd(CARBON))
 }
 }
