@@ -202,3 +202,24 @@ test_that("DWM estimate() and aggregate() accept multiple scopes", {
     dplyr::collect()
   expect_true(all(c("dwm_cwd_VOLCF", "prop") %in% colnames(agg)))
 })
+
+test_that("dwm() argument names control output names", {
+  con <- setup_dwm_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, 1001, spec = dwm_analysis())
+
+  est <- handler %>%
+    estimate(dwm(
+      coarse = dwm_cwd(DRYBIO),
+      fine_small = dwm_fwd(DRYBIO, size = "SM")
+    )) %>%
+    dplyr::collect()
+  expect_setequal(est$var, c("coarse", "fine_small"))
+
+  agg <- handler %>%
+    aggregate(dwm(coarse = dwm_cwd(DRYBIO))) %>%
+    dplyr::collect()
+  expect_true("coarse" %in% colnames(agg))
+  expect_false("dwm_cwd_DRYBIO" %in% colnames(agg))
+})

@@ -106,7 +106,22 @@ parse_formula <- function(f) {
   }
 
   helpers <- lapply(spec, rlang::eval_tidy)
-  dwm_targets <- unname(unlist(lapply(helpers, unclass), recursive = FALSE))
+  supplied_names <- names(spec)
+  if (is.null(supplied_names)) {
+    supplied_names <- rep("", length(spec))
+  }
+
+  targets_by_helper <- lapply(seq_along(helpers), function(i) {
+    targets <- unclass(helpers[[i]])
+    if (nzchar(supplied_names[[i]])) {
+      targets <- lapply(targets, function(target) {
+        target$name <- supplied_names[[i]]
+        target
+      })
+    }
+    targets
+  })
+  dwm_targets <- unname(unlist(targets_by_helper, recursive = FALSE))
   output_names <- unname(vapply(dwm_targets, function(target) target$name, character(1)))
 
   list(

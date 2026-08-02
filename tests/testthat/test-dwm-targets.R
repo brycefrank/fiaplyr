@@ -77,6 +77,22 @@ test_that("all supported DWM component and attribute combinations resolve", {
   )
 })
 
+test_that("dwm() argument names override DWM target names", {
+  parsed <- .parse_target_spec(
+    dwm(coarse = dwm_cwd(DRYBIO), fine_small = dwm_fwd(DRYBIO, size = "SM")),
+    "test"
+  )
+  expect_identical(parsed$slot, "dwm")
+  expect_identical(parsed$targets, c("coarse", "fine_small"))
+  expect_identical(
+    vapply(parsed$dwm_targets, function(target) target$name, character(1)),
+    c("coarse", "fine_small")
+  )
+
+  unnamed <- .parse_target_spec(dwm(dwm_cwd(DRYBIO)), "test")
+  expect_identical(unnamed$targets, "dwm_cwd_DRYBIO")
+})
+
 test_that("DWM component helpers reject unsupported inputs", {
   expect_error(dwm_cwd(HEIGHT), "Valid choices are")
   expect_error(dwm_fuel(VOLCF), "Valid choices are")
