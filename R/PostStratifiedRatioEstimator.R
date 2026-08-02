@@ -540,7 +540,7 @@ setMethod(
   } else if (parsed$slot == "dwm") {
     if (is.null(parsed$dwm_targets)) {
       stop(
-        "DWM ratio targets require a component helper such as `dwm_cwd(CARBON)`.",
+        "DWM ratio targets require a component helper wrapped in `dwm()`, such as `dwm(dwm_cwd(CARBON))`.",
         call. = FALSE
       )
     }

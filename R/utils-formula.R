@@ -58,15 +58,14 @@ parse_formula <- function(f) {
   }
 
   if (inherits(spec, "fiaplyr_dwm_helper")) {
-    dwm_targets <- unclass(spec)
-    output_names <- vapply(dwm_targets, function(target) target$name, character(1))
-    return(list(
-      slot = "dwm",
-      targets = output_names,
-      target_names = rep("", length(output_names)),
-      quosures = NULL,
-      dwm_targets = dwm_targets
-    ))
+    stop(
+      "DWM component helpers must be wrapped in `dwm()`, e.g. `dwm(dwm_cwd(CARBON))`.",
+      call. = FALSE
+    )
+  }
+
+  if (target_table == "dwm") {
+    return(.parse_dwm_scoped_spec(spec))
   }
 
   targets <- vapply(spec, rlang::as_label, character(1))
@@ -82,6 +81,40 @@ parse_formula <- function(f) {
     target_names = target_names,
     quosures = spec,
     dwm_targets = NULL
+  )
+}
+
+.parse_dwm_scoped_spec <- function(spec) {
+  if (length(spec) == 0) {
+    stop(
+      "`dwm()` requires a DWM component helper such as `dwm_cwd(CARBON)`, e.g. `dwm(dwm_cwd(CARBON))`.",
+      call. = FALSE
+    )
+  }
+
+  exprs <- lapply(spec, rlang::quo_get_expr)
+  is_component <- vapply(
+    exprs,
+    function(e) rlang::is_call(e) && rlang::call_name(e) %in% .dwm_component_helpers,
+    logical(1)
+  )
+  if (!all(is_component)) {
+    stop(
+      "`dwm()` must contain only DWM component helpers such as `dwm_cwd(CARBON)`, not raw expressions.",
+      call. = FALSE
+    )
+  }
+
+  helpers <- lapply(spec, rlang::eval_tidy)
+  dwm_targets <- unname(unlist(lapply(helpers, unclass), recursive = FALSE))
+  output_names <- unname(vapply(dwm_targets, function(target) target$name, character(1)))
+
+  list(
+    slot = "dwm",
+    targets = output_names,
+    target_names = rep("", length(output_names)),
+    quosures = NULL,
+    dwm_targets = dwm_targets
   )
 }
 

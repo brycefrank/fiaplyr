@@ -184,7 +184,7 @@ setMethod(
       }
       if (is.null(parsed$dwm_targets)) {
         stop(
-          "DWM estimation requires a component helper such as `dwm_cwd(CARBON)`.",
+          "DWM estimation requires a component helper wrapped in `dwm()`, such as `dwm(dwm_cwd(CARBON))`.",
           call. = FALSE
         )
       }

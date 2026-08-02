@@ -1,3 +1,7 @@
+.dwm_component_helpers <- c(
+  "dwm_cwd", "dwm_fwd", "dwm_pile", "dwm_fuel", "dwm_duff", "dwm_litter"
+)
+
 .dwm_support <- list(
   CWD = list(
     VOLCF = list(base = "CWD_VOLCF", units = "cubic feet per acre", scale = 1),

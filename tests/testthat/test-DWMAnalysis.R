@@ -43,7 +43,7 @@ test_that("DWM plot aggregation uses unadjusted values and fills missing plots",
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   result <- eval_handler(con, 1001, spec = dwm_analysis()) %>%
-    aggregate(dwm_cwd(volume = VOLCF)) %>%
+    aggregate(dwm(dwm_cwd(volume = VOLCF))) %>%
     dplyr::collect() %>%
     dplyr::arrange(PLT_CN)
 
@@ -59,7 +59,7 @@ test_that("DWM plot filters are preserved by the complete scaffold", {
 
   result <- eval_handler(con, 1001, spec = dwm_analysis()) %>%
     subset(plot(PLOT == 1)) %>%
-    aggregate(dwm_cwd(VOLCF)) %>%
+    aggregate(dwm(dwm_cwd(VOLCF))) %>%
     dplyr::collect()
 
   expect_equal(nrow(result), 1)
@@ -72,10 +72,10 @@ test_that("DWM aggregation scales biomass and combines FWD sizes", {
 
   handler <- eval_handler(con, 1001, spec = dwm_analysis())
   biomass <- handler %>%
-    aggregate(dwm_cwd(DRYBIO)) %>%
+    aggregate(dwm(dwm_cwd(DRYBIO))) %>%
     dplyr::collect()
   fwd <- handler %>%
-    aggregate(dwm_fwd(total_carbon = CARBON, size = "ALL")) %>%
+    aggregate(dwm(dwm_fwd(total_carbon = CARBON, size = "ALL"))) %>%
     dplyr::collect()
 
   expect_equal(biomass$dwm_cwd_DRYBIO[biomass$PLT_CN == 101], 10 / 2000)
@@ -97,7 +97,7 @@ test_that("DWM scoped pipeline operations compose lazily", {
   materialized <- suppressWarnings(materialize(handler, "dwm"))
   result <- suppressWarnings(
     handler %>%
-      aggregate(dwm_cwd(VOLCF), sparse = TRUE) %>%
+      aggregate(dwm(dwm_cwd(VOLCF)), sparse = TRUE) %>%
       dplyr::collect()
   )
 
@@ -111,7 +111,7 @@ test_that("DWM point estimates use adjusted values", {
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
   result <- eval_handler(con, 1001, spec = dwm_analysis()) %>%
-    estimate(dwm_cwd(volume = VOLCF)) %>%
+    estimate(dwm(dwm_cwd(volume = VOLCF))) %>%
     dplyr::collect()
 
   expect_identical(result$var, "volume")
@@ -127,10 +127,10 @@ test_that("DWM estimates support domains, totals, margins, and ratios", {
     partition(cond(FORTYPCD), dwm(PHASE))
 
   total <- handler %>%
-    estimate(dwm_cwd(CARBON), output = "total", margins = TRUE) %>%
+    estimate(dwm(dwm_cwd(CARBON)), output = "total", margins = TRUE) %>%
     dplyr::collect()
   ratio_result <- handler %>%
-    estimate(ratio(dwm_cwd(CARBON), cond())) %>%
+    estimate(ratio(dwm(dwm_cwd(CARBON)), cond())) %>%
     dplyr::collect()
 
   expect_true(all(c("FORTYPCD", "PHASE", "is_marginal") %in% colnames(total)))
@@ -147,12 +147,12 @@ test_that("DWM targets work on either side of ratio estimation", {
 
   handler <- eval_handler(con, 1001, spec = dwm_analysis())
   dwm_denominator <- handler %>%
-    estimate(ratio(cond(), dwm_cwd(VOLCF))) %>%
+    estimate(ratio(cond(), dwm(dwm_cwd(VOLCF)))) %>%
     dplyr::collect()
   same_scope <- handler %>%
     estimate(ratio(
-      dwm_cwd(carbon = CARBON),
-      dwm_cwd(volume = VOLCF)
+      dwm(dwm_cwd(carbon = CARBON)),
+      dwm(dwm_cwd(volume = VOLCF))
     )) %>%
     dplyr::collect()
 
@@ -171,11 +171,17 @@ test_that("DWM analysis rejects unsupported targets and missing source fields", 
   handler <- eval_handler(con, 1001, spec = dwm_analysis())
   expect_error(handler %>% aggregate(tree(VOLCFNET)), "supports DWM")
   expect_error(handler %>% aggregate(dwm(CWD_VOLCF_UNADJ)), "component helper")
+  expect_error(handler %>% aggregate(dwm_cwd(VOLCF)), "wrapped in `dwm")
+  expect_error(handler %>% estimate(dwm_cwd(CARBON)), "wrapped in `dwm")
+  expect_error(
+    handler %>% estimate(ratio(dwm_cwd(CARBON), cond())),
+    "wrapped in `dwm"
+  )
 
   DBI::dbExecute(con, "ALTER TABLE COND_DWM_CALC DROP COLUMN CWD_VOLCF_UNADJ")
   broken <- eval_handler(con, 1001, spec = dwm_analysis())
   expect_error(
-    broken %>% aggregate(dwm_cwd(VOLCF)),
+    broken %>% aggregate(dwm(dwm_cwd(VOLCF))),
     "missing required DWM column.*CWD_VOLCF_UNADJ"
   )
 })

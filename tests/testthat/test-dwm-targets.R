@@ -1,18 +1,33 @@
 test_that("DWM component helpers validate and name targets", {
-  cwd <- .parse_target_spec(dwm_cwd(VOLCF), "test")
+  cwd <- .parse_target_spec(dwm(dwm_cwd(VOLCF)), "test")
   expect_identical(cwd$slot, "dwm")
   expect_identical(cwd$targets, "dwm_cwd_VOLCF")
   expect_identical(.resolve_dwm_columns(cwd$dwm_targets[[1]], FALSE), "CWD_VOLCF_UNADJ")
   expect_identical(.resolve_dwm_columns(cwd$dwm_targets[[1]], TRUE), "CWD_VOLCF_ADJ")
 
-  named <- .parse_target_spec(dwm_cwd(volume = VOLCF), "test")
+  named <- .parse_target_spec(dwm(dwm_cwd(volume = VOLCF)), "test")
   expect_identical(named$targets, "volume")
 
-  all_fwd <- .parse_target_spec(dwm_fwd(CARBON, size = "all"), "test")
+  all_fwd <- .parse_target_spec(dwm(dwm_fwd(CARBON, size = "all")), "test")
   expect_identical(all_fwd$targets, "dwm_fwd_all_CARBON")
   expect_identical(
     .resolve_dwm_columns(all_fwd$dwm_targets[[1]], TRUE),
     c("FWD_SM_CARBON_ADJ", "FWD_MD_CARBON_ADJ", "FWD_LG_CARBON_ADJ")
+  )
+})
+
+test_that("DWM component helpers require the dwm() scoping wrapper", {
+  expect_error(
+    .parse_target_spec(dwm_cwd(VOLCF), "test"),
+    "wrapped in `dwm"
+  )
+  expect_error(
+    .parse_target_spec(dwm(CWD_VOLCF_UNADJ), "test"),
+    "component helper"
+  )
+  expect_error(
+    .parse_target_spec(dwm(), "test"),
+    "component helper"
   )
 })
 

@@ -105,7 +105,7 @@ setMethod("aggregate_data", "DWMAnalysis", function(spec, handler, ...) {
   if (parsed$slot == "dwm") {
     if (is.null(parsed$dwm_targets)) {
       stop(
-        "DWM aggregation requires a component helper such as `dwm_cwd(VOLCF)`.",
+        "DWM aggregation requires a component helper wrapped in `dwm()`, such as `dwm(dwm_cwd(VOLCF))`.",
         call. = FALSE
       )
     }
