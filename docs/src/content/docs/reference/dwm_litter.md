@@ -1,12 +1,18 @@
 ---
 title: "Select Litter Loading"
-description: "Select `DRYBIO` (dry short tons/acre) or `CARBON` (short tons/acre). FIADB stores the biomass field as `LITTER_BIOMASS`."
+description: "Select one litter loading attribute. Supported attributes are:"
 ---
 
 ## Description
 
-Select `DRYBIO` (dry short tons/acre) or `CARBON` (short tons/acre). FIADB
-stores the biomass field as `LITTER_BIOMASS`.
+Select one litter loading attribute. Supported attributes are:
+
+## Details
+
+`DRYBIO`: dry short tons per acre
+`CARBON`: short tons per acre
+
+FIADB stores the biomass field as `LITTER_BIOMASS`.
 
 ## Usage
 

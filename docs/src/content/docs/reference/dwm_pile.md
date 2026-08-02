@@ -1,12 +1,17 @@
 ---
 title: "Select Residual Piles"
-description: "Select one pile attribute. Supported attributes are `VOLCF` (cubic feet/acre), `DRYBIO` (dry short tons/acre), and `CARBON` (short tons/acre)."
+description: "Select one pile attribute. Supported attributes are:"
 ---
 
 ## Description
 
-Select one pile attribute. Supported attributes are `VOLCF` (cubic
-feet/acre), `DRYBIO` (dry short tons/acre), and `CARBON` (short tons/acre).
+Select one pile attribute. Supported attributes are:
+
+## Details
+
+`VOLCF`: cubic feet per acre
+`DRYBIO`: dry short tons per acre
+`CARBON`: short tons per acre
 
 ## Usage
 

@@ -1,12 +1,18 @@
 ---
 title: "Select Fuel Loading"
-description: "Select `DRYBIO` (dry short tons/acre) or `CARBON` (short tons/acre). FIADB stores the biomass field as `FUEL_BIOMASS`."
+description: "Select one fuel loading attribute. Supported attributes are:"
 ---
 
 ## Description
 
-Select `DRYBIO` (dry short tons/acre) or `CARBON` (short tons/acre). FIADB
-stores the biomass field as `FUEL_BIOMASS`.
+Select one fuel loading attribute. Supported attributes are:
+
+## Details
+
+`DRYBIO`: dry short tons per acre
+`CARBON`: short tons per acre
+
+FIADB stores the biomass field as `FUEL_BIOMASS`.
 
 ## Usage
 

@@ -140,8 +140,12 @@
 #' Select Coarse Woody Debris
 #'
 #' Select one coarse woody debris attribute from `COND_DWM_CALC`. Supported
-#' attributes are `VOLCF` (cubic feet/acre), `DRYBIO` (dry short tons/acre),
-#' `CARBON` (short tons/acre), and `LPA` (pieces/acre).
+#' attributes are:
+#'
+#' - `VOLCF`: cubic feet per acre
+#' - `DRYBIO`: dry short tons per acre
+#' - `CARBON`: short tons per acre
+#' - `LPA`: pieces per acre
 #'
 #' @param ... Exactly one bare attribute, optionally named to control the output
 #'   column.
@@ -153,9 +157,11 @@ dwm_cwd <- function(...) {
 
 #' Select Fine Woody Debris
 #'
-#' Select one fine woody debris attribute. Supported attributes are `VOLCF`
-#' (cubic feet/acre), `DRYBIO` (dry short tons/acre), and `CARBON` (short
-#' tons/acre).
+#' Select one fine woody debris attribute. Supported attributes are:
+#'
+#' - `VOLCF`: cubic feet per acre
+#' - `DRYBIO`: dry short tons per acre
+#' - `CARBON`: short tons per acre
 #'
 #' @param ... Exactly one bare attribute, optionally named to control the output
 #'   column.
@@ -169,8 +175,11 @@ dwm_fwd <- function(..., size = NULL) {
 
 #' Select Residual Piles
 #'
-#' Select one pile attribute. Supported attributes are `VOLCF` (cubic
-#' feet/acre), `DRYBIO` (dry short tons/acre), and `CARBON` (short tons/acre).
+#' Select one pile attribute. Supported attributes are:
+#'
+#' - `VOLCF`: cubic feet per acre
+#' - `DRYBIO`: dry short tons per acre
+#' - `CARBON`: short tons per acre
 #'
 #' @inheritParams dwm_cwd
 #' @return A structured DWM target for [aggregate()] or [estimate()].
@@ -181,8 +190,12 @@ dwm_pile <- function(...) {
 
 #' Select Fuel Loading
 #'
-#' Select `DRYBIO` (dry short tons/acre) or `CARBON` (short tons/acre). FIADB
-#' stores the biomass field as `FUEL_BIOMASS`.
+#' Select one fuel loading attribute. Supported attributes are:
+#'
+#' - `DRYBIO`: dry short tons per acre
+#' - `CARBON`: short tons per acre
+#'
+#' FIADB stores the biomass field as `FUEL_BIOMASS`.
 #'
 #' @inheritParams dwm_cwd
 #' @return A structured DWM target for [aggregate()] or [estimate()].
@@ -193,8 +206,12 @@ dwm_fuel <- function(...) {
 
 #' Select Duff Loading
 #'
-#' Select `DRYBIO` (dry short tons/acre) or `CARBON` (short tons/acre). FIADB
-#' stores the biomass field as `DUFF_BIOMASS`.
+#' Select one duff loading attribute. Supported attributes are:
+#'
+#' - `DRYBIO`: dry short tons per acre
+#' - `CARBON`: short tons per acre
+#'
+#' FIADB stores the biomass field as `DUFF_BIOMASS`.
 #'
 #' @inheritParams dwm_cwd
 #' @return A structured DWM target for [aggregate()] or [estimate()].
@@ -205,8 +222,12 @@ dwm_duff <- function(...) {
 
 #' Select Litter Loading
 #'
-#' Select `DRYBIO` (dry short tons/acre) or `CARBON` (short tons/acre). FIADB
-#' stores the biomass field as `LITTER_BIOMASS`.
+#' Select one litter loading attribute. Supported attributes are:
+#'
+#' - `DRYBIO`: dry short tons per acre
+#' - `CARBON`: short tons per acre
+#'
+#' FIADB stores the biomass field as `LITTER_BIOMASS`.
 #'
 #' @inheritParams dwm_cwd
 #' @return A structured DWM target for [aggregate()] or [estimate()].

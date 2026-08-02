@@ -17,7 +17,12 @@ column.}
 A structured DWM target for \code{\link[=aggregate]{aggregate()}} or \code{\link[=estimate]{estimate()}}.
 }
 \description{
-Select one fine woody debris attribute. Supported attributes are \code{VOLCF}
-(cubic feet/acre), \code{DRYBIO} (dry short tons/acre), and \code{CARBON} (short
-tons/acre).
+Select one fine woody debris attribute. Supported attributes are:
+}
+\details{
+\itemize{
+\item \code{VOLCF}: cubic feet per acre
+\item \code{DRYBIO}: dry short tons per acre
+\item \code{CARBON}: short tons per acre
+}
 }

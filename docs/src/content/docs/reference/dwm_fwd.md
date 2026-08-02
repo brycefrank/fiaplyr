@@ -1,13 +1,17 @@
 ---
 title: "Select Fine Woody Debris"
-description: "Select one fine woody debris attribute. Supported attributes are `VOLCF` (cubic feet/acre), `DRYBIO` (dry short tons/acre), and `CARBON` (short tons/acre)."
+description: "Select one fine woody debris attribute. Supported attributes are:"
 ---
 
 ## Description
 
-Select one fine woody debris attribute. Supported attributes are `VOLCF`
-(cubic feet/acre), `DRYBIO` (dry short tons/acre), and `CARBON` (short
-tons/acre).
+Select one fine woody debris attribute. Supported attributes are:
+
+## Details
+
+`VOLCF`: cubic feet per acre
+`DRYBIO`: dry short tons per acre
+`CARBON`: short tons per acre
 
 ## Usage
 

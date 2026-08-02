@@ -28,6 +28,7 @@ export default defineConfig({
 						{ label: 'Status Estimates', slug: 'guides/status_estimates' },
 						{ label: 'Ratio Estimates', slug: 'guides/ratio_estimates' },
 						{ label: 'Growth, Removals and Mortality', slug: 'guides/growth_removals_mortality' },
+						{ label: 'Down Woody Material', slug: 'guides/down_woody_material' },
 					],
 				},
 				{
@@ -49,7 +50,8 @@ export default defineConfig({
               label: 'Analysis Specifications',
               items: [
                 {label: 'status_analysis', slug: 'reference/status_analysis'},
-                {label: 'grm_analysis', slug: 'reference/grm_analysis'}
+                {label: 'grm_analysis', slug: 'reference/grm_analysis'},
+                {label: 'dwm_analysis', slug: 'reference/dwm_analysis'}
               ]
             },
             {

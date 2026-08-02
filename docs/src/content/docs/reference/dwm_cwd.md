@@ -1,13 +1,19 @@
 ---
 title: "Select Coarse Woody Debris"
-description: "Select one coarse woody debris attribute from `COND_DWM_CALC`. Supported attributes are `VOLCF` (cubic feet/acre), `DRYBIO` (dry short tons/acre), `CARBON` (short tons/acre), and `LPA` (pieces/acre)."
+description: "Select one coarse woody debris attribute from `COND_DWM_CALC`. Supported attributes are:"
 ---
 
 ## Description
 
 Select one coarse woody debris attribute from `COND_DWM_CALC`. Supported
-attributes are `VOLCF` (cubic feet/acre), `DRYBIO` (dry short tons/acre),
-`CARBON` (short tons/acre), and `LPA` (pieces/acre).
+attributes are:
+
+## Details
+
+`VOLCF`: cubic feet per acre
+`DRYBIO`: dry short tons per acre
+`CARBON`: short tons per acre
+`LPA`: pieces per acre
 
 ## Usage
 

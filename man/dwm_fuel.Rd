@@ -14,6 +14,13 @@ column.}
 A structured DWM target for \code{\link[=aggregate]{aggregate()}} or \code{\link[=estimate]{estimate()}}.
 }
 \description{
-Select \code{DRYBIO} (dry short tons/acre) or \code{CARBON} (short tons/acre). FIADB
-stores the biomass field as \code{FUEL_BIOMASS}.
+Select one fuel loading attribute. Supported attributes are:
+}
+\details{
+\itemize{
+\item \code{DRYBIO}: dry short tons per acre
+\item \code{CARBON}: short tons per acre
+}
+
+FIADB stores the biomass field as \code{FUEL_BIOMASS}.
 }

@@ -33,6 +33,7 @@ Configure the analysis context used by a handler.
 
 - [`grm_analysis`](./grm_analysis/)
 - [`status_analysis`](./status_analysis/)
+- [`dwm_analysis`](./dwm_analysis/)
 
 ## Scoped Helpers
 
@@ -48,13 +49,6 @@ Target particular tables within a handler.
 - [`PostStratifiedEstimator`](./poststratifiedestimator/)
 - [`PostStratifiedRatioEstimator`](./poststratifiedratioestimator/)
 - [`dwm`](./dwm/)
-- [`dwm_analysis`](./dwm_analysis/)
-- [`dwm_cwd`](./dwm_cwd/)
-- [`dwm_duff`](./dwm_duff/)
-- [`dwm_fuel`](./dwm_fuel/)
-- [`dwm_fwd`](./dwm_fwd/)
-- [`dwm_litter`](./dwm_litter/)
-- [`dwm_pile`](./dwm_pile/)
 - [`tree`](./tree/)
 - [`tree_history`](./tree_history/)
 
@@ -97,6 +91,17 @@ Build macros for growth, removals, mortality, and related change components.
 - [`grm_reversion`](./grm_reversion/)
 - [`grm_survivor`](./grm_survivor/)
 - [`grom_gross_growth`](./grom_gross_growth/)
+
+## Down Woody Material Macros
+
+Build macros for downed woody material components.
+
+- [`dwm_cwd`](./dwm_cwd/)
+- [`dwm_duff`](./dwm_duff/)
+- [`dwm_fuel`](./dwm_fuel/)
+- [`dwm_fwd`](./dwm_fwd/)
+- [`dwm_litter`](./dwm_litter/)
+- [`dwm_pile`](./dwm_pile/)
 
 ## Classes
 
