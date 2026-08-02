@@ -603,8 +603,27 @@ setMethod(
       stop("`estimator` must be an estimator object or the string `\"auto\"`.", call. = FALSE)
     }
 
-    first <- args[[1]]
-    resolved_estimator <- if (inherits(first, "fiaplyr_ratio_intent")) {
+    arg_names <- names(args)
+    unnamed <- if (is.null(arg_names)) {
+      rep(TRUE, length(args))
+    } else {
+      arg_names == ""
+    }
+
+    has_ratio <- any(vapply(
+      args[unnamed],
+      inherits,
+      logical(1),
+      "fiaplyr_ratio_intent"
+    ))
+    if (has_ratio && sum(unnamed) > 1) {
+      stop(
+        "`ratio(...)` targets cannot be combined with other targets in a single `estimate()` call.",
+        call. = FALSE
+      )
+    }
+
+    resolved_estimator <- if (has_ratio) {
       pe_post_strat_ratio(var_est = var_est)
     } else {
       pe_post_strat(var_est = var_est)
@@ -686,16 +705,31 @@ setMethod(
     }
 
     args <- list(...)
-    if (length(args) == 0) {
+
+    arg_names <- names(args)
+    unnamed <- if (is.null(arg_names)) {
+      rep(TRUE, length(args))
+    } else {
+      arg_names == ""
+    }
+
+    if (!any(unnamed)) {
       stop(
         "Must provide at least one target helper, such as `tree(VOLCFNET)`, `cond()`, or `ratio(...)`."
       )
     }
 
-    first <- args[[1]]
+    first <- args[[which(unnamed)[1]]]
     if (!inherits(first, "fiaplyr_ratio_intent")) {
       stop(
         "`PostStratifiedRatioEstimator` requires a `ratio(...)` target.",
+        call. = FALSE
+      )
+    }
+
+    if (sum(unnamed) > 1) {
+      stop(
+        "`ratio(...)` targets cannot be combined with other targets in a single `estimate()` call.",
         call. = FALSE
       )
     }

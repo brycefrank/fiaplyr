@@ -185,3 +185,20 @@ test_that("DWM analysis rejects unsupported targets and missing source fields", 
     "missing required DWM column.*CWD_VOLCF_UNADJ"
   )
 })
+
+test_that("DWM estimate() and aggregate() accept multiple scopes", {
+  con <- setup_dwm_test_db()
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  handler <- eval_handler(con, 1001, spec = dwm_analysis())
+
+  est <- handler %>%
+    estimate(dwm(dwm_cwd(CARBON)), cond()) %>%
+    dplyr::collect()
+  expect_setequal(est$var, c("dwm_cwd_CARBON", "prop"))
+
+  agg <- handler %>%
+    aggregate(dwm(dwm_cwd(VOLCF)), cond()) %>%
+    dplyr::collect()
+  expect_true(all(c("dwm_cwd_VOLCF", "prop") %in% colnames(agg)))
+})

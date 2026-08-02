@@ -132,73 +132,98 @@ setMethod(
     }
 
     args <- list(...)
-    if (length(args) != 1) {
+    if (length(args) == 0) {
       stop(
-        "Must provide exactly one scoped target helper, such as `tree(VOLCFGRS)` or `cond()`."
+        "Must provide at least one scoped target helper, such as `tree(VOLCFGRS)`, `cond()`, or `dwm(dwm_cwd(CARBON))`."
       )
     }
     output <- match.arg(output, c("mean", "total"))
 
-    parsed <- .parse_target_spec(args[[1]], "estimate")
-    slot_name <- parsed$slot
-    targets <- parsed$targets
-    target_names <- parsed$target_names
-
-    if (slot_name == "cond") {
-      if (length(targets) > 0 && !all(targets == "1")) {
-        stop(
-          "Only `estimate(cond())` or `estimate(cond(1))` is currently supported for condition estimates."
-        )
-      }
-      return(.estimate_cond_internal(
-        object,
-        targets = targets,
-        target_names = target_names,
-        output = output,
-        margins = margins
-      ))
-    } else if (slot_name == "tree") {
-      return(.estimate_tree_internal(
-        object,
-        targets,
-        target_names = target_names,
-        target_quos = parsed$quosures,
-        output = output,
-        margins = margins
-      ))
-    } else if (slot_name == "tree_history") {
-      if (!inherits(object@handler@spec, "GRMAnalysis")) {
-        stop("`estimate(tree_history(...))` requires a GRMAnalysis handler.")
-      }
-      return(.estimate_tree_history_internal(
-        object,
-        targets,
-        target_names = target_names,
-        target_quos = parsed$quosures,
-        output = output,
-        margins = margins
-      ))
-    } else if (slot_name == "dwm") {
-      if (!inherits(object@handler@spec, "DWMAnalysis")) {
-        stop("DWM estimation requires a `dwm_analysis()` handler.", call. = FALSE)
-      }
-      if (is.null(parsed$dwm_targets)) {
-        stop(
-          "DWM estimation requires a component helper wrapped in `dwm()`, such as `dwm(dwm_cwd(CARBON))`.",
-          call. = FALSE
-        )
-      }
-      return(.estimate_dwm_internal(
-        object,
-        parsed$dwm_targets,
-        output = output,
-        margins = margins
-      ))
-    } else {
-      stop("Unsupported slot: ", slot_name)
+    if (any(vapply(args, inherits, logical(1), "fiaplyr_ratio_intent"))) {
+      stop(
+        "A non-ratio estimator requires a ratio point estimator for `ratio(...)` targets. Use `estimator = pe_post_strat_ratio(...)` or `estimator = \"auto\"`.",
+        call. = FALSE
+      )
     }
+
+    parsed_list <- lapply(args, .parse_target_spec, caller = "estimate")
+
+    results <- lapply(parsed_list, function(parsed) {
+      .estimate_parsed_target(object, parsed, output = output, margins = margins)
+    })
+
+    .lazy_bind_rows(results)
   }
 )
+
+# Internal helper: run one parsed target through the appropriate per-scope
+# estimation pipeline. Multiple targets are handled by the caller, which stacks
+# the results row-wise with `.lazy_bind_rows()`.
+.estimate_parsed_target <- function(object, parsed, output = "mean", margins = FALSE) {
+  slot_name <- parsed$slot
+  targets <- parsed$targets
+  target_names <- parsed$target_names
+
+  if (slot_name == "cond") {
+    if (length(targets) > 0 && !all(targets == "1")) {
+      stop(
+        "Only `estimate(cond())` or `estimate(cond(1))` is currently supported for condition estimates."
+      )
+    }
+    return(.estimate_cond_internal(
+      object,
+      targets = targets,
+      target_names = target_names,
+      output = output,
+      margins = margins
+    ))
+  } else if (slot_name == "tree") {
+    if (inherits(object@handler@spec, "DWMAnalysis")) {
+      stop(
+        "`dwm_analysis()` does not support `estimate(tree(...))` targets; use DWM component helpers wrapped in `dwm()`.",
+        call. = FALSE
+      )
+    }
+    return(.estimate_tree_internal(
+      object,
+      targets,
+      target_names = target_names,
+      target_quos = parsed$quosures,
+      output = output,
+      margins = margins
+    ))
+  } else if (slot_name == "tree_history") {
+    if (!inherits(object@handler@spec, "GRMAnalysis")) {
+      stop("`estimate(tree_history(...))` requires a GRMAnalysis handler.")
+    }
+    return(.estimate_tree_history_internal(
+      object,
+      targets,
+      target_names = target_names,
+      target_quos = parsed$quosures,
+      output = output,
+      margins = margins
+    ))
+  } else if (slot_name == "dwm") {
+    if (!inherits(object@handler@spec, "DWMAnalysis")) {
+      stop("DWM estimation requires a `dwm_analysis()` handler.", call. = FALSE)
+    }
+    if (is.null(parsed$dwm_targets)) {
+      stop(
+        "DWM estimation requires a component helper wrapped in `dwm()`, such as `dwm(dwm_cwd(CARBON))`.",
+        call. = FALSE
+      )
+    }
+    return(.estimate_dwm_internal(
+      object,
+      parsed$dwm_targets,
+      output = output,
+      margins = margins
+    ))
+  } else {
+    stop("Unsupported slot: ", slot_name)
+  }
+}
 
 setMethod(
   ".estimate_composed",
@@ -216,8 +241,9 @@ setMethod(
     margins = FALSE
   ) {
     extra_args <- list(...)
+    all_targets <- c(list(target), extra_args)
 
-    if (inherits(target, "fiaplyr_ratio_intent")) {
+    if (any(vapply(all_targets, inherits, logical(1), "fiaplyr_ratio_intent"))) {
       stop(
         "A non-ratio estimator requires a ratio point estimator for `ratio(...)` targets. Use `estimator = pe_post_strat_ratio(...)` or `estimator = \"auto\"`.",
         call. = FALSE

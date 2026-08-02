@@ -300,6 +300,240 @@
   res
 }
 
+# Parse and validate the arguments to `aggregate()`, producing one parsed
+# target spec per scoped helper. Scope availability is validated against the
+# analysis spec (e.g. `tree_history()` requires GRM, `dwm()` requires DWM).
+.aggregate_prepare <- function(args, spec) {
+  arg_names <- names(args)
+  unnamed <- if (is.null(arg_names)) {
+    rep(TRUE, length(args))
+  } else {
+    arg_names == ""
+  }
+
+  named_args <- if (is.null(arg_names)) {
+    character(0)
+  } else {
+    arg_names[!unnamed & nzchar(arg_names)]
+  }
+  unknown_named <- setdiff(named_args, "sparse")
+  if (length(unknown_named) > 0) {
+    stop(
+      "Unknown named argument(s) for `aggregate()`: ",
+      paste(unknown_named, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  sparse <- if ("sparse" %in% names(args)) args[["sparse"]] else FALSE
+
+  if (!any(unnamed)) {
+    stop(
+      "Must provide at least one scoped target helper such as `tree(VOLCFGRS)`, `cond()`, or `tree_history(...)`."
+    )
+  }
+
+  parsed_list <- lapply(args[unnamed], .parse_target_spec, caller = "aggregate")
+  .validate_aggregate_scopes(spec, parsed_list)
+
+  list(parsed_list = parsed_list, sparse = sparse)
+}
+
+.supported_aggregate_scopes <- function(spec) {
+  if (inherits(spec, "DWMAnalysis")) {
+    return(c("cond", "dwm"))
+  }
+  if (inherits(spec, "GRMAnalysis")) {
+    return(c("tree", "cond", "tree_history"))
+  }
+  c("tree", "cond")
+}
+
+.validate_aggregate_scopes <- function(spec, parsed_list) {
+  slots <- vapply(parsed_list, `[[`, character(1), "slot")
+  supported <- .supported_aggregate_scopes(spec)
+  for (slot in slots) {
+    if (!slot %in% supported) {
+      .stop_unsupported_aggregate_scope(spec, slot)
+    }
+  }
+  invisible(parsed_list)
+}
+
+.stop_unsupported_aggregate_scope <- function(spec, slot) {
+  if (inherits(spec, "DWMAnalysis")) {
+    stop(
+      "`dwm_analysis()` supports DWM component helpers and `cond()` aggregation, not `",
+      slot,
+      "()`.",
+      call. = FALSE
+    )
+  }
+  stop("Unsupported slot: ", slot, call. = FALSE)
+}
+
+# Build a combined plot-level aggregate for a set of scoped target helpers.
+# Targets on the same scope are merged into a single aggregate; different
+# scopes are combined with a full join on plot keys and shared domain columns.
+.aggregate_combined <- function(handler, parsed_list, sparse) {
+  slots <- vapply(parsed_list, `[[`, character(1), "slot")
+  groups <- split(seq_along(parsed_list), slots)
+
+  scope_info <- lapply(groups, function(idx) {
+    group <- parsed_list[idx]
+    list(
+      table = .aggregate_scope(handler, group, sparse),
+      target_cols = .scope_target_cols(group)
+    )
+  })
+
+  .combine_scope_tables(scope_info)
+}
+
+.aggregate_scope <- function(handler, group, sparse) {
+  slot <- group[[1]]$slot
+
+  if (slot == "cond") {
+    if (length(group) > 1) {
+      stop(
+        "`aggregate()` does not support multiple `cond()` helpers in one call.",
+        call. = FALSE
+      )
+    }
+    parsed <- group[[1]]
+    if (length(parsed$targets) > 0 && !all(parsed$targets == "1")) {
+      stop(
+        "Only `aggregate(cond())` or `aggregate(cond(1))` is currently supported for condition aggregation."
+      )
+    }
+    res <- .make_cond_aggregates(handler, sparse = sparse)
+    if (length(parsed$target_names) == 1 && nzchar(parsed$target_names[[1]])) {
+      res <- res %>% dplyr::rename(!!parsed$target_names[[1]] := prop)
+    }
+    return(res)
+  }
+
+  if (slot == "tree") {
+    quosures <- .merge_tree_quosures(group)
+    if (length(quosures) == 0) {
+      return(.make_tree_aggregates(handler, sparse = sparse))
+    }
+    return(.make_tree_aggregates(handler, !!!quosures, sparse = sparse))
+  }
+
+  if (slot == "tree_history") {
+    quosures <- .merge_tree_quosures(group)
+    if (length(quosures) == 0) {
+      return(.make_tree_history_aggregates(handler, sparse = sparse))
+    }
+    return(.make_tree_history_aggregates(handler, !!!quosures, sparse = sparse))
+  }
+
+  if (slot == "dwm") {
+    dwm_targets <- unlist(lapply(group, `[[`, "dwm_targets"), recursive = FALSE)
+    return(.make_dwm_aggregates(handler, dwm_targets, sparse = sparse))
+  }
+
+  stop("Unsupported slot: ", slot)
+}
+
+# Merge the quosures of multiple same-scope target helpers into one list.
+# A literal `1` target (implicit stem density) is named `tree_count` so it
+# survives merging and matches the empty-target column name.
+.merge_tree_quosures <- function(group) {
+  parts <- lapply(group, function(parsed) {
+    qs <- parsed$quosures
+    if (is.null(qs)) {
+      qs <- rlang::syms(parsed$targets)
+    }
+    qs
+  })
+  quosures <- unlist(parts, recursive = FALSE)
+  if (length(quosures) == 0) {
+    return(quosures)
+  }
+
+  nm <- names(quosures)
+  if (is.null(nm)) {
+    nm <- rep("", length(quosures))
+  }
+  for (i in seq_along(quosures)) {
+    expr <- rlang::quo_get_expr(quosures[[i]])
+    if (is.numeric(expr) && length(expr) == 1 && !is.na(expr) && expr == 1) {
+      nm[i] <- "tree_count"
+    }
+  }
+  names(quosures) <- nm
+  quosures
+}
+
+# Compute the output value-column names produced by an aggregate scope group.
+# Used to identify domain columns and to guard against cross-scope collisions.
+.scope_target_cols <- function(group) {
+  slot <- group[[1]]$slot
+
+  if (slot == "cond") {
+    parsed <- group[[1]]
+    if (length(parsed$target_names) == 1 && nzchar(parsed$target_names[[1]])) {
+      return(parsed$target_names[[1]])
+    }
+    return("prop")
+  }
+
+  if (slot == "dwm") {
+    targets <- unlist(lapply(group, `[[`, "dwm_targets"), recursive = FALSE)
+    return(unname(vapply(targets, function(t) t$name, character(1))))
+  }
+
+  if (slot %in% c("tree", "tree_history")) {
+    quosures <- .merge_tree_quosures(group)
+    if (length(quosures) == 0) {
+      return("tree_count")
+    }
+    return(.resolve_tree_target_names(quosures))
+  }
+
+  character(0)
+}
+
+.combine_scope_tables <- function(scope_info) {
+  if (length(scope_info) == 1) {
+    return(scope_info[[1]]$table)
+  }
+
+  all_targets <- unlist(lapply(scope_info, `[[`, "target_cols"))
+  dupes <- unique(all_targets[duplicated(all_targets)])
+  if (length(dupes) > 0) {
+    stop(
+      "Conflicting target column name(s) across scopes: ",
+      paste(dupes, collapse = ", "),
+      ". Rename one of the targets.",
+      call. = FALSE
+    )
+  }
+
+  Reduce(.join_scope_tables, scope_info)$table
+}
+
+.join_scope_tables <- function(acc_info, next_info) {
+  acc <- acc_info$table
+  next_tbl <- next_info$table
+
+  domains_acc <- setdiff(colnames(acc), c(.plot_keys, acc_info$target_cols))
+  domains_next <- setdiff(colnames(next_tbl), c(.plot_keys, next_info$target_cols))
+  shared_domains <- intersect(domains_acc, domains_next)
+
+  joined <- dplyr::full_join(
+    acc,
+    next_tbl,
+    by = c(.plot_keys, shared_domains)
+  )
+
+  list(
+    table = joined,
+    target_cols = c(acc_info$target_cols, next_info$target_cols)
+  )
+}
+
 #' Aggregate condition data to plot or subplot levels
 #'
 #' @param object A EvalHandler object.
