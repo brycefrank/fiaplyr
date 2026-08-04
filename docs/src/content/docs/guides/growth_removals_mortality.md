@@ -82,16 +82,16 @@ handler@tables$tree_history |>
   head()
 ```
 
-    # A query:  ?? x 3
-    # Database: DuckDB 1.5.4 [bryce@Linux 7.0.0-28-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
+    # Source:   SQL [?? x 3]
+    # Database: DuckDB 1.4.4 
       DIA_begin DIA_midpt   DIA
           <dbl>     <dbl> <dbl>
-    1      11.7     12.6   13.6
-    2       8.6      9.5   10.4
-    3       9.3     10.1   10.9
-    4       3.9      4.25   4.6
-    5       3.2      3.4    3.6
-    6       2.6      3.3    4  
+    1       8.3      8.65   9  
+    2      24.4     24.8   25.3
+    3       5.2      5.35   5.5
+    4      13.2     13.6   13.9
+    5       2        2.2    2.4
+    6       1.6      1.65   1.7
 
 Notice that the beginning and midpoint values have suffixes, while the
 end does not. This complies with typical FIA conventions.
@@ -120,8 +120,8 @@ handler@tables$tree_history |>
   print(n = 10)
 ```
 
-    # A query:    ?? x 2
-    # Database:   DuckDB 1.5.4 [bryce@Linux 7.0.0-28-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
+    # Source:     SQL [?? x 2]
+    # Database:   DuckDB 1.4.4 
     # Ordered by: transition
        transition     n
        <chr>      <dbl>
@@ -158,8 +158,8 @@ handler |>
   )
 ```
 
-    # A query:  ?? x 3
-    # Database: DuckDB 1.5.4 [bryce@Linux 7.0.0-28-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
+    # Source:   SQL [?? x 3]
+    # Database: DuckDB 1.4.4 
       var     estimate       se
       <chr>      <dbl>    <dbl>
     1 mort  101032246. 6741699.
@@ -174,8 +174,8 @@ handler |>
   )
 ```
 
-    # A query:  ?? x 3
-    # Database: DuckDB 1.5.4 [bryce@Linux 7.0.0-28-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
+    # Source:   SQL [?? x 3]
+    # Database: DuckDB 1.4.4 
       var       estimate       se
       <chr>        <dbl>    <dbl>
     1 ingrowth 31024427. 1391141.
@@ -191,8 +191,8 @@ handler |>
   )
 ```
 
-    # A query:  ?? x 3
-    # Database: DuckDB 1.5.4 [bryce@Linux 7.0.0-28-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
+    # Source:   SQL [?? x 3]
+    # Database: DuckDB 1.4.4 
       var          estimate        se
       <chr>           <dbl>     <dbl>
     1 net_change 160580318. 20799837.
@@ -216,8 +216,8 @@ handler |>
   )
 ```
 
-    # A query:  ?? x 4
-    # Database: DuckDB 1.5.4 [bryce@Linux 7.0.0-28-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
+    # Source:   SQL [?? x 4]
+    # Database: DuckDB 1.4.4 
       var_n var_d estimate    se
       <chr> <chr>    <dbl> <dbl>
     1 mort  prop      22.0  1.46

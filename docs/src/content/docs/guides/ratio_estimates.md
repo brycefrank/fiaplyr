@@ -65,8 +65,8 @@ handler |>
   )
 ```
 
-    # A query:  ?? x 4
-    # Database: DuckDB 1.5.4 [bryce@Linux 7.0.0-28-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
+    # Source:   SQL [?? x 4]
+    # Database: DuckDB 1.4.4 
       var_n    var_d estimate    se
       <chr>    <chr>    <dbl> <dbl>
     1 VOLCFNET prop     1808.  41.9
@@ -113,8 +113,8 @@ dhr <- dhr_ests |>
 head(dhr)
 ```
 
-    # A query:    ?? x 7
-    # Database:   DuckDB 1.5.4 [bryce@Linux 7.0.0-28-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
+    # Source:     SQL [?? x 7]
+    # Database:   DuckDB 1.4.4 
     # Ordered by: desc(estimate)
       SPCD_n SPCD_d var_n var_d estimate          se COMMON_NAME      
        <dbl>  <dbl> <chr> <chr>    <dbl>       <dbl> <chr>            
@@ -161,8 +161,8 @@ prop_ests |>
   head()
 ```
 
-    # A query:    ?? x 4
-    # Database:   DuckDB 1.5.4 [bryce@Linux 7.0.0-28-generic:R 4.6.0//home/bryce/Programming/fiaplyr/inst/fiadb_vt_mini.duckdb]
+    # Source:     SQL [?? x 4]
+    # Database:   DuckDB 1.4.4 
     # Ordered by: desc(estimate)
       SPCD_n COMMON_NAME        estimate        se
        <dbl> <chr>                 <dbl>     <dbl>
