@@ -136,6 +136,16 @@ trim_leading_blank_lines <- function(lines) {
   lines
 }
 
+strip_duckdb_source_metadata <- function(lines) {
+  # Remove environment/path metadata emitted in brackets after DuckDB version.
+  gsub(
+    "(DuckDB\\s+[^\\[]+)\\s*\\[[^\\]]*\\]",
+    "\\1",
+    lines,
+    perl = TRUE
+  )
+}
+
 build_with_quarto <- function(input, title, output_path) {
   output_name <- paste0(tools::file_path_sans_ext(basename(input)), ".md")
   rendered_path <- file.path(dirname(input), output_name)
@@ -181,12 +191,21 @@ build_with_quarto <- function(input, title, output_path) {
     "gfm"
   )
 
+  old_r_profile_user <- Sys.getenv("R_PROFILE_USER", unset = NA_character_)
+  on.exit({
+    if (is.na(old_r_profile_user)) {
+      Sys.unsetenv("R_PROFILE_USER")
+    } else {
+      Sys.setenv(R_PROFILE_USER = old_r_profile_user)
+    }
+  }, add = TRUE)
+  Sys.setenv(R_PROFILE_USER = profile_path)
+
   render_output <- system2(
     "quarto",
     args,
     stdout = TRUE,
-    stderr = TRUE,
-    env = c(paste0("R_PROFILE_USER=", profile_path))
+    stderr = TRUE
   )
 
   status <- attr(render_output, "status")
@@ -215,6 +234,7 @@ build_with_quarto <- function(input, title, output_path) {
   }
 
   body <- readLines(rendered_path, warn = FALSE)
+  body <- strip_duckdb_source_metadata(body)
   body <- strip_title_heading(body, title)
   body <- rewrite_links(body)
   body <- rewrite_image_paths(body)
@@ -270,8 +290,26 @@ normalize_readme_for_guide <- function(lines) {
     lines,
     perl = TRUE
   )
+
+  lines <- strip_duckdb_source_metadata(lines)
   
   rewrite_links(lines)
+}
+
+sanitize_readme_markdown <- function() {
+  readme_path <- file.path(project_root, "README.md")
+
+  if (!file.exists(readme_path)) {
+    return(invisible(NULL))
+  }
+
+  lines <- readLines(readme_path, warn = FALSE)
+  sanitized <- strip_duckdb_source_metadata(lines)
+
+  if (!identical(lines, sanitized)) {
+    writeLines(sanitized, readme_path)
+    message("Sanitized DuckDB metadata in ", readme_path)
+  }
 }
 
 build_readme_if_possible <- function() {
@@ -352,4 +390,5 @@ for (png_file in png_files) {
 
 invisible(lapply(qmd_files, build_one))
 build_readme_if_possible()
+sanitize_readme_markdown()
 build_getting_started_from_readme()
