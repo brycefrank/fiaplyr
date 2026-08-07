@@ -954,7 +954,7 @@
       dplyr::left_join(
         object@tables$pop_plot_stratum_assgn %>%
           dplyr::select(PLT_CN, STRATUM_CN),
-        by = c("CN" = "PLT_CN")
+        by = c("PREV_PLT_CN" = "PLT_CN")
       ) %>%
       dplyr::mutate(
         ADJ_SUBPTYPE = dplyr::case_when(
