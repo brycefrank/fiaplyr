@@ -34,10 +34,10 @@ setup_grm_test_db <- function() {
     stringsAsFactors = FALSE
   ))
 
-  # POP_PLOT_STRATUM_ASSGN - only assigned to visit 1 plots
+  # POP_PLOT_STRATUM_ASSGN - only assigned to visit 2 (remeasured) plots
   write_table("POP_PLOT_STRATUM_ASSGN", data.frame(
     STRATUM_CN = c(1, 1, 2, 2, 3, 3, 4, 4),
-    PLT_CN = c(101, 102, 103, 104, 201, 202, 203, 204),
+    PLT_CN = c(1001, 1002, 1003, 1004, 1201, 1202, 1203, 1204),
     stringsAsFactors = FALSE
   ))
 
@@ -101,18 +101,19 @@ setup_grm_test_db <- function() {
     stringsAsFactors = FALSE
   ))
 
-  # TREE_GRM_BEGIN - beginning measurements for visit 1 trees
+  # TREE_GRM_BEGIN - beginning measurements for visit 2 trees
+  # (attributes carried forward from the visit 1 measurement of the same tree)
   write_table("TREE_GRM_BEGIN", data.frame(
-    TRE_CN = c(1, 2, 3, 4, 5, 6, 7, 8),
+    TRE_CN = c(101, 102, 103, 104, 105, 106, 107, 108),
     STATUSCD = c(1, 1, 1, 1, 1, 1, 1, 1),
     DIA = c(10, 12, 8, 14, 10, 12, 8, 14),
     HT = c(60, 70, 50, 80, 60, 70, 50, 80),
     stringsAsFactors = FALSE
   ))
 
-  # TREE_GRM_MIDPT - middle measurements for visit 1 trees
+  # TREE_GRM_MIDPT - middle measurements for visit 2 trees
   write_table("TREE_GRM_MIDPT", data.frame(
-    TRE_CN = c(1, 2, 3, 4, 5, 6, 7, 8),
+    TRE_CN = c(101, 102, 103, 104, 105, 106, 107, 108),
     STATUSCD = c(1, 1, 1, 1, 1, 1, 1, 1),
     DIA = c(10.5, 12.3, 8.2, 14.5, 10.5, 12.3, 8.2, 14.5),
     HT = c(62, 72, 52, 82, 62, 72, 52, 82),
@@ -123,21 +124,21 @@ setup_grm_test_db <- function() {
 
   # TREE_GRM_COMPONENT - basis-specific GRM component/subtype columns
   write_table("TREE_GRM_COMPONENT", data.frame(
-    TRE_CN = c(1, 2, 3, 4, 5, 6, 7, 8),
+    TRE_CN = c(101, 102, 103, 104, 105, 106, 107, 108),
     SUBP_SUBPTYP_GRM_AL_FOREST = c(1L, 2L, 3L, 1L, 2L, 3L, 1L, 9L),
     SUBP_COMPONENT_AL_FOREST = c(
-      "MORTALITY_TREE", "MORTALITY_TREE", "MORTALITY_TREE", "REMOVAL_TREE",
-      "MORTALITY_TREE", "MORTALITY_TREE", "REMOVAL_TREE", "MORTALITY_TREE"
+      "MORTALITY1", "MORTALITY1", "MORTALITY1", "CUT1",
+      "MORTALITY1", "MORTALITY1", "CUT1", "MORTALITY1"
     ),
     SUBP_SUBPTYP_GRM_GS_TIMBER = c(3L, 3L, 3L, 3L, 2L, 2L, 2L, 2L),
     SUBP_COMPONENT_GS_TIMBER = c(
-      "REMOVAL_TREE", "REMOVAL_TREE", "REMOVAL_TREE", "REMOVAL_TREE",
-      "MORTALITY_TREE", "MORTALITY_TREE", "MORTALITY_TREE", "MORTALITY_TREE"
+      "CUT1", "CUT1", "CUT1", "CUT1",
+      "MORTALITY1", "MORTALITY1", "MORTALITY1", "MORTALITY1"
     ),
     SUBP_SUBPTYP_GRM_SL_TIMBER = c(2L, 2L, 2L, 2L, 1L, 1L, 1L, 1L),
     SUBP_COMPONENT_SL_TIMBER = c(
-      "MORTALITY_TREE", "MORTALITY_TREE", "MORTALITY_TREE", "MORTALITY_TREE",
-      "REMOVAL_TREE", "REMOVAL_TREE", "REMOVAL_TREE", "REMOVAL_TREE"
+      "MORTALITY1", "MORTALITY1", "MORTALITY1", "MORTALITY1",
+      "CUT1", "CUT1", "CUT1", "CUT1"
     ),
     stringsAsFactors = FALSE
   ))

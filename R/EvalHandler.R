@@ -579,6 +579,7 @@ setMethod(
   }
 )
 
+#' @describeIn estimate Estimate parameters directly from an EvalHandler
 #' @export
 setMethod(
   "estimate",

@@ -111,6 +111,8 @@ pe_post_strat_ratio <- function(var_est = "auto") {
 #'   with no domains). Dropped domain columns appear as `NA`. Defaults to
 #'   `FALSE`.
 #' @param estimator Unused for a bound estimator object.
+#' @param var_est A variance-estimator specification, or `"auto"` (default) to
+#'   use estimator-specific defaults.
 #' @return A dataframe with estimates.
 #' @export
 setMethod(
