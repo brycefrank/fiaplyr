@@ -31,7 +31,7 @@ Remotes:
 Config/testthat/edition: 3
 Collate:
     'methods.R'
-    'scoped-helpers.R'
+    'scopes.R'
     'targets.R'
     'dwm-targets.R'
     'aggregate.R'

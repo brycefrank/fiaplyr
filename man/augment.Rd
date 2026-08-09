@@ -9,7 +9,7 @@ augment(handler, ...)
 \arguments{
 \item{handler}{A handler object.}
 
-\item{...}{One or more scoped helpers describing the data to join, e.g.
+\item{...}{One or more scopes describing the data to join, e.g.
 \code{tree(species_ref, by = "SPCD", type = "left")}.}
 }
 \value{
@@ -24,7 +24,7 @@ covariates. Columns added via \code{augment()} become available to subsequent
 \link[=aggregate]{aggregate()} calls.
 }
 \details{
-The target table and join are specified using the scoped helpers
+The target table and join are specified using the scopes
 (e.g., \link[=tree]{tree()}, \link[=cond]{cond()}, etc.) The first, unnamed argument
 to the helper is the data to join; named arguments configure the join:
 

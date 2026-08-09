@@ -9,7 +9,7 @@
 \arguments{
 \item{handler}{A EvalHandler object.}
 
-\item{...}{A scoped target helper such as \code{tree(VOLCFGRS)},
+\item{...}{A scope such as \code{tree(VOLCFGRS)},
 \code{tree(mean(VOLCFGRS))}, or \code{tree(grm_mortality(VOLCFGRS))}, and optional
 arguments like \code{sparse}.}
 }

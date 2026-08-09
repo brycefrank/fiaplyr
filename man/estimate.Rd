@@ -46,7 +46,7 @@ estimate(
 \arguments{
 \item{object}{An estimator object or evaluation handler.}
 
-\item{...}{Exactly one scoped target helper specifying the estimation target.}
+\item{...}{Exactly one scope specifying the estimation target.}
 
 \item{output}{Output scale, either "mean" (default) or "total".}
 
@@ -66,7 +66,7 @@ use estimator-specific defaults.}
 \description{
 Estimates of population parameters are produced using the \code{estimate()}
 function, which takes a handler as the first argument, followed by a series
-of scoped helpers specifying the attributes of interest, e.g.,
+of scopes specifying the attributes of interest, e.g.,
 \code{tree(VOLCFGRS)} for gross cubic-foot volume. All estimates respect the
 current state of the handler including transformations, subsetting, and
 partitions. Estimates of ratios can be produced using the \code{ratio()} helper,

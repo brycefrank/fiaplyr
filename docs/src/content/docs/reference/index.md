@@ -35,9 +35,9 @@ Configure the analysis context used by a handler.
 - [`status_analysis`](./status_analysis/)
 - [`dwm_analysis`](./dwm_analysis/)
 
-## Scoped Helpers
+## Scopes
 
-Target particular tables within a handler.
+Select the table within a handler that a verb acts on.
 
 - [`fiadb_vt_mini_path`](./fiadb_vt_mini_path/)
 - [`set_fiaplyr_verbosity`](./set_fiaplyr_verbosity/)
@@ -68,9 +68,9 @@ Connect analyses to FIA databases and explore their contents.
 - [`database_mapping`](./database_mapping/)
 - [`explore_evals`](./explore_evals/)
 
-## Growth, Removals and Mortality Macros
+## Growth, Removals and Mortality Targets
 
-Build macros for growth, removals, mortality, and related change components.
+Build targets for growth, removals, mortality, and related change components.
 
 - [`grm_accretion`](./grm_accretion/)
 - [`grm_diversion`](./grm_diversion/)
@@ -92,9 +92,9 @@ Build macros for growth, removals, mortality, and related change components.
 - [`grm_survivor`](./grm_survivor/)
 - [`grom_gross_growth`](./grom_gross_growth/)
 
-## Down Woody Material Macros
+## Down Woody Material Targets
 
-Build macros for downed woody material components.
+Build targets for downed woody material components.
 
 - [`dwm_cwd`](./dwm_cwd/)
 - [`dwm_duff`](./dwm_duff/)

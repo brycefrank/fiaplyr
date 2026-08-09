@@ -1,5 +1,5 @@
 ---
-title: "Scoped Helper for Tree-History-Level Expressions"
+title: "Scope for Tree-History-Level Expressions"
 description: "Captures one or more expressions and tags them to be applied at the `tree_history` table level during lazy evaluation."
 ---
 

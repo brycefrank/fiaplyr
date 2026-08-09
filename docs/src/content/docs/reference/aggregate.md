@@ -30,7 +30,7 @@ aggregate(handler, ...)
 ## Arguments
 
 - `handler`: A handler object.
-- `...`: A scoped target helper such as `tree(VOLCFGRS)`, `tree(mean(VOLCFGRS))`, or `tree(grm_mortality(VOLCFGRS))`, plus optional arguments such as `sparse = TRUE`.
+- `...`: A scope such as `tree(VOLCFGRS)`, `tree(mean(VOLCFGRS))`, or `tree(grm_mortality(VOLCFGRS))`, plus optional arguments such as `sparse = TRUE`.
 
 ## Examples
 

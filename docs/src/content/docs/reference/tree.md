@@ -1,5 +1,5 @@
 ---
-title: "Scoped Helper for Tree-Level Expressions"
+title: "Scope for Tree-Level Expressions"
 description: "Captures one or more expressions and tags them to be applied at the tree table level during lazy evaluation. Used with `transform()`, `subset()`, or `partition()` to explicitly scope mutations, filters, or domain variables."
 ---
 
