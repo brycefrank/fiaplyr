@@ -483,8 +483,8 @@ test_that("GRM macro aggregates do not prefilter on the default expander weight"
     )
   )
 
-  expect_match(generic_sql, '".expander_wt" IS NULL', fixed = TRUE)
-  expect_no_match(macro_sql, '".expander_wt" IS NULL', fixed = TRUE)
+  expect_match(generic_sql, 'TPA_UNADJ IS NULL', fixed = TRUE)
+  expect_no_match(macro_sql, 'TPA_UNADJ IS NULL', fixed = TRUE)
   expect_match(macro_sql, "TPA_UNADJ_begin")
 })
 

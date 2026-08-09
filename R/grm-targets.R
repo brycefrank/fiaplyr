@@ -31,6 +31,9 @@
 #' Internal documentation anchor for shared GRM helper arguments.
 #'
 #' @param expr The variable to summarize. Use `1` for stem density.
+#' @param expander The expansion factor. Defaults to the macro-specific
+#'   expander (e.g., `TPA_UNADJ_begin` for mortality/removal macros or
+#'   `TPA_UNADJ` for ingrowth macros).
 #' @param annualize Logical. If `TRUE`, divides the estimate by `REMPER`.
 #' @param adjust Adjustment behavior for macro-derived targets. One of
 #'   `"auto"`, `"none"`, or `"subptype"`.

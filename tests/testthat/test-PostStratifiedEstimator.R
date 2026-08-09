@@ -492,7 +492,7 @@ test_that("unknown SUBPTYP_GRM codes do not create NA estimates", {
 
   DBI::dbExecute(
     con,
-    "UPDATE TREE_GRM_COMPONENT SET SUBP_SUBPTYP_GRM_AL_FOREST = 1 WHERE TRE_CN = 8"
+    "UPDATE TREE_GRM_COMPONENT SET SUBP_SUBPTYP_GRM_AL_FOREST = 1 WHERE TRE_CN = 108"
   )
 
   handler_known <- eval_handler(con, evalid = 1003, spec = grm_analysis())

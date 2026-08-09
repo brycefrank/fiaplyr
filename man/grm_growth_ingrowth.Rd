@@ -16,6 +16,10 @@ grm_growth_ingrowth(
 \arguments{
 \item{expr}{The variable to summarize. Use \code{1} for stem density.}
 
+\item{expander}{The expansion factor. Defaults to the macro-specific
+expander (e.g., \code{TPA_UNADJ_begin} for mortality/removal macros or
+\code{TPA_UNADJ} for ingrowth macros).}
+
 \item{annualize}{Logical. If \code{TRUE}, divides the estimate by \code{REMPER}.}
 
 \item{adjust}{Adjustment behavior for macro-derived targets. One of

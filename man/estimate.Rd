@@ -3,6 +3,7 @@
 \name{estimate}
 \alias{estimate}
 \alias{estimate,EvalHandler,missing-method}
+\alias{estimate,EvalHandler,character-method}
 \alias{estimate,EvalHandler,PostStratifiedEstimator-method}
 \alias{estimate,EvalHandler,PostStratifiedRatioEstimator-method}
 \title{Estimate Population Parameters}
@@ -17,6 +18,15 @@ estimate(
 )
 
 \S4method{estimate}{EvalHandler,missing}(
+  object,
+  ...,
+  output = "mean",
+  margins = FALSE,
+  estimator = "auto",
+  var_est = "auto"
+)
+
+\S4method{estimate}{EvalHandler,character}(
   object,
   ...,
   output = "mean",
@@ -83,6 +93,8 @@ argument; users do not need to specify \code{estimator = "missing"}.
 \section{Functions}{
 \itemize{
 \item \code{estimate(object = EvalHandler, estimator = missing)}: Estimate parameters directly from an EvalHandler
+
+\item \code{estimate(object = EvalHandler, estimator = character)}: Estimate parameters directly from an EvalHandler
 
 \item \code{estimate(object = EvalHandler, estimator = PostStratifiedEstimator)}: Estimate parameters directly from an EvalHandler
 

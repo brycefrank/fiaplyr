@@ -28,6 +28,9 @@ with no domains). Dropped domain columns appear as \code{NA}. Defaults to
 \code{FALSE}.}
 
 \item{estimator}{Unused for a bound estimator object.}
+
+\item{var_est}{A variance-estimator specification, or \code{"auto"} (default) to
+use estimator-specific defaults.}
 }
 \value{
 A dataframe with estimates.
