@@ -25,7 +25,7 @@ expansion factor, \code{TPA_UNADJ}, to produce a TPA-weighted sum per plot. This
 is the standard FIA expansion. Function calls (e.g., \code{tree(mean(VOLCFGRS))})
 are passed to \code{dplyr::summarise()} using the active plot-level groupings,
 allowing users to specify arbitrary aggregation functions without TPA
-expansion. Functions that return a \code{fiaplyr_macro} object, such as
+expansion. Functions that return a \code{fiaplyr_target} object, such as
 \link[=grm_mortality]{grm_mortality()} and \link[=grm_ingrowth]{grm_ingrowth()}, encode
 their own variable and expansion logic.
 }

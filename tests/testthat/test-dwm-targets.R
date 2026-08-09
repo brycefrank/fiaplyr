@@ -64,15 +64,20 @@ test_that("all supported DWM component and attribute combinations resolve", {
 
   expect_true(all(vapply(
     helpers,
-    function(helper) inherits(helper[[1]], "fiaplyr_dwm_target"),
+    function(helper) inherits(helper, "dwm_target"),
+    logical(1)
+  )))
+  expect_true(all(vapply(
+    helpers,
+    function(helper) inherits(helper, "fiaplyr_target"),
     logical(1)
   )))
   expect_identical(
-    .resolve_dwm_columns(dwm_duff(DRYBIO)[[1]], TRUE),
+    .resolve_dwm_columns(dwm_duff(DRYBIO), TRUE),
     "DUFF_BIOMASS"
   )
   expect_identical(
-    .resolve_dwm_columns(dwm_litter(DRYBIO)[[1]], FALSE),
+    .resolve_dwm_columns(dwm_litter(DRYBIO), FALSE),
     "LITTER_BIOMASS"
   )
 })

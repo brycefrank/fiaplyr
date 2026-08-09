@@ -526,8 +526,8 @@ setMethod("augment", "EvalHandler", function(handler, ...) {
 #'   into `dplyr::summarise()` using the active plot-level groupings.
 #'   This mirrors `dplyr::summarise()` semantics - you control the aggregation.
 #'
-#' Functions that return a `fiaplyr_macro` object (such as [grm_mortality()],
-#' [grm_ingrowth()], etc.) are also expanded correctly - the macro encodes
+#' Functions that return a `fiaplyr_target` object (such as [grm_mortality()],
+#' [grm_ingrowth()], etc.) are also expanded correctly - the target encodes
 #' both the variable and its expansion logic.
 #'
 #' DWM handlers use component helpers such as [dwm_cwd()] and [dwm_fwd()].
@@ -547,7 +547,7 @@ setMethod("augment", "EvalHandler", function(handler, ...) {
 #' # Raw summarise: mean volume per plot (no TPA expansion)
 #' handler |> aggregate(tree(mean(VOLCFGRS)))
 #'
-#' # GRM macro (fiaplyr_macro): encodes its own expansion logic
+#' # GRM target (fiaplyr_target): encodes its own expansion logic
 #' handler |> aggregate(tree_history(grm_mortality(VOLCFGRS)))
 #'
 #' # DWM per-acre loading

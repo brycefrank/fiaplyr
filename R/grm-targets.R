@@ -1,4 +1,4 @@
-# R/scoped-helpers-grm.R
+# R/grm-targets.R
 
 #' Recursively append temporal suffixes to target symbols
 #' @noRd
@@ -41,6 +41,31 @@
 #' @name grm_macro_shared_args
 NULL
 
+#' Internal constructor for a GRM target (a `fiaplyr_target` in the
+#' `tree_history` scope). A GRM target encodes its own expansion logic: the
+#' transition-masked expression, plus the stratum subplot adjustment settings.
+#' @inheritParams grm_macro_shared_args
+#' @param expr The transition-masked expression to sum.
+#' @noRd
+.fiaplyr_grm_target <- function(expr, adjust, adjust_basis, unknown_subptype) {
+  target <- .fiaplyr_target(
+    scope = "tree_history",
+    name = NULL,
+    expr = expr,
+    adjust = adjust,
+    adjust_basis = adjust_basis,
+    unknown_subptype = unknown_subptype
+  )
+  structure(target, class = c("grm_target", "fiaplyr_target"))
+}
+
+#' @noRd
+#' @exportS3Method agg_expr grm_target
+agg_expr.grm_target <- function(target, adjusted) {
+  factor_expr <- .macro_adjustment_factor_expr(target, adjusted = adjusted)
+  rlang::expr(sum((!!target$expr) * (!!factor_expr), na.rm = TRUE))
+}
+
 #' Internal builder for GRM macros
 #' @inheritParams grm_macro_shared_args
 #' @noRd
@@ -76,16 +101,13 @@ NULL
   }
 
   transition_aliases <- .grm_transition_aliases(transition_type)
-  
-  # Mask everything outside the target transition and return as a fiaplyr_macro
-  structure(
-    list(
-      expr = rlang::expr(ifelse(transition %in% !!transition_aliases, !!calc_expr, 0)),
-      adjust = adjust,
-      adjust_basis = adjust_basis,
-      unknown_subptype = unknown_subptype
-    ),
-    class = "fiaplyr_macro"
+
+  # Mask everything outside the target transition and return as a GRM target
+  .fiaplyr_grm_target(
+    expr = rlang::expr(ifelse(transition %in% !!transition_aliases, !!calc_expr, 0)),
+    adjust = adjust,
+    adjust_basis = adjust_basis,
+    unknown_subptype = unknown_subptype
   )
 }
 
@@ -141,14 +163,11 @@ NULL
 
   transition_aliases <- .grm_transition_aliases(transition_type)
 
-  structure(
-    list(
-      expr = rlang::expr(ifelse(transition %in% !!transition_aliases, !!delta_expr, 0)),
-      adjust = adjust,
-      adjust_basis = adjust_basis,
-      unknown_subptype = unknown_subptype
-    ),
-    class = "fiaplyr_macro"
+  .fiaplyr_grm_target(
+    expr = rlang::expr(ifelse(transition %in% !!transition_aliases, !!delta_expr, 0)),
+    adjust = adjust,
+    adjust_basis = adjust_basis,
+    unknown_subptype = unknown_subptype
   )
 }
 
@@ -158,8 +177,8 @@ NULL
     stop("Must provide at least one macro to combine.", call. = FALSE)
   }
 
-  if (!all(vapply(macros, inherits, logical(1), what = "fiaplyr_macro"))) {
-    stop("All inputs must be `fiaplyr_macro` objects.", call. = FALSE)
+  if (!all(vapply(macros, inherits, logical(1), what = "grm_target"))) {
+    stop("All inputs must be GRM targets produced by `grm_*()` helpers.", call. = FALSE)
   }
 
   if (is.null(weights)) {
@@ -180,14 +199,11 @@ NULL
   combined_expr <- Reduce(function(lhs, rhs) rlang::expr((!!lhs) + (!!rhs)), weighted_terms)
   template <- macros[[1]]
 
-  structure(
-    list(
-      expr = combined_expr,
-      adjust = template$adjust,
-      adjust_basis = template$adjust_basis,
-      unknown_subptype = template$unknown_subptype
-    ),
-    class = "fiaplyr_macro"
+  .fiaplyr_grm_target(
+    expr = combined_expr,
+    adjust = template$adjust,
+    adjust_basis = template$adjust_basis,
+    unknown_subptype = template$unknown_subptype
   )
 }
 

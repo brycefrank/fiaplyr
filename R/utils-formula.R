@@ -57,13 +57,6 @@ parse_formula <- function(f) {
     stop("Scoped target helpers must use `tree()`, `cond()`, `plot()`, `dwm()`, or `tree_history()`.")
   }
 
-  if (inherits(spec, "fiaplyr_dwm_helper")) {
-    stop(
-      "DWM component helpers must be wrapped in `dwm()`, e.g. `dwm(dwm_cwd(CARBON))`.",
-      call. = FALSE
-    )
-  }
-
   if (target_table == "dwm") {
     return(.parse_dwm_scoped_spec(spec))
   }
@@ -106,22 +99,25 @@ parse_formula <- function(f) {
   }
 
   helpers <- lapply(spec, rlang::eval_tidy)
+  if (!all(vapply(helpers, inherits, logical(1), what = "dwm_target"))) {
+    stop(
+      "`dwm()` must contain only DWM component helpers such as `dwm_cwd(CARBON)`, not raw expressions.",
+      call. = FALSE
+    )
+  }
+
   supplied_names <- names(spec)
   if (is.null(supplied_names)) {
     supplied_names <- rep("", length(spec))
   }
 
-  targets_by_helper <- lapply(seq_along(helpers), function(i) {
-    targets <- unclass(helpers[[i]])
+  dwm_targets <- lapply(seq_along(helpers), function(i) {
+    target <- helpers[[i]]
     if (nzchar(supplied_names[[i]])) {
-      targets <- lapply(targets, function(target) {
-        target$name <- supplied_names[[i]]
-        target
-      })
+      target$name <- supplied_names[[i]]
     }
-    targets
+    target
   })
-  dwm_targets <- unname(unlist(targets_by_helper, recursive = FALSE))
   output_names <- unname(vapply(dwm_targets, function(target) target$name, character(1)))
 
   list(
@@ -149,6 +145,21 @@ parse_formula <- function(f) {
     )
 
     return(parsed)
+  }
+
+  if (inherits(spec, "fiaplyr_target")) {
+    if (identical(spec$scope, "dwm")) {
+      stop(
+        "DWM component targets must be wrapped in `dwm()`, e.g. `dwm(dwm_cwd(CARBON))`.",
+        call. = FALSE
+      )
+    }
+    stop(
+      "Target helpers must be wrapped in the scoped helper matching their scope, e.g. `",
+      spec$scope,
+      "(...)`.",
+      call. = FALSE
+    )
   }
 
   if (is.list(spec) && !is.null(attr(spec, "target_table"))) {

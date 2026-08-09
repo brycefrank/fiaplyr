@@ -150,10 +150,10 @@
   )
 }
 
-.eval_as_macro <- function(var_quo) {
+.eval_as_target <- function(var_quo) {
   # Try the quosure's captured environment first
   result <- tryCatch(rlang::eval_tidy(var_quo), error = function(e) NULL)
-  if (inherits(result, "fiaplyr_macro")) {
+  if (inherits(result, "fiaplyr_target")) {
     return(result)
   }
   # Fall back to evaluating the expression in the fiaplyr namespace.
@@ -683,7 +683,7 @@
     targets,
     inherits,
     logical(1),
-    what = "fiaplyr_dwm_target"
+    what = "dwm_target"
   ))) {
     stop("At least one valid DWM component target is required.", call. = FALSE)
   }
@@ -733,14 +733,8 @@
     )
   }
 
-  agg_exprs <- lapply(seq_along(source_columns), function(i) {
-    columns <- source_columns[[i]]
-    scale <- .dwm_target_scale(targets[[i]])
-    terms <- lapply(rlang::syms(columns), function(column) {
-      rlang::expr(dplyr::coalesce(!!column, 0) * !!scale)
-    })
-    row_total <- Reduce(function(x, y) rlang::expr((!!x) + (!!y)), terms)
-    rlang::expr(sum(!!row_total, na.rm = TRUE))
+  agg_exprs <- lapply(targets, function(target) {
+    agg_expr(target, adjusted = adjusted)
   })
   names(agg_exprs) <- output_names
 
@@ -886,15 +880,10 @@
         zero_fill_vars <<- c(zero_fill_vars, resolved_names[[i]])
         rlang::expr(sum(.expander_wt * .adj_factor * (!!var_quo), na.rm = TRUE))
       } else {
-        evaluated <- .eval_as_macro(var_quo)
-        if (inherits(evaluated, "fiaplyr_macro")) {
+        evaluated <- .eval_as_target(var_quo)
+        if (inherits(evaluated, "fiaplyr_target")) {
           zero_fill_vars <<- c(zero_fill_vars, resolved_names[[i]])
-          expanded_expr <- evaluated$expr
-          factor_expr <- .macro_adjustment_factor_expr(
-            evaluated,
-            adjusted = adjusted
-          )
-          rlang::expr(sum((!!expanded_expr) * (!!factor_expr), na.rm = TRUE))
+          agg_expr(evaluated, adjusted = adjusted)
         } else {
           expr
         }
@@ -1046,15 +1035,10 @@
         zero_fill_vars <<- c(zero_fill_vars, resolved_names[[i]])
         rlang::expr(sum(.expander_wt * (!!var_quo), na.rm = TRUE))
       } else {
-        evaluated <- .eval_as_macro(var_quo)
-        if (inherits(evaluated, "fiaplyr_macro")) {
+        evaluated <- .eval_as_target(var_quo)
+        if (inherits(evaluated, "fiaplyr_target")) {
           zero_fill_vars <<- c(zero_fill_vars, resolved_names[[i]])
-          expanded_expr <- evaluated$expr
-          factor_expr <- .macro_adjustment_factor_expr(
-            evaluated,
-            adjusted = adjusted
-          )
-          rlang::expr(sum((!!expanded_expr) * (!!factor_expr), na.rm = TRUE))
+          agg_expr(evaluated, adjusted = adjusted)
         } else {
           expr
         }

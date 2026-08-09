@@ -30,8 +30,8 @@ into \code{dplyr::summarise()} using the active plot-level groupings.
 This mirrors \code{dplyr::summarise()} semantics - you control the aggregation.
 }
 
-Functions that return a \code{fiaplyr_macro} object (such as \code{\link[=grm_mortality]{grm_mortality()}},
-\code{\link[=grm_ingrowth]{grm_ingrowth()}}, etc.) are also expanded correctly - the macro encodes
+Functions that return a \code{fiaplyr_target} object (such as \code{\link[=grm_mortality]{grm_mortality()}},
+\code{\link[=grm_ingrowth]{grm_ingrowth()}}, etc.) are also expanded correctly - the target encodes
 both the variable and its expansion logic.
 
 DWM handlers use component helpers such as \code{\link[=dwm_cwd]{dwm_cwd()}} and \code{\link[=dwm_fwd]{dwm_fwd()}}.
@@ -45,7 +45,7 @@ handler |> aggregate(tree(VOLCFGRS))
 # Raw summarise: mean volume per plot (no TPA expansion)
 handler |> aggregate(tree(mean(VOLCFGRS)))
 
-# GRM macro (fiaplyr_macro): encodes its own expansion logic
+# GRM target (fiaplyr_target): encodes its own expansion logic
 handler |> aggregate(tree_history(grm_mortality(VOLCFGRS)))
 
 # DWM per-acre loading
