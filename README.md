@@ -4,7 +4,7 @@
 <!-- badges: start -->
 
 [![R-CMD-check](https://github.com/brycefrank/fiaplyr/actions/workflows/R-CMD-check.yml/badge.svg)](https://github.com/brycefrank/fiaplyr/actions/workflows/R-CMD-check.yml)
-[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](https://github.com/brycefrank/fiaplyr)
+[![Version](https://img.shields.io/badge/version-0.4.1-blue.svg)](https://github.com/brycefrank/fiaplyr)
 [![Documentation](https://img.shields.io/badge/docs-brycefrank.com%2Ffiaplyr-blue.svg)](https://brycefrank.com/fiaplyr)
 <!-- badges: end -->
 
