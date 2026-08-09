@@ -15,7 +15,7 @@
 #' their own variable and expansion logic.
 #'
 #' @param handler A handler object.
-#' @param ... A scoped target helper such as `tree(VOLCFGRS)`,
+#' @param ... A scope such as `tree(VOLCFGRS)`,
 #'   `tree(mean(VOLCFGRS))`, or `tree(grm_mortality(VOLCFGRS))`, plus optional
 #'   arguments such as `sparse = TRUE`.
 #' @export
@@ -120,7 +120,7 @@ setGeneric("partition", function(handler, ...) standardGeneric("partition"))
 #' [transform()][transform], [subset()][subset], [partition()][partition], and
 #' [aggregate()][aggregate] calls.
 #'
-#' The target table and join are specified using the scoped helpers
+#' The target table and join are specified using the scopes
 #' (e.g., [tree()][tree], [cond()][cond], etc.) The first, unnamed argument
 #' to the helper is the data to join; named arguments configure the join:
 #'
@@ -136,7 +136,7 @@ setGeneric("partition", function(handler, ...) standardGeneric("partition"))
 #' }
 #'
 #' @param handler A handler object.
-#' @param ... One or more scoped helpers describing the data to join, e.g.
+#' @param ... One or more scopes describing the data to join, e.g.
 #'   `tree(species_ref, by = "SPCD", type = "left")`.
 #' @return The handler with pending augmentations queued.
 #' @export
@@ -176,14 +176,14 @@ setGeneric("get_strata_weights", function(handler) {
 #'
 #' Estimates of population parameters are produced using the `estimate()`
 #' function, which takes a handler as the first argument, followed by a series
-#' of scoped helpers specifying the attributes of interest, e.g.,
+#' of scopes specifying the attributes of interest, e.g.,
 #' `tree(VOLCFGRS)` for gross cubic-foot volume. All estimates respect the
 #' current state of the handler including transformations, subsetting, and
 #' partitions. Estimates of ratios can be produced using the `ratio()` helper,
 #' e.g., `estimate(ratio(tree(VOLCFGRS), tree(BA)))`.
 #'
 #' @param object An estimator object or evaluation handler.
-#' @param ... Exactly one scoped target helper specifying the estimation target.
+#' @param ... Exactly one scope specifying the estimation target.
 #' @param output Output scale, either "mean" (default) or "total".
 #' @param margins Logical. If `TRUE`, returns all marginal estimates in addition
 #'   to the full cross-domain estimates. Marginals are produced by re-running

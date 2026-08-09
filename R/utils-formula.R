@@ -155,7 +155,7 @@ parse_formula <- function(f) {
       )
     }
     stop(
-      "Target helpers must be wrapped in the scoped helper matching their scope, e.g. `",
+      "Target helpers must be wrapped in the scope matching their scope, e.g. `",
       spec$scope,
       "(...)`.",
       call. = FALSE
@@ -167,6 +167,6 @@ parse_formula <- function(f) {
   }
 
   stop(
-    "Must provide exactly one scoped target helper such as `tree(VOLCFGRS)` or `cond()`."
+    "Must provide exactly one scope such as `tree(VOLCFGRS)` or `cond()`."
   )
 }

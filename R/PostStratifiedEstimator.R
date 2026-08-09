@@ -102,7 +102,7 @@ pe_post_strat_ratio <- function(var_est = "auto") {
 #' Estimate Population Parameters
 #'
 #' @param object A PostStratifiedEstimator object.
-#' @param ... Exactly one scoped target helper specifying the estimation target
+#' @param ... Exactly one scope specifying the estimation target
 #'   (e.g., `tree(VOLCFGRS)` or `cond()`).
 #' @param output Output scale, either "mean" (default) or "total".
 #' @param margins Logical. If `TRUE`, returns the full cross-domain estimates
@@ -134,7 +134,7 @@ setMethod(
     args <- list(...)
     if (length(args) == 0) {
       stop(
-        "Must provide at least one scoped target helper, such as `tree(VOLCFGRS)`, `cond()`, or `dwm(dwm_cwd(CARBON))`."
+        "Must provide at least one scope, such as `tree(VOLCFGRS)`, `cond()`, or `dwm(dwm_cwd(CARBON))`."
       )
     }
     output <- match.arg(output, c("mean", "total"))

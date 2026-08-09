@@ -4,7 +4,7 @@
 #
 # A `fiaplyr_target` is a named, scoped request for a plot-level quantity.
 # Every target carries:
-#   * `scope` - the scoped helper (target table) it is valid within, e.g.
+#   * `scope` - the scope (target table) it is valid within, e.g.
 #     "tree_history", "dwm", etc.
 #   * `name` - the output column name produced when the target is aggregated
 #   * target-specific fields used by the lowering method
@@ -15,7 +15,7 @@
 
 #' Universal target constructor
 #'
-#' @param scope The scoped helper (target table) the target is valid within.
+#' @param scope The scope (target table) the target is valid within.
 #' @param name The output column name.
 #' @param ... Additional target-specific fields.
 #' @return A `fiaplyr_target` object.

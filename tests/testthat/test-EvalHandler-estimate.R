@@ -126,7 +126,7 @@ test_that("EvalHandler estimate() rejects output and margins for ratio() helper"
   )
 })
 
-test_that("estimate() accepts multiple scoped target helpers", {
+test_that("estimate() accepts multiple scopes", {
   con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 

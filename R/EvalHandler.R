@@ -335,12 +335,12 @@ setMethod("show", "EvalHandler", function(object) {
   quosures
 }
 
-#' Internal: Parse a Scoped Helper into an Augmentation Spec
+#' Internal: Parse a Scope into an Augmentation Spec
 #'
 #' Extracts the data argument and join options (`by`, `type`, `copy`) from a
-#' scoped helper used within `augment()`.
+#' scope used within `augment()`.
 #'
-#' @param qs A tagged quosure list produced by a scoped helper.
+#' @param qs A tagged quosure list produced by a scope.
 #' @return A list with `target`, `data`, `by`, `type`, and `copy` elements.
 #' @keywords internal
 .parse_augment_helper <- function(qs) {
@@ -469,7 +469,7 @@ setMethod("partition", "EvalHandler", function(handler, ...) {
 #' `partition()`, and `aggregate()` calls.
 #'
 #' @param handler An EvalHandler object.
-#' @param ... One or more scoped helpers describing the data to join, e.g.
+#' @param ... One or more scopes describing the data to join, e.g.
 #'   `tree(species_ref, by = "SPCD", type = "left")`.
 #' @return The handler with pending augmentations queued.
 #' @export
@@ -534,7 +534,7 @@ setMethod("augment", "EvalHandler", function(handler, ...) {
 #' Their source fields are already per-acre loadings and are not tree-expanded.
 #'
 #' @param handler A EvalHandler object.
-#' @param ... A scoped target helper such as `tree(VOLCFGRS)`,
+#' @param ... A scope such as `tree(VOLCFGRS)`,
 #'   `tree(mean(VOLCFGRS))`, or `tree(grm_mortality(VOLCFGRS))`, and optional
 #'   arguments like `sparse`.
 #' @return A lazy query with plot-level summaries.

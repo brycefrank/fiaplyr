@@ -43,7 +43,7 @@ test_that("agg_expr() lowers both target kinds to summarise expressions", {
   expect_match(d_adj_deparse, "CWD_DRYBIO_ADJ", fixed = TRUE)
 })
 
-test_that("targets understand the scoped helper within which they are called", {
+test_that("targets understand the scope within which they are called", {
   expect_error(
     .parse_target_spec(grm_mortality(), "test"),
     "tree_history"

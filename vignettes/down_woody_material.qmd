@@ -20,8 +20,8 @@ basic analysis of DWM is possible, and we demonstrate this with an example from
 Vermont.
 
 Much like the GRM case, users produce estimates using a series of facilitating
-functions called macros, which are called within `aggregate` and `estimate`
-contexts. The macro names should be familiar, and are all prefixed with `dwm_`.
+functions called targets, which are called within `aggregate` and `estimate`
+contexts. The target names should be familiar, and are all prefixed with `dwm_`.
 Common examples include:
 
 - `dwm_cwd`
@@ -29,10 +29,10 @@ Common examples include:
 - `dwm_litter`
 - `dwm_pile`
 
-These macros correspond to different components of DWM analysis, and the
+These targets correspond to different components of DWM analysis, and the
 supported variables differ by component, as shown in the following table:
 
-| Component               | Macro          | Supported variables                      |
+| Component               | Target         | Supported variables                      |
 |-------------------------|----------------|------------------------------------------|
 | Coarse woody debris     | `dwm_cwd()`    | `VOLCF`, `DRYBIO`, `CARBON`, `LPA`       |
 | Fine woody debris       | `dwm_fwd()`    | `VOLCF`, `DRYBIO`, `CARBON`              |
@@ -70,7 +70,7 @@ statement gives particulars.
 ## Estimation of Down Woody Material Components
 
 Beginning with a simple example, let's assume we want to estimate the total
-coarse woody debris biomass. The macro `dwm_cwd` is used, which can accept the
+coarse woody debris biomass. The target `dwm_cwd` is used, which can accept the
 `DRYBIO` variable, yielding
 
 ```{r}
@@ -85,7 +85,7 @@ handler |>
 ```
 
 Likewise, the biomass of other components can be estimated with the appropriate
-macros, such as `dwm_fwd`, which accepts a size class argument
+targets, such as `dwm_fwd`, which accepts a size class argument
 
 ```{r}
 handler |>

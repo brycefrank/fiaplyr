@@ -65,7 +65,7 @@ Post-stratified estimates, among others used by FIA, can be made using the
 `estimate` method on the handler. By default, the `estimate` method uses
 the `PostStratifiedEstimator()` class, which implements the standard FIA
 post-stratified estimator used most frequently in FIA state reports and similar
-products. Specify the estimation target with the same scoped helpers used
+products. Specify the estimation target with the same scopes used
 throughout the package. For example, `cond()` estimates condition proportions,
 while `tree(...)` estimates tree-level attributes.
 

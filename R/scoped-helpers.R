@@ -1,4 +1,4 @@
-#' Scoped Helper for Tree-Level Expressions
+#' Scope for Tree-Level Expressions
 #'
 #' Captures one or more expressions and tags them to be applied at the tree
 #' table level during lazy evaluation. Used with `transform()`, `subset()`,
@@ -21,7 +21,7 @@ tree <- function(...) {
   qs
 }
 
-#' Scoped Helper for Condition-Level Expressions
+#' Scope for Condition-Level Expressions
 #'
 #' Captures one or more expressions and tags them to be applied at the condition
 #' table level during lazy evaluation. Used with `transform()`, `subset()`,
@@ -46,7 +46,7 @@ cond <- function(...) {
   qs
 }
 
-#' Scoped Helper for Downed Woody Material Expressions
+#' Scope for Downed Woody Material Expressions
 #'
 #' Captures expressions to apply to the joined `COND_DWM_CALC` data during
 #' [transform()], [subset()], [partition()], or [augment()]. Use the
@@ -69,7 +69,7 @@ dwm <- function(...) {
   qs
 }
 
-#' Scoped Helper for Plot-Level Expressions
+#' Scope for Plot-Level Expressions
 #'
 #' Captures one or more expressions and tags them to be applied at the plot
 #' table level during lazy evaluation. Used with `transform()`, `subset()`,
@@ -91,7 +91,7 @@ plot <- function(...) {
   qs
 }
 
-#' Scoped Helper for Previous-Plot-Level Expressions
+#' Scope for Previous-Plot-Level Expressions
 #'
 #' Captures one or more expressions and tags them to be applied at the previous
 #' plot table level during lazy evaluation.
@@ -105,7 +105,7 @@ pplot <- function(...) {
   qs
 }
 
-#' Scoped Helper for Previous-Condition-Level Expressions
+#' Scope for Previous-Condition-Level Expressions
 #'
 #' Captures one or more expressions and tags them to be applied at the previous
 #' condition table level during lazy evaluation.
@@ -119,7 +119,7 @@ pcond <- function(...) {
   qs
 }
 
-#' Scoped Helper for Previous-Tree-Level Expressions
+#' Scope for Previous-Tree-Level Expressions
 #'
 #' Captures one or more expressions and tags them to be applied at the previous
 #' tree table level during lazy evaluation.
@@ -133,7 +133,7 @@ ptree <- function(...) {
   qs
 }
 
-#' Scoped Helper for Tree-History-Level Expressions
+#' Scope for Tree-History-Level Expressions
 #'
 #' Captures one or more expressions and tags them to be applied at the
 #' `tree_history` table level during lazy evaluation.
@@ -147,16 +147,16 @@ tree_history <- function(...) {
   qs
 }
 
-#' Scoped Helper for Ratio Estimates
+#' Scope for Ratio Estimates
 #'
 #' Captures a numerator and denominator expression to specify a ratio
 #' estimation intent.
 #'
-#' @param num A scoped target helper for the numerator, e.g., `tree(VOLCFNET)`
-#' @param den A scoped target helper for the denominator, e.g., `cond()`
+#' @param num A scope for the numerator, e.g., `tree(VOLCFNET)`
+#' @param den A scope for the denominator, e.g., `cond()`
 #' @param den_partitions Optional denominator-only domain overrides expressed as
-#'   scoped helpers, either as a single helper (for example `cond(FORTYPCD)`) or
-#'   a list of helpers (for example `list(cond(FORTYPCD), tree(SPCD))`).
+#'   scopes, either as a single scope (for example `cond(FORTYPCD)`) or
+#'   a list of scopes (for example `list(cond(FORTYPCD), tree(SPCD))`).
 #' @return An object of class `fiaplyr_ratio_intent`.
 #' @export
 #' @examples

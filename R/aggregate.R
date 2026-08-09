@@ -301,7 +301,7 @@
 }
 
 # Parse and validate the arguments to `aggregate()`, producing one parsed
-# target spec per scoped helper. Scope availability is validated against the
+# target spec per scope. Scope availability is validated against the
 # analysis spec (e.g. `tree_history()` requires GRM, `dwm()` requires DWM).
 .aggregate_prepare <- function(args, spec) {
   arg_names <- names(args)
@@ -328,7 +328,7 @@
 
   if (!any(unnamed)) {
     stop(
-      "Must provide at least one scoped target helper such as `tree(VOLCFGRS)`, `cond()`, or `tree_history(...)`."
+      "Must provide at least one scope such as `tree(VOLCFGRS)`, `cond()`, or `tree_history(...)`."
     )
   }
 
@@ -371,7 +371,7 @@
   stop("Unsupported slot: ", slot, call. = FALSE)
 }
 
-# Build a combined plot-level aggregate for a set of scoped target helpers.
+# Build a combined plot-level aggregate for a set of scopes.
 # Targets on the same scope are merged into a single aggregate; different
 # scopes are combined with a full join on plot keys and shared domain columns.
 .aggregate_combined <- function(handler, parsed_list, sparse) {
