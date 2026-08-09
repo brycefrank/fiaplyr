@@ -39,6 +39,12 @@ export default defineConfig({
               label: 'Handlers',
               items: [
                 {label: 'eval_handler', slug: 'reference/eval_handler' },
+                {label: 'window_handler', slug: 'reference/window_handler' },
+              ]
+            },
+            {
+              label: 'Verbs',
+              items: [
                 {label: 'transform', slug: 'reference/transform' },
                 { label: 'augment', slug: 'reference/augment' },
                 {label: 'subset', slug: 'reference/subset' },

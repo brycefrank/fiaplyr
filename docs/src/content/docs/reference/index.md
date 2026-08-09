@@ -9,8 +9,9 @@ description: "Auto-generated reference pages from fiaplyr Rd documentation."
 Create handlers for FIA database analyses.
 
 - [`eval_handler`](./eval_handler/)
+- [`window_handler`](./window_handler/)
 
-## Handler Methods
+## Verbs
 
 Subset, transform, estimate, and summarize FIA data.
 
@@ -48,6 +49,7 @@ Select the table within a handler that a verb acts on.
 - [`ptree`](./ptree/)
 - [`PostStratifiedEstimator`](./poststratifiedestimator/)
 - [`PostStratifiedRatioEstimator`](./poststratifiedratioestimator/)
+- [`coordinates`](./coordinates/)
 - [`dwm`](./dwm/)
 - [`tree`](./tree/)
 - [`tree_history`](./tree_history/)
@@ -120,4 +122,5 @@ Core S4 classes used to represent handlers, analyses, mappings, and estimators. 
 - [`PostStratifiedVarianceEstimator`](./poststratifiedvarianceestimator-class/)
 - [`StatusAnalysis`](./statusanalysis-class/)
 - [`VarianceEstimator`](./varianceestimator-class/)
+- [`WindowHandler`](./windowhandler-class/)
 

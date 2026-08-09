@@ -44,6 +44,16 @@ estimate(
   var_est = "auto"
 )
 
+## S4 method for signature 'EvalHandler,character'
+estimate(
+  object,
+  ...,
+  output = "mean",
+  margins = FALSE,
+  estimator = "auto",
+  var_est = "auto"
+)
+
 ## S4 method for signature 'EvalHandler,PostStratifiedEstimator'
 estimate(
   object,
@@ -79,6 +89,8 @@ estimate(
 Functions
 
 `estimate(object = EvalHandler, estimator = missing)`: Estimate parameters directly from an EvalHandler
+
+`estimate(object = EvalHandler, estimator = character)`: Estimate parameters directly from an EvalHandler
 
 `estimate(object = EvalHandler, estimator = PostStratifiedEstimator)`: Estimate parameters directly from an EvalHandler
 

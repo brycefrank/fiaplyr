@@ -606,8 +606,8 @@ index_lines <- c(
 )
 
 function_group_symbols <- list(
-  "Handlers" = c("eval_handler"),
-  "Handler Methods" = c(
+  "Handlers" = c("eval_handler", "window_handler"),
+  "Verbs" = c(
     "aggregate", "augment", "estimate", "estimate_ratio",
     "evalid", "materialize", "partition",
     "ratio", "show", "subset", "summary", "transform"
@@ -630,7 +630,7 @@ function_group_symbols <- list(
 
 section_descriptions <- c(
   "Handlers" = "Create handlers for FIA database analyses.",
-  "Handler Methods" = "Subset, transform, estimate, and summarize FIA data.",
+  "Verbs" = "Subset, transform, estimate, and summarize FIA data.",
   "Analysis Specifications" = "Configure the analysis context used by a handler.",
   "Scopes" = "Select the table within a handler that a verb acts on.",
   "Estimators" = "Estimate population totals, ratios, and associated variances.",
