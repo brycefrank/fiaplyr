@@ -2,18 +2,18 @@
 % Please edit documentation in R/EvalHandler.R
 \name{.parse_augment_helper}
 \alias{.parse_augment_helper}
-\title{Internal: Parse a Scoped Helper into an Augmentation Spec}
+\title{Internal: Parse a Scope into an Augmentation Spec}
 \usage{
 .parse_augment_helper(qs)
 }
 \arguments{
-\item{qs}{A tagged quosure list produced by a scoped helper.}
+\item{qs}{A tagged quosure list produced by a scope.}
 }
 \value{
 A list with \code{target}, \code{data}, \code{by}, \code{type}, and \code{copy} elements.
 }
 \description{
 Extracts the data argument and join options (\code{by}, \code{type}, \code{copy}) from a
-scoped helper used within \code{augment()}.
+scope used within \code{augment()}.
 }
 \keyword{internal}

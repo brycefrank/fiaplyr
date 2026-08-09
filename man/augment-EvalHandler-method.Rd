@@ -9,7 +9,7 @@
 \arguments{
 \item{handler}{An EvalHandler object.}
 
-\item{...}{One or more scoped helpers describing the data to join, e.g.
+\item{...}{One or more scopes describing the data to join, e.g.
 \code{tree(species_ref, by = "SPCD", type = "left")}.}
 }
 \value{

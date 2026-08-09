@@ -33,6 +33,11 @@
   )
 )
 
+#' Internal constructor for a DWM target (a `fiaplyr_target` in the `dwm`
+#' scope). A DWM target is a declarative selector: it records which source
+#' columns to aggregate and the per-acre unit scale; the aggregation expression
+#' is resolved lazily via `agg_expr()`.
+#' @noRd
 .dwm_target <- function(component, ..., size = NULL) {
   component <- toupper(component)
   attributes <- rlang::enquos(...)
@@ -92,25 +97,30 @@
   }
   default_name <- paste0(default_name, "_", attribute)
 
-  target <- structure(
-    list(
-      component = component,
-      attribute = attribute,
-      size = size,
-      name = if (nzchar(supplied_name)) supplied_name else default_name
-    ),
-    class = "fiaplyr_dwm_target"
+  target <- .fiaplyr_target(
+    scope = "dwm",
+    name = if (nzchar(supplied_name)) supplied_name else default_name,
+    component = component,
+    attribute = attribute,
+    size = size
   )
+  structure(target, class = c("dwm_target", "fiaplyr_target"))
+}
 
-  structure(
-    list(target),
-    target_table = "dwm",
-    class = c("fiaplyr_dwm_helper", "list")
-  )
+#' @noRd
+#' @exportS3Method agg_expr dwm_target
+agg_expr.dwm_target <- function(target, adjusted) {
+  columns <- .resolve_dwm_columns(target, adjusted = adjusted)
+  scale <- .dwm_target_scale(target)
+  terms <- lapply(rlang::syms(columns), function(column) {
+    rlang::expr(dplyr::coalesce(!!column, 0) * !!scale)
+  })
+  row_total <- Reduce(function(x, y) rlang::expr((!!x) + (!!y)), terms)
+  rlang::expr(sum(!!row_total, na.rm = TRUE))
 }
 
 .resolve_dwm_columns <- function(target, adjusted) {
-  if (!inherits(target, "fiaplyr_dwm_target")) {
+  if (!inherits(target, "dwm_target")) {
     stop("Invalid DWM aggregation target.", call. = FALSE)
   }
 

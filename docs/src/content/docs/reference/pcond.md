@@ -1,5 +1,5 @@
 ---
-title: "Scoped Helper for Previous-Condition-Level Expressions"
+title: "Scope for Previous-Condition-Level Expressions"
 description: "Captures one or more expressions and tags them to be applied at the previous condition table level during lazy evaluation."
 ---
 

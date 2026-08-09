@@ -1,6 +1,6 @@
 Package: fiaplyr
 Title: Interface to FIA Databases with 'dbplyr'
-Version: 0.4.0
+Version: 0.4.1
 Authors@R:
     person("Bryce", "Frank", email = "bfrank70@gmail.com", role = c("aut", "cre"))
 Author: Bryce Frank [aut, cre]
@@ -31,7 +31,8 @@ Remotes:
 Config/testthat/edition: 3
 Collate:
     'methods.R'
-    'scoped-helpers.R'
+    'scopes.R'
+    'targets.R'
     'dwm-targets.R'
     'aggregate.R'
     'utils-formula.R'
@@ -41,7 +42,7 @@ Collate:
     'StatusAnalysis.R'
     'DWMAnalysis.R'
     'GRMAnalysis.R'
-    'grm-macros.R'
+    'grm-targets.R'
     'Estimator.R'
     'post_stratification.R'
     'PostStratifiedEstimator.R'

@@ -14,7 +14,7 @@ covariates. Columns added via `augment()` become available to subsequent
 
 ## Details
 
-The target table and join are specified using the scoped helpers
+The target table and join are specified using the scopes
 (e.g., [`tree()`](../tree/), [`cond()`](../cond/), etc.) The first, unnamed argument
 to the helper is the data to join; named arguments configure the join:
 
@@ -36,7 +36,7 @@ augment(handler, ...)
 ## Arguments
 
 - `handler`: A handler object.
-- `...`: One or more scoped helpers describing the data to join, e.g. `tree(species_ref, by = "SPCD", type = "left")`.
+- `...`: One or more scopes describing the data to join, e.g. `tree(species_ref, by = "SPCD", type = "left")`.
 
 ## Value
 

@@ -1,5 +1,5 @@
 ---
-title: "Scoped Helper for Condition-Level Expressions"
+title: "Scope for Condition-Level Expressions"
 description: "Captures one or more expressions and tags them to be applied at the condition table level during lazy evaluation. Used with `transform()`, `subset()`, or `partition()` to explicitly scope mutations, filters, or domain variables."
 ---
 

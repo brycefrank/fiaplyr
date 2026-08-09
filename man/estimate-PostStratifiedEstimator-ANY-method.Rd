@@ -16,7 +16,7 @@
 \arguments{
 \item{object}{A PostStratifiedEstimator object.}
 
-\item{...}{Exactly one scoped target helper specifying the estimation target
+\item{...}{Exactly one scope specifying the estimation target
 (e.g., \code{tree(VOLCFGRS)} or \code{cond()}).}
 
 \item{output}{Output scale, either "mean" (default) or "total".}

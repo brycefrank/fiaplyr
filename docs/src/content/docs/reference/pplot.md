@@ -1,5 +1,5 @@
 ---
-title: "Scoped Helper for Previous-Plot-Level Expressions"
+title: "Scope for Previous-Plot-Level Expressions"
 description: "Captures one or more expressions and tags them to be applied at the previous plot table level during lazy evaluation."
 ---
 

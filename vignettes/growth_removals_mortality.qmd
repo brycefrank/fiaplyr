@@ -20,8 +20,8 @@ which will facilitate `fiaplyr` in correctly applying the appropriate transition
 rules, which is done when the handler is initialized.
 
 Generally, users produce estimates using a series of facilitating functions
-called macros, which are called within `aggregate` and `estimate` contexts.
-The macro names should be familiar, and are all prefixed with `grm_`. Common
+called targets, which are called within `aggregate` and `estimate` contexts.
+The target names should be familiar, and are all prefixed with `grm_`. Common
 examples include:
 
 - `grm_mortality`
@@ -29,8 +29,8 @@ examples include:
 - `grm_ingrowth`
 - `grm_net_change`
 
-and others. Users supply the desired variable to the macro, whether or not to
-annualize the estimate, and any other relevant arguments. Aside from the macros,
+and others. Users supply the desired variable to the target, whether or not to
+annualize the estimate, and any other relevant arguments. Aside from the targets,
 analysis of GRM data is largely similar to that of status analysis. We animate
 GRM analysis with an example from Vermont.
 
@@ -85,7 +85,7 @@ rules that comply with the selected tree and land bases specified in the
 `tree_history` table that contains the transition type, for which we use the
 conventional names from the FIA database, but in lower case to differentiate
 from the original values. While it is important to be aware of the transitions,
-they are typically abstracted away when using GRM macros. Still, some inspection
+they are typically abstracted away when using GRM targets. Still, some inspection
 is useful, such as a count of trees by transition
 
 ```{r}
@@ -96,15 +96,15 @@ handler@tables$tree_history |>
   print(n = 10)
 ```
 
-## Estimation of Change Components with Macros
+## Estimation of Change Components with Targets
 
 Change components refer to the various outputs that users may be interested in,
 such as mortality volume, removals, and others. For most use cases, it is
-sufficient to use the GRM macros to specify the desired change components, which
+sufficient to use the GRM targets to specify the desired change components, which
 abstract away complex transition rules and other accounting methods.
 
 Beginning with a simple example, let's assume we want to estimate the total
-mortality volume. The macro `grm_mortality` is used, which generates mortality
+mortality volume. The target `grm_mortality` is used, which generates mortality
 for the specified variable. The `annualize` argument is used to produce annual
 mortality rates, as is done in most standard FIA estimates.
 
@@ -116,7 +116,7 @@ handler |>
   )
 ```
 
-Likewise, ingrowth can also be estimated with the `grm_ingrowth` macro
+Likewise, ingrowth can also be estimated with the `grm_ingrowth` target
 
 ```{r}
 handler |>
@@ -127,7 +127,7 @@ handler |>
 ```
 
 Higher order change components are `grm_net_change`, `grm_net_growth` and
-`grm_gross_growth`, all of which use convenient macros.
+`grm_gross_growth`, all of which use convenient targets.
 
 ```{r}
 handler |>

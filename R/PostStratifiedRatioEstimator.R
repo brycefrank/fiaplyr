@@ -295,7 +295,7 @@ setMethod(
 
   if (!is.list(parts) || length(parts) == 0) {
     stop(
-      "`den_partitions` must be NULL, a scoped helper, or a non-empty list of scoped helpers."
+      "`den_partitions` must be NULL, a scope, or a non-empty list of scopes."
     )
   }
 
@@ -309,7 +309,7 @@ setMethod(
 
   if (!all(is_scoped)) {
     stop(
-      "All `den_partitions` entries must be scoped helpers like `cond(...)` or `tree(...)`."
+      "All `den_partitions` entries must be scopes like `cond(...)` or `tree(...)`."
     )
   }
 

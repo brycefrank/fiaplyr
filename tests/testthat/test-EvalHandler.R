@@ -184,7 +184,7 @@ test_that("aggregate() preserves user-defined output names", {
   expect_false("prop" %in% colnames(cond_res))
 })
 
-test_that("aggregate() accepts multiple scoped target helpers", {
+test_that("aggregate() accepts multiple scopes", {
   con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
@@ -231,7 +231,7 @@ test_that("aggregate() rejects multiple cond() helpers", {
   )
 })
 
-test_that("partition() accepts multiple scoped helpers in one call", {
+test_that("partition() accepts multiple scopes in one call", {
   con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
@@ -250,7 +250,7 @@ test_that("partition() accepts multiple scoped helpers in one call", {
   expect_false("prop" %in% colnames(cond_res))
 })
 
-test_that("partition() accepts multiple scoped helpers in one call", {
+test_that("partition() accepts multiple scopes in one call", {
   con <- setup_status_test_db()
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
 
@@ -310,7 +310,7 @@ test_that("partition() respects helper scope for shared column names", {
   expect_equal(sort(unique(tree_result[["COUNTYCD.tree"]])), c(100, 200))
 })
 
-test_that("scoped helpers tag expressions correctly", {
+test_that("scopes tag expressions correctly", {
   # Test that helpers capture and tag quosures
   tree_expr <- tree(BA = 0.005454 * DIA^2)
   expect_equal(attr(tree_expr, "target_table"), "tree")

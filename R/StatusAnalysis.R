@@ -100,7 +100,7 @@ setMethod("initialize_tables", "StatusAnalysis", function(spec, db, evalid, back
 #'
 #' @param spec A StatusAnalysis object.
 #' @param handler The EvalHandler object.
-#' @param ... Arguments for aggregation (scoped target helper, sparse, etc.)
+#' @param ... Arguments for aggregation (scope, sparse, etc.)
 #' @return A lazy query with aggregates.
 #' @noRd
 setMethod("aggregate_data", "StatusAnalysis", function(spec, handler, ...) {

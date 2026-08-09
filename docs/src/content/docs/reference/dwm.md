@@ -1,5 +1,5 @@
 ---
-title: "Scoped Helper for Downed Woody Material Expressions"
+title: "Scope for Downed Woody Material Expressions"
 description: "Captures expressions to apply to the joined `COND_DWM_CALC` data during `[`transform()`](../transform/)`, `[`subset()`](../subset/)`, `[`partition()`](../partition/)`, or `[`augment()`](../augment/)`. Use the component-specific `dwm_*()` helpers instead when selecting an aggregation or estimation target."
 ---
 

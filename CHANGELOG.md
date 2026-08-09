@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.4.1 - 2026-08-09
+
+### Changed
+
+- Refactored GRM and DWM macro helpers into a unified `fiaplyr_target`
+  system:
+  - `grm_*()` and `dwm_*()` helpers now return structured target objects
+    (`grm_target`, `dwm_target`) that lower to aggregation expressions via
+    the `agg_expr()` generic.
+  - Source files renamed (`grm-macros.R` to `grm-targets.R`, DWM macros to
+    DWM targets) to reflect the new terminology.
+- Renamed "macros" and "scoped helpers" to "targets" and "scopes" throughout
+  the package, documentation, and vignettes:
+  - `R/scoped-helpers.R` renamed to `R/scopes.R`.
+  - Reference documentation index headings updated to use the new
+    terminology.
+- Updated vignettes (`growth_removals_mortality`, `down_woody_material`,
+  `status_estimates`) to use "targets" instead of "macros".
+
 ## 0.4.0 - 2026-08-02
 
 ### Added

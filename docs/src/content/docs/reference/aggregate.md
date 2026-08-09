@@ -17,7 +17,7 @@ expansion factor, `TPA_UNADJ`, to produce a TPA-weighted sum per plot. This
 is the standard FIA expansion. Function calls (e.g., `tree(mean(VOLCFGRS))`)
 are passed to `dplyr::summarise()` using the active plot-level groupings,
 allowing users to specify arbitrary aggregation functions without TPA
-expansion. Functions that return a `fiaplyr_macro` object, such as
+expansion. Functions that return a `fiaplyr_target` object, such as
 [`grm_mortality()`](../grm_mortality/) and [`grm_ingrowth()`](../grm_ingrowth/), encode
 their own variable and expansion logic.
 
@@ -30,7 +30,7 @@ aggregate(handler, ...)
 ## Arguments
 
 - `handler`: A handler object.
-- `...`: A scoped target helper such as `tree(VOLCFGRS)`, `tree(mean(VOLCFGRS))`, or `tree(grm_mortality(VOLCFGRS))`, plus optional arguments such as `sparse = TRUE`.
+- `...`: A scope such as `tree(VOLCFGRS)`, `tree(mean(VOLCFGRS))`, or `tree(grm_mortality(VOLCFGRS))`, plus optional arguments such as `sparse = TRUE`.
 
 ## Examples
 

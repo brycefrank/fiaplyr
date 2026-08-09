@@ -615,7 +615,7 @@ function_group_symbols <- list(
   "Analysis Specifications" = c(
     "grm_analysis", "status_analysis", "dwm_analysis"
   ),
-  "Scoped Helpers" = c(
+  "Scopes" = c(
     "fiadb_vt_mini_path",
     "set_fiaplyr_verbosity", "cond", "pcond", "plot", "pplot", "ptree",
     "PostStratifiedEstimator", "PostStratifiedRatioEstimator"
@@ -625,18 +625,18 @@ function_group_symbols <- list(
     "ve_post_strat_ratio"
   ),
   "Database Facilitation" = c("database_mapping", "explore_evals"),
-  "Growth, Removals and Mortality Macros" = character()
+  "Growth, Removals and Mortality Targets" = character()
 )
 
 section_descriptions <- c(
   "Handlers" = "Create handlers for FIA database analyses.",
   "Handler Methods" = "Subset, transform, estimate, and summarize FIA data.",
   "Analysis Specifications" = "Configure the analysis context used by a handler.",
-  "Scoped Helpers" = "Target particular tables within a handler.",
+  "Scopes" = "Select the table within a handler that a verb acts on.",
   "Estimators" = "Estimate population totals, ratios, and associated variances.",
   "Database Facilitation" = "Connect analyses to FIA databases and explore their contents.",
-  "Growth, Removals and Mortality Macros" = "Build macros for growth, removals, mortality, and related change components.",
-  "Down Woody Material Macros" = "Build macros for downed woody material components.",
+  "Growth, Removals and Mortality Targets" = "Build targets for growth, removals, mortality, and related change components.",
+  "Down Woody Material Targets" = "Build targets for downed woody material components.",
   "Classes" = "Core S4 classes used to represent handlers, analyses, mappings, and estimators. These are typically not used directly by uses, and their associated lower-case helpers are used instead."
 )
 
@@ -651,7 +651,7 @@ macro_symbols <- vapply(
   function(topic) topic$symbol,
   character(1)
 )
-function_group_symbols[["Growth, Removals and Mortality Macros"]] <- macro_symbols
+function_group_symbols[["Growth, Removals and Mortality Targets"]] <- macro_symbols
 
 dwm_macro_symbols <- vapply(
   Filter(
@@ -664,7 +664,7 @@ dwm_macro_symbols <- vapply(
   function(topic) topic$symbol,
   character(1)
 )
-function_group_symbols[["Down Woody Material Macros"]] <- dwm_macro_symbols
+function_group_symbols[["Down Woody Material Targets"]] <- dwm_macro_symbols
 
 topic_by_symbol <- setNames(function_topics, vapply(function_topics, function(topic) {
   topic$symbol
@@ -672,8 +672,8 @@ topic_by_symbol <- setNames(function_topics, vapply(function_topics, function(to
 grouped_symbols <- unique(unlist(function_group_symbols, use.names = FALSE))
 unclassified_symbols <- setdiff(names(topic_by_symbol), grouped_symbols)
 if (length(unclassified_symbols)) {
-  function_group_symbols[["Scoped Helpers"]] <- c(
-    function_group_symbols[["Scoped Helpers"]],
+  function_group_symbols[["Scopes"]] <- c(
+    function_group_symbols[["Scopes"]],
     unclassified_symbols
   )
 }
