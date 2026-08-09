@@ -24,6 +24,7 @@ Imports:
     lifecycle
 Suggests:
     duckdb,
+    sf,
     testthat (>= 3.0.0),
     rvalidator
 Remotes:
@@ -38,6 +39,7 @@ Collate:
     'utils-formula.R'
     'DatabaseMapping.R'
     'BaseHandler.R'
+    'WindowHandler.R'
     'AnalysisSpec.R'
     'StatusAnalysis.R'
     'DWMAnalysis.R'
@@ -48,6 +50,7 @@ Collate:
     'PostStratifiedEstimator.R'
     'PostStratifiedRatioEstimator.R'
     'EvalHandler.R'
+    'coordinates.R'
     'utils.R'
     'explore.R'
 Roxygen: list(markdown = TRUE)
