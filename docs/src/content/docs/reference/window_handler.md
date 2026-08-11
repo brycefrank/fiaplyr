@@ -24,6 +24,7 @@ window_handler(
   statecd = NULL,
   countycd = NULL,
   county = NULL,
+  spec = status_analysis(),
   backend = NULL
 )
 ```
@@ -38,6 +39,7 @@ window_handler(
 - `statecd`: A numeric vector of state codes. When used alone, retains all plots in those states.
 - `countycd`: A numeric vector of county codes. Only valid in combination with a single-valued `statecd` (county codes are ambiguous across states).
 - `county`: A data frame with `STATECD` and `COUNTYCD` columns, one row per county. Use this when selecting counties across multiple states.
+- `spec`: An [`AnalysisSpec`](../analysisspec-class/) object controlling how the selected plots are aggregated. Defaults to [`status_analysis()`](../status_analysis/).
 - `backend`: An optional [`database_mapping()`](../database_mapping/) for custom schema/table names.
 
 ## Value
@@ -66,4 +68,8 @@ window_handler(con, geometry = win, crs = 26918)
 
 # With a temporal range
 window_handler(con, statecd = 50, invyrs = 2008:2012)
+
+# Composed with a GRM analysis spec
+window_handler(con, statecd = 50, spec = grm_analysis()) |>
+  aggregate(tree_history(grm_mortality()))
 ```

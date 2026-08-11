@@ -13,6 +13,9 @@ specify their target table.
 
 ```r
 transform(handler, ...)
+
+## S4 method for signature 'WindowHandler'
+transform(handler, ...)
 ```
 
 ## Arguments
@@ -23,6 +26,12 @@ transform(handler, ...)
 ## Value
 
 The handler with pending mutations queued.
+
+## Additional Details
+
+Methods (by class)
+
+`transform(WindowHandler)`: Add or modify columns of a WindowHandler
 
 ## Examples
 

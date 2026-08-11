@@ -3,11 +3,14 @@
 \name{materialize}
 \alias{materialize}
 \alias{materialize,EvalHandler-method}
+\alias{materialize,WindowHandler-method}
 \title{Materialize a Handler Table}
 \usage{
 materialize(handler, slot)
 
 \S4method{materialize}{EvalHandler}(handler, slot)
+
+\S4method{materialize}{WindowHandler}(handler, slot)
 }
 \arguments{
 \item{handler}{A handler object.}
@@ -24,5 +27,7 @@ transformations, and domain settings have been applied.
 \section{Functions}{
 \itemize{
 \item \code{materialize(EvalHandler)}: Materialize a prepared table for EvalHandler
+
+\item \code{materialize(WindowHandler)}: Materialize a prepared table for WindowHandler
 
 }}

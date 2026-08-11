@@ -15,6 +15,9 @@ materialize(handler, slot)
 
 ## S4 method for signature 'EvalHandler'
 materialize(handler, slot)
+
+## S4 method for signature 'WindowHandler'
+materialize(handler, slot)
 ```
 
 ## Arguments
@@ -31,3 +34,5 @@ A lazy query for the requested table.
 Functions
 
 `materialize(EvalHandler)`: Materialize a prepared table for EvalHandler
+
+`materialize(WindowHandler)`: Materialize a prepared table for WindowHandler

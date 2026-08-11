@@ -24,6 +24,9 @@ be mixed in a single call, such as `partition(tree(SPCD), cond(OWNCD))`.
 
 ```r
 partition(handler, ...)
+
+## S4 method for signature 'WindowHandler'
+partition(handler, ...)
 ```
 
 ## Arguments
@@ -34,6 +37,12 @@ partition(handler, ...)
 ## Value
 
 The handler with domain variables set.
+
+## Additional Details
+
+Methods (by class)
+
+`partition(WindowHandler)`: Set domain variables of a WindowHandler
 
 ## Examples
 

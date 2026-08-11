@@ -25,12 +25,21 @@ their own variable and expansion logic.
 
 ```r
 aggregate(handler, ...)
+
+## S4 method for signature 'WindowHandler'
+aggregate(handler, ...)
 ```
 
 ## Arguments
 
 - `handler`: A handler object.
 - `...`: A scope such as `tree(VOLCFGRS)`, `tree(mean(VOLCFGRS))`, or `tree(grm_mortality(VOLCFGRS))`, plus optional arguments such as `sparse = TRUE`.
+
+## Additional Details
+
+Methods (by class)
+
+`aggregate(WindowHandler)`: Aggregate a WindowHandler to the plot level
 
 ## Examples
 

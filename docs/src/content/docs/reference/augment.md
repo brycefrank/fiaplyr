@@ -31,6 +31,9 @@ a warning) when joined against a remote table.
 
 ```r
 augment(handler, ...)
+
+## S4 method for signature 'WindowHandler'
+augment(handler, ...)
 ```
 
 ## Arguments
@@ -41,6 +44,12 @@ augment(handler, ...)
 ## Value
 
 The handler with pending augmentations queued.
+
+## Additional Details
+
+Methods (by class)
+
+`augment(WindowHandler)`: Join external data onto a WindowHandler table
 
 ## Examples
 

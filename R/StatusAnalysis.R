@@ -36,35 +36,21 @@ status_analysis <- function() {
   new("StatusAnalysis")
 }
 
-#' Initialize Tables for Status Analysis
+#' Build Tables for Status Analysis
 #'
 #' @param spec A StatusAnalysis object.
+#' @param plot_qry A lazy plot query restricted to the selected plots.
 #' @param db A DBIConnection object.
-#' @param evalid The evaluation ID.
 #' @param backend Optional DatabaseMapping for custom schema/table names.
+#' @param evalid The evaluation ID (ignored by status analysis).
 #' @return A list of lazy queries.
 #' @noRd
-setMethod("initialize_tables", "StatusAnalysis", function(spec, db, evalid, backend = NULL) {
+setMethod("build_tables", "StatusAnalysis", function(spec, plot_qry, db, backend = NULL, evalid = NULL) {
   if (is.null(backend)) {
     backend <- database_mapping()
   }
 
   tbl_ref <- function(name) get_table_ref(backend, name)
-
-  pop_eval_qry <- dplyr::tbl(db, tbl_ref("POP_EVAL")) %>%
-    dplyr::filter(EVALID == !!evalid)
-
-  pop_estn_unit_qry <- dplyr::tbl(db, tbl_ref("POP_ESTN_UNIT")) %>%
-    dplyr::semi_join(pop_eval_qry, by = c("EVAL_CN" = "CN"))
-
-  pop_stratum_qry <- dplyr::tbl(db, tbl_ref("POP_STRATUM")) %>%
-    dplyr::semi_join(pop_estn_unit_qry, by = c("ESTN_UNIT_CN" = "CN"))
-
-  pop_plot_stratum_assgn_qry <- dplyr::tbl(db, tbl_ref("POP_PLOT_STRATUM_ASSGN")) %>%
-    dplyr::semi_join(pop_stratum_qry, by = c("STRATUM_CN" = "CN"))
-
-  plot_qry <- dplyr::tbl(db, tbl_ref("PLOT")) %>%
-    dplyr::semi_join(pop_plot_stratum_assgn_qry, by = c("CN" = "PLT_CN"))
 
   cond_qry <- dplyr::tbl(db, tbl_ref("COND")) %>%
     dplyr::semi_join(plot_qry, by = c("PLT_CN" = "CN"))
@@ -84,10 +70,6 @@ setMethod("initialize_tables", "StatusAnalysis", function(spec, db, evalid, back
   )
 
   list(
-    pop_eval = pop_eval_qry,
-    pop_estn_unit = pop_estn_unit_qry,
-    pop_stratum = pop_stratum_qry,
-    pop_plot_stratum_assgn = pop_plot_stratum_assgn_qry,
     plot = plot_qry,
     cond = cond_qry,
     tree = tree_qry,

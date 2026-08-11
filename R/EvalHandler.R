@@ -57,19 +57,51 @@ setClass(
 #' handler <- eval_handler(con, evalid = 500601)
 #' }
 eval_handler <- function(db, evalid, spec = status_analysis(), backend = NULL) {
-  tables <- initialize_tables(spec, db, evalid, backend)
-
-  if (!is.null(tables$pop_eval)) {
-    if (
-      tables$pop_eval %>%
-        dplyr::tally() %>%
-        dplyr::collect() %>%
-        dplyr::pull(n) ==
-        0
-    ) {
-      stop(paste0("EVALID ", evalid, " does not exist in the database."))
-    }
+  if (is.null(backend)) {
+    backend <- database_mapping()
   }
+
+  tbl_ref <- function(name) get_table_ref(backend, name)
+
+  # The pop frame selects which plots belong to the evaluation. Building it is
+  # the handler's job (plot selection); the spec builds only the child tables
+  # it needs for aggregation.
+  pop_eval_qry <- dplyr::tbl(db, tbl_ref("POP_EVAL")) %>%
+    dplyr::filter(EVALID == !!evalid)
+
+  pop_estn_unit_qry <- dplyr::tbl(db, tbl_ref("POP_ESTN_UNIT")) %>%
+    dplyr::semi_join(pop_eval_qry, by = c("EVAL_CN" = "CN"))
+
+  pop_stratum_qry <- dplyr::tbl(db, tbl_ref("POP_STRATUM")) %>%
+    dplyr::semi_join(pop_estn_unit_qry, by = c("ESTN_UNIT_CN" = "CN"))
+
+  pop_plot_stratum_assgn_qry <- dplyr::tbl(db, tbl_ref("POP_PLOT_STRATUM_ASSGN")) %>%
+    dplyr::semi_join(pop_stratum_qry, by = c("STRATUM_CN" = "CN"))
+
+  plot_qry <- dplyr::tbl(db, tbl_ref("PLOT")) %>%
+    dplyr::semi_join(pop_plot_stratum_assgn_qry, by = c("CN" = "PLT_CN"))
+
+  if (
+    pop_eval_qry %>%
+      dplyr::tally() %>%
+      dplyr::collect() %>%
+      dplyr::pull(n) ==
+      0
+  ) {
+    stop(paste0("EVALID ", evalid, " does not exist in the database."))
+  }
+
+  spec_tables <- build_tables(spec, plot_qry, db, backend = backend, evalid = evalid)
+
+  tables <- c(
+    list(
+      pop_eval = pop_eval_qry,
+      pop_estn_unit = pop_estn_unit_qry,
+      pop_stratum = pop_stratum_qry,
+      pop_plot_stratum_assgn = pop_plot_stratum_assgn_qry
+    ),
+    spec_tables
+  )
 
   new(
     "EvalHandler",
@@ -395,14 +427,21 @@ setMethod("show", "EvalHandler", function(object) {
 #'   transform(tree(BA = 0.005454 * DIA^2))
 #' }
 setMethod("transform", "EvalHandler", function(handler, ...) {
-  # Get arguments as list - they may be tagged quosure lists from helpers
-  # or raw expressions that need to be captured
-  args_list <- list(...)
+  .transform_impl(handler, list(...), rlang::enquos(...))
+})
 
-  args <- .normalize_scoped_args(args_list, rlang::enquos(...))
+#' @describeIn transform Add or modify columns of a WindowHandler
+setMethod("transform", "WindowHandler", function(handler, ...) {
+  .transform_impl(handler, list(...), rlang::enquos(...))
+})
+
+#' Internal: shared transform implementation
+#' @noRd
+.transform_impl <- function(handler, args_list, quosures) {
+  args <- .normalize_scoped_args(args_list, quosures)
 
   .route_scoped_expressions(handler, args, operation = "append_mutations")
-})
+}
 
 #' Subset: Apply Scoped Filters
 #'
@@ -422,14 +461,21 @@ setMethod("transform", "EvalHandler", function(handler, ...) {
 #'   subset(tree(STATUSCD == 1))
 #' }
 setMethod("subset", "EvalHandler", function(handler, ...) {
-  # Get arguments as list - they may be tagged quosure lists from helpers
-  # or raw expressions that need to be captured
-  args_list <- list(...)
+  .subset_impl(handler, list(...), rlang::enquos(...))
+})
 
-  args <- .normalize_scoped_args(args_list, rlang::enquos(...))
+#' @describeIn subset Apply scoped filters to a WindowHandler
+setMethod("subset", "WindowHandler", function(handler, ...) {
+  .subset_impl(handler, list(...), rlang::enquos(...))
+})
+
+#' Internal: shared subset implementation
+#' @noRd
+.subset_impl <- function(handler, args_list, quosures) {
+  args <- .normalize_scoped_args(args_list, quosures)
 
   .route_scoped_expressions(handler, args, operation = "append_filters")
-})
+}
 
 #' Partition: Specify Domain Variables
 #'
@@ -449,14 +495,21 @@ setMethod("subset", "EvalHandler", function(handler, ...) {
 #'   partition(tree(SPCD), cond(OWNCD))
 #' }
 setMethod("partition", "EvalHandler", function(handler, ...) {
-  # Get arguments as list - they may be tagged quosure lists from helpers
-  # or raw expressions that need to be captured
-  args_list <- list(...)
+  .partition_impl(handler, list(...), rlang::enquos(...))
+})
 
-  args <- .normalize_scoped_args(args_list, rlang::enquos(...))
+#' @describeIn partition Set domain variables of a WindowHandler
+setMethod("partition", "WindowHandler", function(handler, ...) {
+  .partition_impl(handler, list(...), rlang::enquos(...))
+})
+
+#' Internal: shared partition implementation
+#' @noRd
+.partition_impl <- function(handler, args_list, quosures) {
+  args <- .normalize_scoped_args(args_list, quosures)
 
   .route_scoped_expressions(handler, args, operation = "set_domains")
-})
+}
 
 #' Augment: Join External Data onto a Handler Table
 #'
@@ -482,8 +535,17 @@ setMethod("partition", "EvalHandler", function(handler, ...) {
 #'   partition(tree(COMMON_NAME))
 #' }
 setMethod("augment", "EvalHandler", function(handler, ...) {
-  helpers <- list(...)
+  .augment_impl(handler, list(...))
+})
 
+#' @describeIn augment Join external data onto a WindowHandler table
+setMethod("augment", "WindowHandler", function(handler, ...) {
+  .augment_impl(handler, list(...))
+})
+
+#' Internal: shared augment implementation
+#' @noRd
+.augment_impl <- function(handler, helpers) {
   if (length(helpers) == 0) {
     return(handler)
   }
@@ -511,7 +573,7 @@ setMethod("augment", "EvalHandler", function(handler, ...) {
   }
 
   handler
-})
+}
 
 #' Aggregate a Handler to the Plot Level
 #'
@@ -555,9 +617,19 @@ setMethod("augment", "EvalHandler", function(handler, ...) {
 #' }
 #' @export
 setMethod("aggregate", "EvalHandler", function(handler, ...) {
-  args <- list(...)
-  do.call(aggregate_data, c(list(spec = handler@spec, handler = handler), args))
+  .aggregate_impl(handler, list(...))
 })
+
+#' @describeIn aggregate Aggregate a WindowHandler to the plot level
+setMethod("aggregate", "WindowHandler", function(handler, ...) {
+  .aggregate_impl(handler, list(...))
+})
+
+#' Internal: shared aggregate implementation
+#' @noRd
+.aggregate_impl <- function(handler, args) {
+  do.call(aggregate_data, c(list(spec = handler@spec, handler = handler), args))
+}
 
 #' @describeIn estimate Estimate parameters directly from an EvalHandler
 setMethod(
@@ -781,6 +853,17 @@ setMethod("get_strata_weights", "EvalHandler", function(handler) {
 
 #' @describeIn materialize Materialize a prepared table for EvalHandler
 setMethod("materialize", "EvalHandler", function(handler, slot) {
+  .materialize_impl(handler, slot)
+})
+
+#' @describeIn materialize Materialize a prepared table for WindowHandler
+setMethod("materialize", "WindowHandler", function(handler, slot) {
+  .materialize_impl(handler, slot)
+})
+
+#' Internal: shared materialize implementation
+#' @noRd
+.materialize_impl <- function(handler, slot) {
   slot <- as.character(slot)
 
   if (length(slot) != 1 || is.na(slot) || !nzchar(slot)) {
@@ -820,7 +903,7 @@ setMethod("materialize", "EvalHandler", function(handler, slot) {
   }
 
   .build_plot_data(handler)
-})
+}
 
 #' Get Evaluation ID
 #'

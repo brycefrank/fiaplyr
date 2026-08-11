@@ -13,6 +13,7 @@ window_handler(
   statecd = NULL,
   countycd = NULL,
   county = NULL,
+  spec = status_analysis(),
   backend = NULL
 )
 }
@@ -41,6 +42,9 @@ with a single-valued \code{statecd} (county codes are ambiguous across states).}
 
 \item{county}{A data frame with \code{STATECD} and \code{COUNTYCD} columns, one row per
 county. Use this when selecting counties across multiple states.}
+
+\item{spec}{An \link[=AnalysisSpec-class]{AnalysisSpec} object controlling how the
+selected plots are aggregated. Defaults to \link[=status_analysis]{status_analysis()}.}
 
 \item{backend}{An optional \link[=database_mapping]{database_mapping()} for custom
 schema/table names.}
@@ -77,5 +81,9 @@ window_handler(con, geometry = win, crs = 26918)
 
 # With a temporal range
 window_handler(con, statecd = 50, invyrs = 2008:2012)
+
+# Composed with a GRM analysis spec
+window_handler(con, statecd = 50, spec = grm_analysis()) |>
+  aggregate(tree_history(grm_mortality()))
 }
 }

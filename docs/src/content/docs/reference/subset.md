@@ -28,6 +28,9 @@ design.
 
 ```r
 subset(handler, ...)
+
+## S4 method for signature 'WindowHandler'
+subset(handler, ...)
 ```
 
 ## Arguments
@@ -38,6 +41,12 @@ subset(handler, ...)
 ## Value
 
 The handler with pending filters queued.
+
+## Additional Details
+
+Methods (by class)
+
+`subset(WindowHandler)`: Apply scoped filters to a WindowHandler
 
 ## Examples
 

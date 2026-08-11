@@ -9,6 +9,99 @@ test_that("window_handler() returns a WindowHandler with all plots by default", 
   )
 })
 
+test_that("window_handler() defaults to the status analysis spec", {
+  con <- setup_status_test_db()
+  wh <- window_handler(con)
+
+  expect_s4_class(wh@spec, "StatusAnalysis")
+  expect_s4_class(wh@spec, "AnalysisSpec")
+})
+
+test_that("window_handler() composes with the status spec for aggregation", {
+  con <- setup_status_test_db()
+
+  wh <- window_handler(con)
+
+  tree_res <- wh %>%
+    aggregate(tree(VOLCFGRS)) %>%
+    dplyr::collect()
+  expect_true("VOLCFGRS" %in% colnames(tree_res))
+  expect_equal(nrow(tree_res), 8)
+
+  cond_res <- wh %>%
+    partition(cond(COND_STATUS_CD)) %>%
+    aggregate(cond()) %>%
+    dplyr::collect()
+  expect_true(all(c("COND_STATUS_CD", "prop") %in% colnames(cond_res)))
+})
+
+test_that("window_handler() verbs compose with aggregation", {
+  con <- setup_status_test_db()
+
+  res <- window_handler(con) %>%
+    transform(tree(BA = 0.005454 * DIA^2)) %>%
+    subset(tree(SPCD == 1)) %>%
+    partition(tree(SPCD)) %>%
+    aggregate(tree(BA)) %>%
+    dplyr::collect()
+
+  expect_true(all(c("SPCD", "BA") %in% colnames(res)))
+  expect_true(all(res$SPCD == 1))
+})
+
+test_that("window_handler() supports augment() and materialize()", {
+  con <- setup_status_test_db()
+
+  species_ref <- data.frame(
+    SPCD = c(1, 2),
+    COMMON_NAME = c("Pine", "Oak"),
+    stringsAsFactors = FALSE
+  )
+
+  augmented <- window_handler(con) %>%
+    augment(tree(species_ref, by = "SPCD"))
+
+  expect_length(augmented@pipeline$tree$augment, 1)
+
+  res <- suppressWarnings(
+    materialize(augmented, "tree") %>% dplyr::collect()
+  )
+  expect_true("COMMON_NAME" %in% names(res))
+  expect_setequal(unique(res$COMMON_NAME), c("Pine", "Oak"))
+
+  agg <- suppressWarnings(
+    augmented %>%
+      partition(tree(COMMON_NAME)) %>%
+      aggregate(tree(VOLCFGRS)) %>%
+      dplyr::collect()
+  )
+  expect_true("COMMON_NAME" %in% names(agg))
+})
+
+test_that("window_handler() composes with the GRM spec", {
+  con <- setup_grm_test_db()
+
+  wh <- window_handler(con, spec = grm_analysis())
+
+  expect_s4_class(wh@spec, "GRMAnalysis")
+  expect_false(is.null(wh@tables$tree_history))
+
+  res <- wh %>%
+    aggregate(tree_history(mortality = grm_mortality())) %>%
+    dplyr::collect()
+  expect_true(nrow(res) > 0)
+  expect_true("mortality" %in% colnames(res))
+})
+
+test_that("window_handler() rejects the DWM spec with an explanatory error", {
+  con <- setup_dwm_test_db()
+
+  expect_error(
+    window_handler(con, spec = dwm_analysis()),
+    "requires an evaluation context"
+  )
+})
+
 test_that("window_handler() filters by statecd", {
   con <- setup_status_test_db()
 

@@ -8,17 +8,28 @@ setClass("AnalysisSpec", contains = "VIRTUAL")
 #' @export
 setClass("ChangeAnalysis", contains = "AnalysisSpec")
 
-#' Initialize Tables for an Analysis Spec
+#' Build Analysis Tables for an Analysis Spec
+#'
+#' Given the handler-selected plot query, build the child tables the aggregation
+#' policy needs (cond/tree for status; tree_history for GRM; cond_dwm_calc for
+#' DWM). Plot selection is the handler's concern; building the analysis
+#' data structure is the spec's.
 #'
 #' @param spec An AnalysisSpec object.
+#' @param plot_qry A lazy plot query restricted to the selected plots.
 #' @param db A DBIConnection object.
-#' @param evalid The evaluation ID.
 #' @param backend Optional DatabaseMapping for custom schema/table names.
-#' @return A list of lazy queries.
+#' @param evalid The evaluation ID, or `NULL` when the handler has no evaluation
+#'   context (e.g. a `WindowHandler`). Specs that are keyed by evaluation
+#'   (e.g. DWM) should abort with an explanatory error when it is `NULL`.
+#' @return A list of lazy queries, including `plot` and any child tables.
 #' @noRd
-setGeneric("initialize_tables", function(spec, db, evalid, backend = NULL) {
-  standardGeneric("initialize_tables")
-})
+setGeneric(
+  "build_tables",
+  function(spec, plot_qry, db, backend = NULL, evalid = NULL) {
+    standardGeneric("build_tables")
+  }
+)
 
 #' Aggregate Data for an Analysis Spec
 #'

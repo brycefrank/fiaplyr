@@ -18,3 +18,4 @@ Slots
 - `tables`: A list of lazy queries for the tables.
 - `pipeline`: Pending operations grouped by target table and operation.
 - `window`: A list describing the spatial/temporal window that was applied.
+- `spec`: The AnalysisSpec used to build the analysis tables.

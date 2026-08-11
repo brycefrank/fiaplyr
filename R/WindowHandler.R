@@ -9,6 +9,7 @@
 #' @slot tables A list of lazy queries for the tables.
 #' @slot pipeline Pending operations grouped by target table and operation.
 #' @slot window A list describing the spatial/temporal window that was applied.
+#' @slot spec The AnalysisSpec used to build the analysis tables.
 #' @export
 setClass(
   "WindowHandler",
@@ -16,7 +17,8 @@ setClass(
   slots = list(
     tables = "list",
     pipeline = "list",
-    window = "list"
+    window = "list",
+    spec = "AnalysisSpec"
   )
 )
 
@@ -46,6 +48,8 @@ setClass(
 #'   with a single-valued `statecd` (county codes are ambiguous across states).
 #' @param county A data frame with `STATECD` and `COUNTYCD` columns, one row per
 #'   county. Use this when selecting counties across multiple states.
+#' @param spec An [AnalysisSpec][AnalysisSpec-class] object controlling how the
+#'   selected plots are aggregated. Defaults to [status_analysis()][status_analysis].
 #' @param backend An optional [database_mapping()][database_mapping] for custom
 #'   schema/table names.
 #'
@@ -73,6 +77,10 @@ setClass(
 #'
 #' # With a temporal range
 #' window_handler(con, statecd = 50, invyrs = 2008:2012)
+#'
+#' # Composed with a GRM analysis spec
+#' window_handler(con, statecd = 50, spec = grm_analysis()) |>
+#'   aggregate(tree_history(grm_mortality()))
 #' }
 window_handler <- function(
   db,
@@ -83,6 +91,7 @@ window_handler <- function(
   statecd = NULL,
   countycd = NULL,
   county = NULL,
+  spec = status_analysis(),
   backend = NULL
 ) {
   if (is.null(backend)) {
@@ -190,12 +199,15 @@ window_handler <- function(
       dplyr::filter(CN %in% !!matched_cn)
   }
 
+  spec_tables <- build_tables(spec, plot_qry, db, backend = backend, evalid = NULL)
+
   new(
     "WindowHandler",
     db = db,
-    tables = list(plot = plot_qry),
+    tables = spec_tables,
     pipeline = .new_pipeline(),
-    window = window_spec
+    window = window_spec,
+    spec = spec
   )
 }
 

@@ -19,5 +19,7 @@ inventory year.
 \item{\code{pipeline}}{Pending operations grouped by target table and operation.}
 
 \item{\code{window}}{A list describing the spatial/temporal window that was applied.}
+
+\item{\code{spec}}{The AnalysisSpec used to build the analysis tables.}
 }}
 
